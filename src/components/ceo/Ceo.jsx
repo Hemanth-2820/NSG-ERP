@@ -10,7 +10,6 @@ import Settings from './pages/Settings';
 import Announcements from './pages/Announcements';
 import StrategyOKRs from './pages/StrategyOKRs';
 import Messaging from './pages/Messaging';
-import CeoErrorBoundary from './CeoErrorBoundary';
 import './CEO.css';
 
 export default function Ceo({ activeTab }) {
@@ -33,9 +32,7 @@ export default function Ceo({ activeTab }) {
 
   return (
     <div className="ceo-module-container" style={{ padding: 0 }}>
-      <CeoErrorBoundary>
-        {renderContent()}
-      </CeoErrorBoundary>
+      {renderContent()}
     </div>
   );
 }

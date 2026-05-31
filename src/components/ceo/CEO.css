@@ -1,25 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* WORLD-CLASS CEO DASHBOARD - LIGHT ENTERPRISE THEME */
+/* WORLD-CLASS CEO DASHBOARD - ENTERPRISE ERP THEME */
 :root {
   /* Core Base Colors */
   --ceo-bg: #F8FAFC;
   --ceo-card-bg: #FFFFFF;
+  --ceo-hover: #EFF6FF;
+  
+  /* Borders */
   --ceo-border: #E2E8F0;
-  --ceo-border-hover: #CBD5E1;
   --ceo-divider: #CBD5E1;
   
-  /* Text */
+  /* Typography */
   --ceo-text-primary: #0F172A;
   --ceo-text-secondary: #475569;
   --ceo-text-muted: #64748B;
   
-  /* Status Colors */
+  /* Brand & Status Colors */
   --ceo-primary: #2563EB;
   --ceo-success: #10B981;
   --ceo-warning: #F59E0B;
   --ceo-danger: #EF4444;
-  --ceo-info: #3B82F6;
   --ceo-purple: #8B5CF6;
   
   /* Form Elements */
@@ -28,16 +29,23 @@
   --form-input-focus: #2563EB;
 
   /* Dashboard & Layout Tokens */
-  --tree-node-hover: #F1F5F9;
-  --tree-connector-line: #CBD5E1;
   --tab-active-bg: #EFF6FF;
   --tab-active-border: #2563EB;
 
-  /* Geometry */
-  --ceo-radius-md: 8px;
-  --ceo-radius-lg: 12px;
-  --ceo-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --ceo-shadow-glow: 0 4px 6px -1px rgba(37, 99, 235, 0.1), 0 2px 4px -1px rgba(37, 99, 235, 0.06);
+  /* Geometry & Spacing (STRICT COMPLIANCE) */
+  --ceo-radius-btn: 10px;
+  --ceo-radius-table: 14px;
+  --ceo-radius-card: 16px;
+  
+  --ceo-pad-page: 32px;
+  --ceo-pad-card: 24px;
+  --ceo-pad-cell: 16px;
+  
+  --ceo-gap-section: 32px;
+  --ceo-gap-card: 24px;
+
+  /* Shadows (STRICT COMPLIANCE) */
+  --ceo-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -52,48 +60,79 @@ body {
 
 /* Base Container */
 .ceo-module-container {
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
   background-color: var(--ceo-bg);
   color: var(--ceo-text-primary);
   min-height: 100vh;
-  padding: 24px 32px;
+  padding: var(--ceo-pad-page);
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
 }
 
+/* Typography Classes */
+.ceo-typography-page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ceo-text-primary);
+  margin: 0;
+}
+.ceo-typography-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ceo-text-primary);
+}
+.ceo-typography-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ceo-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ceo-typography-body {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ceo-text-secondary);
+}
+.ceo-typography-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ceo-text-muted);
+}
+
 /* Buttons */
 .ceo-btn {
-  background: #FFFFFF;
+  background: var(--ceo-card-bg);
   border: 1px solid var(--ceo-border);
   color: var(--ceo-text-primary);
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: var(--ceo-radius-btn);
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: var(--ceo-shadow);
+  transition: filter 0.2s ease, border-color 0.2s ease;
 }
 .ceo-btn:hover {
-  background: #F8FAFC;
-  border-color: var(--ceo-border-hover);
+  filter: brightness(105%);
 }
 .ceo-btn-primary {
   background: var(--ceo-primary);
   color: #fff;
   border: none;
 }
-.ceo-btn-primary:hover {
-  background: #1D4ED8;
-  box-shadow: var(--ceo-shadow-glow);
-}
 .ceo-btn-danger {
   background: var(--ceo-danger);
+  color: #fff;
+  border: none;
+}
+.ceo-btn-success {
+  background: var(--ceo-success);
   color: #fff;
   border: none;
 }
@@ -114,16 +153,17 @@ body {
   background: var(--form-input-bg);
   border: 1px solid var(--form-input-border);
   color: var(--ceo-text-primary);
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  transition: all 0.2s ease;
+  padding: 12px var(--ceo-pad-cell);
+  border-radius: var(--ceo-radius-btn);
+  font-size: 14px;
+  font-weight: 500;
   width: 100%;
+  box-shadow: var(--ceo-shadow);
+  transition: outline 0.2s ease, border-color 0.2s ease;
 }
 .ceo-form-input:focus {
   outline: none;
   border-color: var(--form-input-focus);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 .ceo-form-input::placeholder {
   color: #94A3B8;
@@ -132,274 +172,154 @@ body {
 /* Status Badges */
 .ceo-badge {
   padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 11px;
+  border-radius: var(--ceo-radius-btn);
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
 }
-
 .ceo-badge.critical { background: #FEF2F2; color: #EF4444; border: 1px solid #FECACA; }
 .ceo-badge.warning { background: #FFFBEB; color: #F59E0B; border: 1px solid #FDE68A; }
 .ceo-badge.success { background: #F0FDF4; color: #10B981; border: 1px solid #A7F3D0; }
 .ceo-badge.neutral { background: #F8FAFC; color: #64748B; border: 1px solid #E2E8F0; }
-
-/* Timeline */
-.ceo-timeline-item {
-  position: relative;
-  padding-left: 32px;
-  padding-bottom: 24px;
-}
-.ceo-timeline-item::before {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 6px;
-  bottom: -6px;
-  width: 2px;
-  background: var(--ceo-border);
-}
-.ceo-timeline-item:last-child::before {
-  display: none;
-}
-.ceo-timeline-dot {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--ceo-card-bg);
-  border: 2px solid var(--ceo-primary);
-  z-index: 1;
-}
-.ceo-timeline-time {
-  font-size: 12px;
-  color: var(--ceo-text-muted);
-  margin-bottom: 4px;
-}
-
-/* ================================================= */
-/* NEW ENTERPRISE ERP ARCHITECTURE COMPONENTS        */
-/* ================================================= */
 
 /* Executive KPI Strip */
 .ceo-kpi-strip {
   display: flex;
   background: var(--ceo-card-bg);
   border: 1px solid var(--ceo-border);
-  border-radius: var(--ceo-radius-md);
+  border-radius: var(--ceo-radius-card);
   overflow: hidden;
   box-shadow: var(--ceo-shadow);
+  margin-bottom: var(--ceo-gap-section);
 }
 .ceo-kpi-strip-item {
   flex: 1;
-  padding: 16px 24px;
+  padding: var(--ceo-pad-card);
   border-right: 1px solid var(--ceo-divider);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: transform 0.2s ease;
+}
+.ceo-kpi-strip-item:hover {
+  background: var(--ceo-hover);
 }
 .ceo-kpi-strip-item:last-child {
   border-right: none;
+}
+.ceo-kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ceo-text-primary);
+}
+
+/* Layout Grids */
+.ceo-layout-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ceo-gap-section);
+}
+.ceo-split-layout {
+  display: flex;
+  gap: var(--ceo-gap-card);
+}
+.ceo-split-left {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ceo-gap-card);
+}
+.ceo-split-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ceo-gap-card);
+}
+
+/* Command Center Panel (Cards) */
+.ceo-command-panel {
+  background: var(--ceo-card-bg);
+  border: 1px solid var(--ceo-border);
+  border-radius: var(--ceo-radius-card);
+  box-shadow: var(--ceo-shadow);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+  overflow: hidden;
+}
+.ceo-command-panel:hover {
+  transform: translateY(-2px);
+}
+.ceo-command-header {
+  padding: var(--ceo-pad-card);
+  border-bottom: 1px solid var(--ceo-border);
+  background: var(--ceo-bg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ceo-command-content {
+  padding: var(--ceo-pad-card);
+  flex: 1;
 }
 
 /* Premium ERP Data Table */
 .ceo-erp-table-container {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--ceo-border);
-  border-radius: var(--ceo-radius-md);
   background: var(--ceo-card-bg);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  border-radius: var(--ceo-radius-table);
 }
 .ceo-erp-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
   text-align: left;
 }
 .ceo-erp-table th {
-  background: #F8FAFC;
-  padding: 12px 16px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: var(--ceo-bg);
+  padding: 12px var(--ceo-pad-cell);
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ceo-text-secondary);
   border-bottom: 2px solid var(--ceo-border);
-  border-right: 1px solid #E2E8F0;
   position: sticky;
   top: 0;
   z-index: 10;
-  white-space: nowrap;
-}
-.ceo-erp-table th:last-child {
-  border-right: none;
 }
 .ceo-erp-table td {
-  padding: 12px 16px;
+  padding: 16px var(--ceo-pad-cell);
   border-bottom: 1px solid var(--ceo-divider);
-  border-right: 1px dashed #E2E8F0;
   color: var(--ceo-text-primary);
+  font-weight: 500;
   vertical-align: middle;
 }
-.ceo-erp-table td:last-child {
-  border-right: none;
-}
 .ceo-erp-table tbody tr {
-  background: #FFFFFF;
-  transition: all 0.2s ease;
-}
-.ceo-erp-table tbody tr:nth-child(even) {
-  background: #F8FAFC;
+  background: var(--ceo-card-bg);
+  transition: background 0.2s ease;
 }
 .ceo-erp-table tbody tr:hover {
-  background: #EFF6FF;
-  box-shadow: inset 3px 0 0 var(--ceo-primary);
+  background: var(--ceo-hover);
 }
 .ceo-erp-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Split Screen Layouts */
-.ceo-split-layout {
-  display: flex;
-  gap: 24px;
-  height: 100%;
-}
-.ceo-split-left {
-  flex: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.ceo-split-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* Command Center Panel */
-.ceo-command-panel {
-  background: var(--ceo-card-bg);
-  border: 1px solid var(--ceo-border);
-  border-radius: var(--ceo-radius-lg);
-  box-shadow: var(--ceo-shadow);
-  display: flex;
-  flex-direction: column;
-}
-.ceo-command-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--ceo-divider);
-  background: #F8FAFC;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top-left-radius: var(--ceo-radius-lg);
-  border-top-right-radius: var(--ceo-radius-lg);
-}
-.ceo-dash-card-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ceo-text-primary);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.ceo-command-content {
-  padding: 24px;
-  flex: 1;
-}
-
-/* Matrix View (Dense Data) */
-.ceo-matrix-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-}
-.ceo-matrix-cell {
-  padding: 16px;
-  border: 1px solid var(--ceo-border);
-  background: #F8FAFC;
-  border-radius: 8px;
-}
-
-/* Setup Module Specific */
-.ceo-setup-layout {
-  display: flex;
-  gap: 32px;
-  align-items: flex-start;
-  min-height: calc(100vh - 150px);
-}
-.ceo-setup-sidebar {
-  width: 200px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: sticky;
-  top: 32px;
-}
-.ceo-setup-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ceo-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-}
-.ceo-setup-nav-item:hover {
-  background: #F1F5F9;
-  color: var(--ceo-text-primary);
-}
-.ceo-setup-nav-item.active {
-  background: var(--tab-active-bg);
-  color: var(--tab-active-border);
-  border-color: #BFDBFE;
-  box-shadow: inset 3px 0 0 var(--tab-active-border);
-}
-.ceo-tree-node {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #FFFFFF;
-  border: 1px solid var(--ceo-border);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  transition: background 0.2s;
-}
-.ceo-tree-node:hover {
-  background: var(--tree-node-hover);
-}
-.ceo-tree-children {
-  padding-left: 32px;
-  border-left: 1px dashed var(--tree-connector-line);
-  margin-left: 16px;
-}
-
-/* Hide default scrollbars */
-.ceo-erp-table-container::-webkit-scrollbar {
+/* Scrollbars */
+::-webkit-scrollbar {
   height: 8px;
   width: 8px;
 }
-.ceo-erp-table-container::-webkit-scrollbar-track {
-  background: #F8FAFC;
+::-webkit-scrollbar-track {
+  background: var(--ceo-bg);
 }
-.ceo-erp-table-container::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+::-webkit-scrollbar-thumb {
+  background: var(--ceo-divider);
   border-radius: 4px;
 }
-.ceo-erp-table-container::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ceo-text-muted);
 }

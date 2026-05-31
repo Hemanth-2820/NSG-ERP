@@ -1,208 +1,173 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { 
-  Briefcase, Activity, CheckCircle, Clock, AlertTriangle, 
-  TrendingUp, Users, Target, ShieldAlert, ChevronRight, Settings, Filter
+  Briefcase, Activity, Target, ShieldAlert, 
+  ChevronRight, Settings, Filter, Download, Plus, Search, CheckCircle, Clock
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import '../CEO.css';
 
 // ==========================================
 // MOCK DATA
 // ==========================================
-const kpiStripData = [
-  { title: "Total Portfolio Value", value: "₹18.4M", trend: "up", percent: "5%", color: "#2563EB" },
-  { title: "Active Initiatives", value: "34", trend: "up", percent: "2", color: "#10B981" },
-  { title: "At Risk / Delayed", value: "3", trend: "down", percent: "1", color: "#EF4444" },
-  { title: "Avg Velocity", value: "92%", trend: "up", percent: "4%", color: "#8B5CF6" },
-  { title: "Resource Allocation", value: "88%", trend: "flat", percent: "0%", color: "#3B82F6" },
-  { title: "Upcoming Milestones", value: "12", trend: "up", percent: "3", color: "#F59E0B" },
-];
-
-const portfolioTable = [
-  { id: "PRJ-992", name: "Enterprise ERP Cloud Migration", sponsor: "CTO Office", budget: "₹4.2M", health: "Healthy", progress: 68, status: "Active" },
-  { id: "PRJ-993", name: "Q3 Marketing Campaign Rollout", sponsor: "CMO Office", budget: "₹1.8M", health: "At Risk", progress: 34, status: "Delayed" },
-  { id: "PRJ-994", name: "Data Center Infrastructure Upgrade", sponsor: "IT Dept", budget: "₹8.5M", health: "Healthy", progress: 92, status: "Closing" },
-  { id: "PRJ-995", name: "Compliance & Security Audit 2026", sponsor: "Legal", budget: "₹0.9M", health: "Healthy", progress: 15, status: "Planning" },
-  { id: "PRJ-996", name: "Sales Portal V2 Beta Launch", sponsor: "Sales", budget: "₹2.2M", health: "Warning", progress: 75, status: "Active" },
+const kpiData = [
+  { label: "Active Portfolios", value: "8", trend: "flat", change: "0", color: "#8B5CF6" },
+  { label: "Enterprise Projects", value: "34", trend: "up", change: "+2", color: "#2563EB" },
+  { label: "Capital Allocation", value: "₹18.5M", trend: "up", change: "+1.2M", color: "#10B981" },
+  { label: "Budget Variance", value: "-2.4%", trend: "down", change: "0.4%", color: "#F59E0B" },
+  { label: "Projects At Risk", value: "3", trend: "up", change: "+1", color: "#EF4444" },
+  { label: "On-Time Delivery", value: "92%", trend: "up", change: "+4%", color: "#10B981" },
 ];
 
 const allocationData = [
-  { dept: 'Engineering', load: 95 },
-  { dept: 'Design', load: 85 },
-  { dept: 'Marketing', load: 110 },
-  { dept: 'QA / Testing', load: 75 },
-  { dept: 'Operations', load: 60 },
+  { dept: 'IT Systems', budget: 8.5 },
+  { dept: 'Marketing', budget: 4.2 },
+  { dept: 'R&D', budget: 3.8 },
+  { dept: 'Operations', budget: 2.0 },
 ];
 
-// ==========================================
-// ANIMATION VARIANTS
-// ==========================================
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
-};
-
-// ==========================================
-// COMPONENTS
-// ==========================================
+const projects = [
+  { name: 'Global ERP Migration', sponsor: 'Elena Rodriguez', phase: 'Execution', budget: '₹4.5M', status: 'Healthy', progress: 68 },
+  { name: 'APAC Data Center', sponsor: 'Michael Chen', phase: 'Planning', budget: '₹2.8M', status: 'Warning', progress: 15 },
+  { name: 'Q3 Brand Campaign', sponsor: 'James Wilson', phase: 'Execution', budget: '₹1.2M', status: 'At Risk', progress: 42 },
+  { name: 'Security Audit V2', sponsor: 'Sarah Connor', phase: 'Closure', budget: '₹0.5M', status: 'Healthy', progress: 95 },
+];
 
 export default function Projects() {
-  const getHealthBadge = (health) => {
-    switch(health) {
-      case 'Healthy': return <span className="ceo-badge success">Healthy</span>;
-      case 'Warning': return <span className="ceo-badge warning">Warning</span>;
-      case 'At Risk': return <span className="ceo-badge critical">At Risk</span>;
-      default: return <span className="ceo-badge neutral">{health}</span>;
-    }
-  };
-
   return (
-    <div style={{ padding: '0 32px 32px 32px', maxWidth: '1800px', margin: '0 auto', color: 'var(--ceo-text-primary)' }}>
+    <div className="ceo-layout-grid">
       
-      {/* SECTION 1: Executive Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', borderBottom: '1px solid var(--ceo-border)', paddingBottom: '24px' }}
-      >
+      {/* 1. PAGE HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span className="ceo-badge neutral">Delivery & Operations</span>
-            <ChevronRight size={14} color="var(--ceo-text-muted)" />
-            <span style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>Portfolio Intelligence</span>
+          <h1 className="ceo-typography-page-title">Portfolio Management</h1>
+          <p className="ceo-typography-body" style={{ marginTop: '8px' }}>Executive visibility into strategic initiatives, capital allocation, and delivery risks.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={14} color="var(--ceo-text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+            <input type="text" placeholder="Search portfolios..." className="ceo-form-input" style={{ paddingLeft: '32px', width: '250px' }} />
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 700, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Strategic Project Portfolio</h1>
+          <button className="ceo-btn"><Filter size={16} /> Filter</button>
+          <button className="ceo-btn"><Download size={16} /> Export</button>
+          <button className="ceo-btn ceo-btn-primary"><Plus size={16} /> New Portfolio</button>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="ceo-btn"><Settings size={16} /> Portfolio Settings</button>
-          <button className="ceo-btn ceo-btn-primary"><Target size={16} /> New Strategic Initiative</button>
-        </div>
-      </motion.div>
+      </div>
 
-      <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        
-        {/* SECTION 2: Portfolio KPI Dashboard */}
-        <motion.div variants={itemVariants} className="ceo-kpi-strip">
-          {kpiStripData.map((kpi, idx) => (
-            <div key={idx} className="ceo-kpi-strip-item">
-              <span style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{kpi.title}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--ceo-text-primary)' }}>{kpi.value}</span>
-                <span style={{ display: 'flex', alignItems: 'center', color: kpi.color, fontSize: '12px', fontWeight: 600, background: `${kpi.color}15`, padding: '2px 6px', borderRadius: '4px' }}>
-                  {kpi.trend === 'up' ? '↗' : kpi.trend === 'down' ? '↘' : '→'} {kpi.percent}
-                </span>
-              </div>
+      {/* 2. KPI STRIP */}
+      <div className="ceo-kpi-strip">
+        {kpiData.map((kpi, i) => (
+          <div key={i} className="ceo-kpi-strip-item">
+            <span className="ceo-typography-meta" style={{ textTransform: 'uppercase' }}>{kpi.label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+              <span className="ceo-kpi-value">{kpi.value}</span>
+              <span className="ceo-badge neutral" style={{ color: kpi.color, background: `${kpi.color}15`, border: 'none' }}>
+                {kpi.trend === 'up' ? '↗' : kpi.trend === 'down' ? '↘' : '→'} {kpi.change}
+              </span>
             </div>
-          ))}
-        </motion.div>
+          </div>
+        ))}
+      </div>
 
-        {/* SECTION 3: Main Layout - Table & Analytics */}
-        <div className="ceo-split-layout">
+      {/* 3. SPLIT LAYOUT */}
+      <div className="ceo-split-layout">
+        
+        {/* LEFT COLUMN */}
+        <div className="ceo-split-left">
           
-          {/* Main Portfolio Matrix */}
-          <motion.div variants={itemVariants} className="ceo-command-panel ceo-split-left" style={{ flex: 2 }}>
+          <div className="ceo-command-panel">
             <div className="ceo-command-header">
-              <div className="ceo-dash-card-title"><Briefcase size={18} color="var(--ceo-primary)" /> Tier 1 Enterprise Initiatives Matrix</div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input type="text" placeholder="Search initiatives..." className="ceo-form-input" style={{ width: '200px', padding: '6px 12px', fontSize: '12px' }} />
-                <button className="ceo-btn" style={{ padding: '6px 12px' }}><Filter size={14} /> Filter</button>
-              </div>
+              <div className="ceo-typography-card-title"><Briefcase size={18} color="var(--ceo-primary)" /> Strategic Project Matrix</div>
+              <button className="ceo-btn" style={{ padding: '6px 12px', fontSize: '12px' }}>View Full Matrix</button>
             </div>
-            
-            <div className="ceo-erp-table-container" style={{ border: 'none', borderRadius: '0' }}>
+            <div className="ceo-erp-table-container" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
               <table className="ceo-erp-table">
                 <thead>
                   <tr>
-                    <th>Initiative ID / Name</th>
-                    <th>Executive Sponsor</th>
-                    <th>Approved Budget</th>
-                    <th>Delivery Progress</th>
-                    <th style={{ textAlign: 'right' }}>Health / Status</th>
+                    <th>Initiative Name</th>
+                    <th>Exec. Sponsor</th>
+                    <th>Phase</th>
+                    <th>Budget</th>
+                    <th>Progress</th>
+                    <th style={{ textAlign: 'right' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {portfolioTable.map((prj, i) => (
+                  {projects.map((proj, i) => (
                     <tr key={i}>
-                      <td>
-                        <div style={{ fontWeight: 600, fontSize: '14px' }}>{prj.name}</div>
-                        <div style={{ fontFamily: 'monospace', color: 'var(--ceo-text-muted)', fontSize: '11px', marginTop: '2px' }}>{prj.id}</div>
-                      </td>
-                      <td>{prj.sponsor}</td>
-                      <td style={{ fontWeight: 600 }}>{prj.budget}</td>
-                      <td style={{ width: '200px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ flex: 1, height: '6px', background: 'var(--ceo-bg)', border: '1px solid var(--ceo-border)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${prj.progress}%`, height: '100%', background: prj.health === 'At Risk' ? 'var(--ceo-danger)' : prj.health === 'Warning' ? 'var(--ceo-warning)' : 'var(--ceo-success)' }}></div>
+                      <td style={{ fontWeight: 600 }}>{proj.name}</td>
+                      <td>{proj.sponsor}</td>
+                      <td><span className="ceo-typography-meta">{proj.phase}</span></td>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{proj.budget}</td>
+                      <td style={{ width: '150px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ flex: 1, height: '6px', background: 'var(--ceo-bg)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${proj.progress}%`, height: '100%', background: proj.status === 'At Risk' ? 'var(--ceo-danger)' : proj.status === 'Warning' ? 'var(--ceo-warning)' : 'var(--ceo-success)' }}></div>
                           </div>
-                          <span style={{ fontSize: '12px', fontWeight: 600, width: '35px', textAlign: 'right' }}>{prj.progress}%</span>
+                          <span className="ceo-typography-meta" style={{ minWidth: '30px' }}>{proj.progress}%</span>
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ marginBottom: '4px' }}>{getHealthBadge(prj.health)}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', fontWeight: 600 }}>{prj.status}</div>
+                        <span className={`ceo-badge ${proj.status === 'At Risk' ? 'critical' : proj.status === 'Warning' ? 'warning' : 'success'}`}>
+                          {proj.status}
+                        </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </motion.div>
-
-          <div className="ceo-split-right" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
-            {/* Project Risk Board */}
-            <motion.div variants={itemVariants} className="ceo-command-panel" style={{ borderTop: '4px solid var(--ceo-danger)' }}>
-              <div className="ceo-command-header" style={{ background: 'transparent' }}>
-                <div className="ceo-dash-card-title"><ShieldAlert size={18} color="var(--ceo-danger)" /> Escalation Board</div>
-              </div>
-              <div className="ceo-command-content" style={{ paddingTop: 0 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ padding: '16px', background: 'var(--ceo-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span className="ceo-badge critical">PRJ-993</span>
-                      <span style={{ fontSize: '11px', color: 'var(--ceo-danger)', fontWeight: 600 }}>Over Budget</span>
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ceo-text-primary)', marginBottom: '4px' }}>Q3 Marketing Campaign</div>
-                    <div style={{ fontSize: '12px', color: 'var(--ceo-text-secondary)' }}>Resource bottleneck in content production. Requires executive override for external agency hire.</div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Resource Allocation */}
-            <motion.div variants={itemVariants} className="ceo-command-panel">
-              <div className="ceo-command-header">
-                <div className="ceo-dash-card-title"><Users size={18} color="var(--ceo-primary)" /> Department Utilization Matrix</div>
-              </div>
-              <div className="ceo-command-content" style={{ height: '220px', padding: '16px 24px 0 0' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={allocationData} layout="vertical" margin={{ left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--ceo-border)" horizontal={false} />
-                    <XAxis type="number" domain={[0, 120]} stroke="var(--ceo-text-muted)" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis dataKey="dept" type="category" stroke="var(--ceo-text-secondary)" fontSize={11} tickLine={false} axisLine={false} width={80} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--ceo-card-bg)', borderColor: 'var(--ceo-border)', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} itemStyle={{ color: 'var(--ceo-text-primary)' }} cursor={{ fill: 'var(--ceo-bg)' }} />
-                    <Bar dataKey="load" radius={[0, 4, 4, 0]} barSize={16}>
-                      {allocationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.load > 100 ? 'var(--ceo-danger)' : 'var(--ceo-success)'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
           </div>
 
         </div>
 
-      </motion.div>
+        {/* RIGHT COLUMN */}
+        <div className="ceo-split-right">
+          
+          <div className="ceo-command-panel">
+            <div className="ceo-command-header">
+              <div className="ceo-typography-card-title"><Activity size={18} color="var(--ceo-primary)" /> Capital Allocation (₹M)</div>
+            </div>
+            <div className="ceo-command-content" style={{ height: '250px', paddingRight: '32px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={allocationData} layout="vertical" margin={{ top: 0, right: 0, left: 30, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--ceo-border)" horizontal={false} />
+                  <XAxis type="number" stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="dept" stroke="var(--ceo-text-secondary)" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={{ fill: 'var(--ceo-bg)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--ceo-border)' }} />
+                  <Bar dataKey="budget" fill="var(--ceo-primary)" barSize={20} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="ceo-command-panel" style={{ borderTop: '4px solid var(--ceo-danger)' }}>
+            <div className="ceo-command-header" style={{ borderBottom: 'none' }}>
+              <div className="ceo-typography-card-title"><ShieldAlert size={18} color="var(--ceo-danger)" /> Risk Matrix</div>
+            </div>
+            <div className="ceo-command-content" style={{ paddingTop: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ padding: '16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span className="ceo-typography-meta" style={{ fontWeight: 600, color: 'var(--ceo-text-primary)' }}>Q3 Brand Campaign</span>
+                  <span className="ceo-badge critical">Critical Risk</span>
+                </div>
+                <div className="ceo-typography-body" style={{ color: '#B91C1C', fontWeight: 600 }}>Budget overrun by 15% due to agency fees. Needs sponsor intervention.</div>
+              </div>
+              <div style={{ padding: '16px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span className="ceo-typography-meta" style={{ fontWeight: 600, color: 'var(--ceo-text-primary)' }}>APAC Data Center</span>
+                  <span className="ceo-badge warning">Schedule Delay</span>
+                </div>
+                <div className="ceo-typography-body" style={{ color: '#B45309', fontWeight: 600 }}>Hardware procurement delayed by 3 weeks. Buffer consumed.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }

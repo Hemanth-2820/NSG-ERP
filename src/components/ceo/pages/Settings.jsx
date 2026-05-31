@@ -1,134 +1,169 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { 
-  Settings as SettingsIcon, Shield, Bell, Key, User,
-  Monitor, Database, Lock, ChevronRight, Save, Link
+  Settings as SettingsIcon, Shield, Users, Key, Bell, 
+  List, Link2, Database, Save, Activity, Download
 } from 'lucide-react';
 import '../CEO.css';
 
-export default function Settings() {
-  const [activeTab, setActiveTab] = useState('account');
+// ==========================================
+// MOCK DATA
+// ==========================================
+const menuItems = [
+  { id: 'general', label: 'General Configuration', icon: <SettingsIcon size={16} /> },
+  { id: 'security', label: 'Security & Access', icon: <Shield size={16} /> },
+  { id: 'users', label: 'User Provisioning', icon: <Users size={16} /> },
+  { id: 'perms', label: 'Role Permissions', icon: <Key size={16} /> },
+  { id: 'notifs', label: 'System Notifications', icon: <Bell size={16} /> },
+  { id: 'audit', label: 'Compliance Audit Logs', icon: <List size={16} /> },
+  { id: 'integrations', label: 'ERP Integrations', icon: <Link2 size={16} /> },
+  { id: 'backups', label: 'Data & Backups', icon: <Database size={16} /> },
+];
 
-  const navItems = [
-    { id: 'account', label: 'Executive Account', icon: <User size={16} /> },
-    { id: 'security', label: 'Access & Security', icon: <Shield size={16} /> },
-    { id: 'notifications', label: 'Notification Preferences', icon: <Bell size={16} /> },
-    { id: 'integrations', label: 'ERP Integrations', icon: <Link size={16} /> },
-    { id: 'system', label: 'System Preferences', icon: <Monitor size={16} /> },
-  ];
+const auditLogs = [
+  { id: 'AUD-091', action: 'User Permissions Modified', user: 'System Admin', timestamp: 'Oct 14, 2023 14:32:01', ip: '192.168.1.45', status: 'Success' },
+  { id: 'AUD-090', action: 'Failed Login Attempt', user: 'unknown@nsg-erp.com', timestamp: 'Oct 14, 2023 11:15:22', ip: '203.0.113.42', status: 'Failed' },
+  { id: 'AUD-089', action: 'Database Backup Completed', user: 'System Task', timestamp: 'Oct 14, 2023 03:00:00', ip: 'localhost', status: 'Success' },
+  { id: 'AUD-088', action: 'API Key Generated', user: 'Vivek C. (CEO)', timestamp: 'Oct 13, 2023 16:45:10', ip: '10.0.0.15', status: 'Success' },
+];
+
+export default function Settings() {
+  const [activeMenu, setActiveMenu] = useState('general');
 
   return (
-    <div style={{ padding: '0 32px 32px 32px', maxWidth: '1800px', margin: '0 auto', color: 'var(--ceo-text-primary)' }}>
+    <div className="ceo-layout-grid">
       
-      {/* SECTION 1: Executive Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', borderBottom: '1px solid var(--ceo-border)', paddingBottom: '24px' }}
-      >
+      {/* 1. PAGE HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span className="ceo-badge neutral">Administration</span>
-            <ChevronRight size={14} color="var(--ceo-text-muted)" />
-            <span style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>Portal Configuration</span>
-          </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 700, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Executive Preferences</h1>
+          <h1 className="ceo-typography-page-title">Enterprise System Configuration</h1>
+          <p className="ceo-typography-body" style={{ marginTop: '8px' }}>Manage security, access controls, system integrations, and compliance logs.</p>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="ceo-btn"><Activity size={16} /> System Health</button>
           <button className="ceo-btn ceo-btn-primary"><Save size={16} /> Save Changes</button>
         </div>
-      </motion.div>
+      </div>
 
-      {/* SECTION 2: Master-Detail Setup Layout */}
-      <div className="ceo-setup-layout">
+      {/* 2. SPLIT LAYOUT */}
+      <div className="ceo-split-layout">
         
-        {/* Sidebar */}
-        <div className="ceo-setup-sidebar">
-          {navItems.map(item => (
-            <div 
-              key={item.id} 
-              className={`ceo-setup-nav-item ${activeTab === item.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(item.id)}
-            >
-              {item.icon}
-              {item.label}
+        {/* LEFT COLUMN - NAV */}
+        <div style={{ width: '280px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          <div className="ceo-command-panel">
+            <div className="ceo-command-content" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {menuItems.map(item => (
+                <div 
+                  key={item.id} 
+                  onClick={() => setActiveMenu(item.id)}
+                  style={{
+                    padding: '12px 16px', borderRadius: 'var(--ceo-radius-btn)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    background: activeMenu === item.id ? 'var(--ceo-hover)' : 'transparent',
+                    color: activeMenu === item.id ? 'var(--ceo-primary)' : 'var(--ceo-text-secondary)',
+                    fontWeight: activeMenu === item.id ? 600 : 500,
+                    borderLeft: activeMenu === item.id ? '3px solid var(--ceo-primary)' : '3px solid transparent'
+                  }}
+                >
+                  {item.icon}
+                  <span style={{ fontSize: '14px' }}>{item.label}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
         </div>
 
-        {/* Content Area */}
+        {/* RIGHT COLUMN - CONTENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {activeTab === 'account' && (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="ceo-command-panel">
+          {activeMenu === 'general' && (
+            <div className="ceo-command-panel">
               <div className="ceo-command-header">
-                <div className="ceo-dash-card-title"><User size={18} color="var(--ceo-primary)" /> Personal Executive Profile</div>
+                <div className="ceo-typography-card-title"><SettingsIcon size={18} color="var(--ceo-primary)" /> General Enterprise Settings</div>
               </div>
-              <div className="ceo-command-content">
-                <div style={{ display: 'flex', gap: '32px', marginBottom: '32px' }}>
-                  <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: '#F1F5F9', border: '1px solid var(--ceo-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 700, color: 'var(--ceo-text-muted)' }}>
-                    VC
+              <div className="ceo-command-content" style={{ padding: '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', maxWidth: '800px' }}>
+                  <div className="ceo-form-group">
+                    <label>Enterprise Instance Name</label>
+                    <input type="text" className="ceo-form-input" defaultValue="NSG Global ERP - Prod" />
                   </div>
-                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <div className="ceo-form-group">
-                      <label>Full Name</label>
-                      <input type="text" className="ceo-form-input" defaultValue="Vivek C." />
-                    </div>
-                    <div className="ceo-form-group">
-                      <label>Corporate Title</label>
-                      <input type="text" className="ceo-form-input" defaultValue="Chief Executive Officer" disabled style={{ background: '#F8FAFC' }} />
-                    </div>
-                    <div className="ceo-form-group">
-                      <label>Primary Email</label>
-                      <input type="email" className="ceo-form-input" defaultValue="vivek@nsg-erp.com" />
-                    </div>
-                    <div className="ceo-form-group">
-                      <label>Contact Number</label>
-                      <input type="text" className="ceo-form-input" defaultValue="+91 98765 43210" />
-                    </div>
+                  <div className="ceo-form-group">
+                    <label>Primary Domain</label>
+                    <input type="text" className="ceo-form-input" defaultValue="erp.nsg-global.com" disabled style={{ background: 'var(--ceo-bg)' }} />
+                  </div>
+                  <div className="ceo-form-group">
+                    <label>System Timezone</label>
+                    <select className="ceo-form-input" defaultValue="UTC">
+                      <option value="UTC">UTC (Coordinated Universal Time)</option>
+                      <option value="IST">IST (Indian Standard Time)</option>
+                      <option value="EST">EST (Eastern Standard Time)</option>
+                    </select>
+                  </div>
+                  <div className="ceo-form-group">
+                    <label>Default Currency</label>
+                    <select className="ceo-form-input" defaultValue="INR">
+                      <option value="INR">INR (₹)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                    </select>
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
 
-          {activeTab === 'security' && (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="ceo-command-panel">
+          {activeMenu === 'audit' && (
+            <div className="ceo-command-panel">
               <div className="ceo-command-header">
-                <div className="ceo-dash-card-title"><Shield size={18} color="var(--ceo-success)" /> Security & Authentication</div>
+                <div className="ceo-typography-card-title"><List size={18} color="var(--ceo-primary)" /> Security & Compliance Audit Logs</div>
+                <button className="ceo-btn" style={{ padding: '6px 12px', fontSize: '12px' }}><Download size={14} /> Export CSV</button>
               </div>
-              <div className="ceo-command-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <div style={{ padding: '20px', border: '1px solid var(--ceo-border)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>Two-Factor Authentication (2FA)</div>
-                    <div style={{ fontSize: '13px', color: 'var(--ceo-text-muted)' }}>Add an extra layer of security to your executive account.</div>
-                  </div>
-                  <button className="ceo-btn" style={{ color: 'var(--ceo-success)', borderColor: 'var(--ceo-success)' }}>Enabled</button>
-                </div>
-                
-                <div style={{ padding: '20px', border: '1px solid var(--ceo-border)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>Change Password</div>
-                    <div style={{ fontSize: '13px', color: 'var(--ceo-text-muted)' }}>Last changed 45 days ago. Required every 90 days.</div>
-                  </div>
-                  <button className="ceo-btn">Update Password</button>
-                </div>
+              <div className="ceo-erp-table-container" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
+                <table className="ceo-erp-table">
+                  <thead>
+                    <tr>
+                      <th>Event ID</th>
+                      <th>Action</th>
+                      <th>User / Actor</th>
+                      <th>IP Address</th>
+                      <th>Timestamp (UTC)</th>
+                      <th style={{ textAlign: 'right' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.map((log) => (
+                      <tr key={log.id}>
+                        <td style={{ fontFamily: 'monospace' }} className="ceo-typography-meta">{log.id}</td>
+                        <td style={{ fontWeight: 600 }}>{log.action}</td>
+                        <td>{log.user}</td>
+                        <td style={{ fontFamily: 'monospace' }} className="ceo-typography-meta">{log.ip}</td>
+                        <td className="ceo-typography-meta">{log.timestamp}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <span className={`ceo-badge ${log.status === 'Success' ? 'success' : 'critical'}`}>
+                            {log.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </motion.div>
+            </div>
           )}
 
-          {activeTab !== 'account' && activeTab !== 'security' && (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="ceo-command-panel">
-              <div className="ceo-command-header">
-                <div className="ceo-dash-card-title"><SettingsIcon size={18} color="var(--ceo-text-muted)" /> Preference Module</div>
+          {activeMenu !== 'general' && activeMenu !== 'audit' && (
+            <div className="ceo-command-panel" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <SettingsIcon size={48} color="var(--ceo-border)" style={{ margin: '0 auto 16px auto' }} />
+                <h3 className="ceo-typography-card-title" style={{ justifyContent: 'center', marginBottom: '8px' }}>Configuration Module Ready</h3>
+                <p className="ceo-typography-body">The {menuItems.find(m => m.id === activeMenu)?.label} module is connected to the master database.</p>
               </div>
-              <div className="ceo-command-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--ceo-text-muted)', fontSize: '14px' }}>
-                Select a preference module from the sidebar to configure your settings.
-              </div>
-            </motion.div>
+            </div>
           )}
 
         </div>
+
       </div>
 
     </div>

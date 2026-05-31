@@ -1,181 +1,157 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { 
-  MessageSquare, Search, Plus, Filter, MoreVertical, 
-  Paperclip, Send, Phone, Video, Info, CheckCircle, 
-  Clock, ChevronRight, User, Star
+  Megaphone, ShieldAlert, Pin, Clock, 
+  Send, Users, Briefcase, FileText, Settings, Search, Edit3
 } from 'lucide-react';
 import '../CEO.css';
 
 // ==========================================
 // MOCK DATA
 // ==========================================
-const conversations = [
-  { id: 1, name: "Executive Board", type: "group", lastMsg: "Please review the Q3 projections before the 2PM call.", time: "10:42 AM", unread: 3, active: true },
-  { id: 2, name: "Sarah Connor", type: "direct", role: "VP Engineering", lastMsg: "The cloud migration is complete. Zero downtime.", time: "09:15 AM", unread: 0 },
-  { id: 3, name: "Crisis Management", type: "group", lastMsg: "PR statement has been finalized and sent to legal.", time: "Yesterday", unread: 0 },
-  { id: 4, name: "John Doe", type: "direct", role: "CFO", lastMsg: "I've attached the revised budget sheets for approval.", time: "Yesterday", unread: 1 },
-  { id: 5, name: "Harvey Specter", type: "direct", role: "Chief Legal Officer", lastMsg: "Contract terms look solid. Proceed to signing.", time: "28 May", unread: 0 },
+const commChannels = [
+  { id: 'exec', label: 'Executive Directives', icon: <Megaphone size={16} /> },
+  { id: 'board', label: 'Board Communications', icon: <Briefcase size={16} /> },
+  { id: 'dept', label: 'Department Updates', icon: <Users size={16} /> },
+  { id: 'alerts', label: 'System Alerts', icon: <ShieldAlert size={16} /> },
 ];
 
-const currentChat = [
-  { sender: "Sarah Connor", role: "VP Eng", time: "09:05 AM", msg: "Vivek, the final cluster migration is starting now.", isMe: false },
-  { sender: "Vivek C.", role: "CEO", time: "09:10 AM", msg: "Understood. Keep me posted on any latency spikes.", isMe: true },
-  { sender: "Sarah Connor", role: "VP Eng", time: "09:15 AM", msg: "The cloud migration is complete. Zero downtime. Performance metrics look completely stable across all regions.", isMe: false },
+const messages = [
+  { id: 1, title: 'Q3 Earnings Call Prep', channel: 'Executive Directives', sender: 'CEO Office', date: 'Oct 14, 2023', priority: 'High', pinned: true },
+  { id: 2, title: 'Board Resolution: Mergers', channel: 'Board Communications', sender: 'Legal', date: 'Oct 12, 2023', priority: 'Critical', pinned: true },
+  { id: 3, title: 'Data Center Migration Schedule', channel: 'System Alerts', sender: 'IT Ops', date: 'Oct 10, 2023', priority: 'High', pinned: false },
+  { id: 4, title: 'New VP of Sales Announced', channel: 'Department Updates', sender: 'HR', date: 'Oct 08, 2023', priority: 'Standard', pinned: false },
 ];
-
-// ==========================================
-// ANIMATION VARIANTS
-// ==========================================
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-};
 
 export default function Messaging() {
-  return (
-    <div style={{ padding: '0 32px 32px 32px', maxWidth: '1800px', margin: '0 auto', color: 'var(--ceo-text-primary)' }}>
-      
-      {/* SECTION 1: Executive Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', borderBottom: '1px solid var(--ceo-border)', paddingBottom: '24px' }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span className="ceo-badge neutral">Communications</span>
-            <ChevronRight size={14} color="var(--ceo-text-muted)" />
-            <span style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>Internal Network</span>
-          </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 700, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Executive Comms Hub</h1>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="ceo-btn"><Phone size={16} /> Conference Bridge</button>
-          <button className="ceo-btn ceo-btn-primary"><Plus size={16} /> New Secure Channel</button>
-        </div>
-      </motion.div>
+  const [activeChannel, setActiveChannel] = useState('exec');
 
-      <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+  return (
+    <div className="ceo-layout-grid">
+      
+      {/* 1. PAGE HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 className="ceo-typography-page-title">Executive Communication Hub</h1>
+          <p className="ceo-typography-body" style={{ marginTop: '8px' }}>Centralized broadcast center for board, executive, and enterprise-wide directives.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="ceo-btn"><Settings size={16} /> Comm Policies</button>
+          <button className="ceo-btn ceo-btn-primary"><Edit3 size={16} /> New Broadcast</button>
+        </div>
+      </div>
+
+      {/* 2. SPLIT LAYOUT */}
+      <div className="ceo-split-layout">
         
-        <div className="ceo-command-panel" style={{ height: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+        {/* LEFT COLUMN - NAV */}
+        <div style={{ width: '280px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
-          {/* SIDEBAR - Inbox */}
-          <div style={{ width: '350px', borderRight: '1px solid var(--ceo-border)', display: 'flex', flexDirection: 'column', background: 'var(--ceo-bg)' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid var(--ceo-border)', background: '#FFFFFF' }}>
-              <div style={{ position: 'relative' }}>
-                <Search size={14} color="var(--ceo-text-muted)" style={{ position: 'absolute', left: '12px', top: '10px' }} />
-                <input type="text" placeholder="Search secure channels..." className="ceo-form-input" style={{ paddingLeft: '32px', background: 'var(--ceo-bg)' }} />
-              </div>
+          <div className="ceo-command-panel">
+            <div className="ceo-command-header">
+              <div className="ceo-typography-card-title">Communication Channels</div>
             </div>
-            
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {conversations.map((chat) => (
+            <div className="ceo-command-content" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {commChannels.map(ch => (
                 <div 
-                  key={chat.id} 
-                  style={{ 
-                    padding: '16px 20px', 
-                    borderBottom: '1px solid var(--ceo-border)', 
-                    cursor: 'pointer',
-                    background: chat.active ? '#FFFFFF' : 'transparent',
-                    borderLeft: chat.active ? '4px solid var(--ceo-primary)' : '4px solid transparent',
+                  key={ch.id} 
+                  onClick={() => setActiveChannel(ch.id)}
+                  style={{
+                    padding: '12px 16px', borderRadius: 'var(--ceo-radius-btn)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    background: activeChannel === ch.id ? 'var(--ceo-hover)' : 'transparent',
+                    color: activeChannel === ch.id ? 'var(--ceo-primary)' : 'var(--ceo-text-secondary)',
+                    fontWeight: activeChannel === ch.id ? 600 : 500,
+                    borderLeft: activeChannel === ch.id ? '3px solid var(--ceo-primary)' : '3px solid transparent'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--ceo-text-primary)' }}>{chat.name}</div>
-                    <div style={{ fontSize: '11px', color: chat.unread > 0 ? 'var(--ceo-primary)' : 'var(--ceo-text-muted)', fontWeight: chat.unread > 0 ? 600 : 400 }}>{chat.time}</div>
-                  </div>
-                  {chat.role && <div style={{ fontSize: '11px', color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>{chat.role}</div>}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '13px', color: chat.unread > 0 ? 'var(--ceo-text-primary)' : 'var(--ceo-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px', fontWeight: chat.unread > 0 ? 600 : 400 }}>
-                      {chat.lastMsg}
-                    </div>
-                    {chat.unread > 0 && (
-                      <div style={{ background: 'var(--ceo-primary)', color: 'white', fontSize: '10px', fontWeight: 'bold', width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {chat.unread}
-                      </div>
-                    )}
-                  </div>
+                  {ch.icon}
+                  <span style={{ fontSize: '14px' }}>{ch.label}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* MAIN CHAT AREA */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
-            
-            {/* Chat Header */}
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--ceo-bg)', border: '1px solid var(--ceo-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>
-                  SC
-                </div>
-                <div>
-                  <h2 style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 4px 0' }}>Sarah Connor</h2>
-                  <div style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--ceo-success)' }}></div>
-                    VP Engineering • Active Now
-                  </div>
+          <div className="ceo-command-panel">
+            <div className="ceo-command-header">
+              <div className="ceo-typography-card-title">Scheduled Broadcasts</div>
+            </div>
+            <div className="ceo-command-content" style={{ padding: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ padding: '12px', background: 'var(--ceo-bg)', borderRadius: '8px', border: '1px solid var(--ceo-border)' }}>
+                  <div className="ceo-typography-meta" style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12}/> Tomorrow, 09:00 AM</div>
+                  <div className="ceo-typography-body" style={{ fontWeight: 600, color: 'var(--ceo-text-primary)' }}>Q3 Townhall Invite</div>
                 </div>
               </div>
-              
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button className="ceo-btn" style={{ padding: '8px' }}><Phone size={16} /></button>
-                <button className="ceo-btn" style={{ padding: '8px' }}><Video size={16} /></button>
-                <button className="ceo-btn" style={{ padding: '8px' }}><Info size={16} /></button>
-              </div>
             </div>
-
-            {/* Messages Area */}
-            <div style={{ flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ textAlign: 'center', margin: '20px 0' }}>
-                <span className="ceo-badge neutral" style={{ fontSize: '10px' }}>Today</span>
-              </div>
-              
-              {currentChat.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.isMe ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)' }}>{msg.sender}</span>
-                    <span style={{ fontSize: '10px', color: 'var(--ceo-text-muted)' }}>{msg.time}</span>
-                  </div>
-                  <div style={{ 
-                    padding: '12px 16px', 
-                    borderRadius: '8px', 
-                    background: msg.isMe ? 'var(--ceo-primary)' : 'var(--ceo-bg)',
-                    color: msg.isMe ? '#FFFFFF' : 'var(--ceo-text-primary)',
-                    border: msg.isMe ? 'none' : '1px solid var(--ceo-border)',
-                    maxWidth: '70%',
-                    fontSize: '14px',
-                    lineHeight: '1.5',
-                    borderTopRightRadius: msg.isMe ? 0 : '8px',
-                    borderTopLeftRadius: msg.isMe ? '8px' : 0
-                  }}>
-                    {msg.msg}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Input Area */}
-            <div style={{ padding: '20px 24px', borderTop: '1px solid var(--ceo-border)', background: 'var(--ceo-bg)' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <button style={{ background: 'transparent', border: 'none', color: 'var(--ceo-text-muted)', cursor: 'pointer', padding: '8px' }}><Paperclip size={20} /></button>
-                <input 
-                  type="text" 
-                  placeholder="Type a secure message..." 
-                  className="ceo-form-input" 
-                  style={{ flex: 1, padding: '12px 16px', background: '#FFFFFF' }} 
-                />
-                <button className="ceo-btn ceo-btn-primary" style={{ padding: '12px 24px' }}>
-                  <Send size={16} /> Send
-                </button>
-              </div>
-            </div>
-
           </div>
+
         </div>
 
-      </motion.div>
+        {/* RIGHT COLUMN - CONTENT */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* SEARCH & FILTER */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search size={14} color="var(--ceo-text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+              <input type="text" placeholder="Search directives, alerts, and board minutes..." className="ceo-form-input" style={{ paddingLeft: '32px' }} />
+            </div>
+          </div>
+
+          {/* MESSAGE FEED */}
+          <div className="ceo-command-panel">
+            <div className="ceo-command-header">
+              <div className="ceo-typography-card-title">Recent Communications</div>
+            </div>
+            <div className="ceo-command-content" style={{ padding: 0 }}>
+              {messages.map((msg, i) => (
+                <div key={msg.id} style={{ 
+                  padding: '24px', 
+                  borderBottom: i === messages.length - 1 ? 'none' : '1px solid var(--ceo-border)',
+                  background: msg.pinned ? 'var(--ceo-hover)' : 'transparent'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {msg.pinned && <Pin size={14} color="var(--ceo-primary)" style={{ transform: 'rotate(45deg)' }} />}
+                      <span className="ceo-typography-section-title">{msg.title}</span>
+                    </div>
+                    <span className={`ceo-badge ${msg.priority === 'Critical' ? 'critical' : msg.priority === 'High' ? 'warning' : 'neutral'}`}>
+                      {msg.priority}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
+                    <div>
+                      <div className="ceo-typography-meta">Sender</div>
+                      <div className="ceo-typography-body" style={{ fontWeight: 600 }}>{msg.sender}</div>
+                    </div>
+                    <div>
+                      <div className="ceo-typography-meta">Channel</div>
+                      <div className="ceo-typography-body">{msg.channel}</div>
+                    </div>
+                    <div>
+                      <div className="ceo-typography-meta">Date Published</div>
+                      <div className="ceo-typography-body">{msg.date}</div>
+                    </div>
+                  </div>
+
+                  <p className="ceo-typography-body" style={{ marginBottom: '24px', maxWidth: '800px', lineHeight: '1.6' }}>
+                    This is a preview of the official communication. Executive directives contain highly sensitive structural and financial data intended only for the designated leadership distribution list. Please click below to read the full document and acknowledge receipt.
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button className="ceo-btn ceo-btn-primary"><FileText size={16} /> Read Full Document</button>
+                    <button className="ceo-btn"><Send size={16} /> Forward to Dept Head</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }
