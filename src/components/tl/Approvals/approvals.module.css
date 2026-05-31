@@ -1,0 +1,267 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  background-color: #ffffff; /* Light background */
+  color: #1e293b;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tabsHeader {
+  display: flex;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  gap: 16px;
+  align-items: center;
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tabBtn:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+.tabBtnActive {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge {
+  background-color: #ef4444;
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: bold;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 500px;
+}
+
+.listPanel, .detailPanel {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.panelTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* List Item Styles */
+.listItem {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.listItem:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+}
+
+.listItemActive {
+  border-color: #4f46e5;
+  background-color: #f5f3ff;
+}
+
+.listItemHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.empName {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.urgencyBadge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #f59e0b;
+  color: #fff;
+}
+
+.itemDesc {
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.actionRow {
+  display: flex;
+  gap: 8px;
+}
+
+.btnApprove, .btnReject {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.btnApprove {
+  background-color: #10b981;
+  color: white;
+}
+
+.btnApprove:hover {
+  background-color: #059669;
+}
+
+.btnReject {
+  background-color: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.btnReject:hover {
+  background-color: #fef2f2;
+}
+
+/* Detail Panel Styles */
+.detailHeader {
+  margin-bottom: 24px;
+}
+
+.detailTitle {
+  font-size: 20px;
+  font-weight: bold;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.detailSub {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.infoBlock {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.infoLabel {
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.infoValue {
+  font-size: 14px;
+  color: #334155;
+}
+
+.warningBox {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px;
+  color: #b91c1c;
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.successBox {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 12px;
+  color: #15803d;
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.gridTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.gridTable th {
+  text-align: left;
+  padding: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.gridTable td {
+  padding: 8px;
+  font-size: 13px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.imagePlaceholder {
+  width: 100%;
+  height: 150px;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}

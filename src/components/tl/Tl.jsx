@@ -8,6 +8,7 @@ import Timesheets from './Timesheets/index';
 import Reports from './Reports/index';
 import Escalations from './Escalations/index';
 import MessagingAndMeet from './Messaging & Meet/messages.module.index';
+import Approvals from './Approvals/index';
 
 export default function Tl({ activeTab, setActiveTab }) {
   const [selectedChatUser, setSelectedChatUser] = useState(null);
@@ -23,8 +24,9 @@ export default function Tl({ activeTab, setActiveTab }) {
       {activeTab === 'reports' && <Reports />}
       {activeTab === 'escalations' && <Escalations />}
       {activeTab === 'messaging' && <MessagingAndMeet initialSelectedChannel={selectedChatUser} />}
+      {activeTab === 'approvals' && <Approvals />}
       
-      {activeTab !== 'dashboard' && activeTab !== 'team' && activeTab !== 'projects' && activeTab !== 'tasks' && activeTab !== 'attendance' && activeTab !== 'timesheets' && activeTab !== 'reports' && activeTab !== 'escalations' && activeTab !== 'messaging' && (
+      {activeTab !== 'dashboard' && activeTab !== 'team' && activeTab !== 'projects' && activeTab !== 'tasks' && activeTab !== 'attendance' && activeTab !== 'timesheets' && activeTab !== 'reports' && activeTab !== 'escalations' && activeTab !== 'messaging' && activeTab !== 'approvals' && (
         <>
           <div className="component-header">
             <div>
