@@ -1,25 +1,52 @@
 import React from 'react';
-import { LayoutDashboard } from 'lucide-react';
+import { 
+  LayoutDashboard, Briefcase, Users, FileCheck, 
+  Clock, FileWarning, Calendar, CreditCard, TrendingUp, LogOut, 
+  GraduationCap, BarChart3, Sliders, MessageSquare 
+} from 'lucide-react';
 
 export default function HrSidebar({ activeTab, setActiveTab }) {
-  const isActive = activeTab === 'dashboard';
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'recruitment', label: 'Recruitment & ATS', icon: Briefcase },
+    { id: 'employees', label: 'Employee Registry', icon: Users },
+    { id: 'onboarding', label: 'Onboarding', icon: FileCheck },
+    { id: 'attendance', label: 'Attendance', icon: Clock },
+    { id: 'timesheets', label: 'Timesheet Exceptions', icon: FileWarning },
+    { id: 'leave', label: 'Leave Management', icon: Calendar },
+    { id: 'payroll', label: 'Payroll Builder', icon: CreditCard },
+    { id: 'appraisals', label: 'Appraisals', icon: TrendingUp },
+    { id: 'exits', label: 'Exits & FnF', icon: LogOut },
+    { id: 'lnd', label: 'Learning & L&D', icon: GraduationCap },
+    { id: 'reports', label: 'Reports Engine', icon: BarChart3 },
+    { id: 'settings', label: 'Settings', icon: Sliders },
+    { id: 'messaging', label: 'Messaging & Meet', icon: MessageSquare },
+  ];
 
   return (
-    <div className="nav-group">
+    <div className="nav-group" style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingBottom: '32px' }}>
       <span className="nav-group-title">HR Modules</span>
-      <button
-        className={`nav-link ${isActive ? 'active' : ''}`}
-        onClick={() => setActiveTab('dashboard')}
-        style={isActive ? {
-          color: '#ec4899',
-          borderLeftColor: '#ec4899',
-          backgroundColor: 'rgba(236, 72, 153, 0.05)'
-        } : {}}
-      >
-        <LayoutDashboard size={18} />
-        <span>Dashboard</span>
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: 'calc(100vh - 240px)', overflowY: 'auto', paddingRight: '4px' }}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              className={`nav-link ${isActive ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              style={isActive ? {
+                color: '#ec4899',
+                borderLeftColor: '#ec4899',
+                backgroundColor: 'rgba(236, 72, 153, 0.05)'
+              } : {}}
+            >
+              <Icon size={18} />
+              <span style={{ fontSize: '13px' }}>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
-
