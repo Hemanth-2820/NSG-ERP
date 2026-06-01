@@ -1,0 +1,513 @@
+/* ============================================================
+   Timesheet.css — scoped styles for the Employee Timesheet module
+   Matches att-root design tokens from Attendance.css
+   ============================================================ */
+
+/* ── Design tokens (timesheet-specific) ── */
+.ts-root {
+  --ts-bg:              #0f172a;
+  --ts-bg-card:         #16213e;
+  --ts-bg-card-hover:   #1a2747;
+  --ts-bg-inner:        #1e2d4a;
+  --ts-border:          rgba(255, 255, 255, 0.08);
+  --ts-border-subtle:   rgba(255, 255, 255, 0.05);
+
+  --ts-text:            #e8edf5;
+  --ts-text-dim:        rgba(232, 237, 245, 0.55);
+  --ts-text-muted:      rgba(232, 237, 245, 0.28);
+
+  --ts-emerald:         #10b981;
+  --ts-emerald-dim:     rgba(16, 185, 129, 0.12);
+  --ts-emerald-border:  rgba(16, 185, 129, 0.25);
+  --ts-blue:            #60a5fa;
+  --ts-blue-dim:        rgba(96, 165, 250, 0.12);
+  --ts-amber:           #fbbf24;
+  --ts-amber-dim:       rgba(251, 191, 36, 0.12);
+  --ts-red:             #f87171;
+  --ts-red-dim:         rgba(248, 113, 113, 0.12);
+  --ts-violet:          #a78bfa;
+  --ts-violet-dim:      rgba(167, 139, 250, 0.12);
+  --ts-violet-border:   rgba(167, 139, 250, 0.30);
+
+  --ts-radius-card:     16px;
+  --ts-radius-item:     10px;
+
+  font-family: 'Geist', 'DM Sans', 'Inter', sans-serif;
+  color: var(--ts-text);
+}
+
+/* ── Animations ── */
+@keyframes ts-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ts-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes ts-glow-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(167, 139, 250, 0.5); }
+  70%  { box-shadow: 0 0 0 12px rgba(167, 139, 250, 0);  }
+  100% { box-shadow: 0 0 0 0   rgba(167, 139, 250, 0);   }
+}
+
+.ts-spin     { animation: ts-spin 0.8s linear infinite; }
+.ts-fade-in  { animation: ts-fade-in 0.3s ease both; }
+
+/* ── Page layout ── */
+.ts-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+/* ── Card base ── */
+.ts-card {
+  background: var(--ts-bg-card);
+  border: 1px solid var(--ts-border);
+  border-radius: var(--ts-radius-card);
+  padding: 24px;
+}
+
+/* ── Section header ── */
+.ts-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.ts-section-header__icon  { flex-shrink: 0; }
+.ts-section-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ts-text);
+}
+.ts-section-header__badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* ════════════════════════════════════════
+   WEEK NAVIGATOR
+   ════════════════════════════════════════ */
+.ts-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.ts-week-nav__btn {
+  background: var(--ts-bg-inner);
+  border: 1px solid var(--ts-border);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ts-text-dim);
+  transition: all 150ms;
+}
+.ts-week-nav__btn:hover:not(:disabled) {
+  background: var(--ts-bg-card-hover);
+  color: var(--ts-text);
+}
+.ts-week-nav__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.ts-week-nav__label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ts-text);
+}
+.ts-week-nav__sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ts-text-muted);
+  margin-top: 2px;
+}
+
+/* ════════════════════════════════════════
+   TIMESHEET GRID
+   ════════════════════════════════════════ */
+.ts-grid-wrap {
+  overflow-x: auto;
+  border-radius: var(--ts-radius-item);
+  border: 1px solid var(--ts-border);
+}
+
+.ts-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* Header row */
+.ts-grid thead tr {
+  background: var(--ts-bg-inner);
+}
+.ts-grid thead th {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ts-text-muted);
+  border-bottom: 1px solid var(--ts-border);
+  white-space: nowrap;
+}
+.ts-grid thead th.ts-col-task  { min-width: 180px; position: sticky; left: 0; background: var(--ts-bg-inner); z-index: 2; }
+.ts-grid thead th.ts-col-day   { min-width: 90px; text-align: center; }
+.ts-grid thead th.ts-col-total { min-width: 70px; text-align: center; color: var(--ts-emerald); }
+
+/* Body rows */
+.ts-grid tbody tr {
+  border-bottom: 1px solid var(--ts-border-subtle);
+  transition: background 120ms;
+}
+.ts-grid tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+.ts-grid tbody tr:hover            { background: var(--ts-bg-card-hover); }
+
+.ts-grid tbody td {
+  padding: 10px 14px;
+  color: var(--ts-text);
+  vertical-align: middle;
+}
+.ts-grid tbody td.ts-col-task {
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+  min-width: 180px;
+}
+
+/* Task name cell */
+.ts-task-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ts-text);
+}
+.ts-task-sprint {
+  font-size: 10px;
+  color: var(--ts-text-muted);
+  margin-top: 2px;
+}
+
+/* Hour input cell */
+.ts-hour-input {
+  width: 64px;
+  background: var(--ts-bg-inner);
+  border: 1px solid var(--ts-border);
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ts-text);
+  font-family: 'DM Mono', 'Courier New', monospace;
+  text-align: center;
+  outline: none;
+  transition: border-color 150ms;
+  -moz-appearance: textfield;
+}
+.ts-hour-input::-webkit-outer-spin-button,
+.ts-hour-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ts-hour-input:focus {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.05);
+}
+.ts-hour-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Row total badge */
+.ts-row-total {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ts-text-dim);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ts-row-total--ok  { color: var(--ts-emerald); }
+.ts-row-total--low { color: var(--ts-amber); }
+
+/* Footer row — day totals */
+.ts-grid tfoot tr.ts-footer-totals {
+  background: var(--ts-bg-inner);
+  border-top: 2px solid var(--ts-border);
+}
+.ts-grid tfoot td {
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.ts-footer-label {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ts-text-muted);
+  text-align: left !important;
+  position: sticky;
+  left: 0;
+  background: var(--ts-bg-inner);
+}
+
+/* Day total colour coding */
+.ts-day-total--ok      { color: var(--ts-emerald); }
+.ts-day-total--partial { color: var(--ts-amber); }
+.ts-day-total--zero    { color: var(--ts-red); }
+.ts-day-total--na      { color: var(--ts-text-muted); }
+
+/* Week total cell */
+.ts-week-total {
+  color: var(--ts-violet);
+  font-size: 13px;
+}
+
+/* ── Add task row ── */
+.ts-add-row td {
+  padding: 10px 14px;
+  border-top: 1px dashed var(--ts-border);
+}
+.ts-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px dashed var(--ts-emerald-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: var(--ts-emerald);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms;
+  font-family: inherit;
+}
+.ts-add-btn:hover {
+  background: var(--ts-emerald-dim);
+  border-style: solid;
+}
+
+/* ════════════════════════════════════════
+   SUBMIT BAR
+   ════════════════════════════════════════ */
+.ts-submit-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--ts-bg-inner);
+  border: 1px solid var(--ts-border);
+  border-radius: var(--ts-radius-card);
+}
+.ts-submit-bar__warning {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ts-amber);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ts-submit-btn {
+  height: 40px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 10px;
+  background: hsl(265, 60%, 28%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 200ms, box-shadow 200ms;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.ts-submit-btn:hover:not(:disabled) { background: hsl(265, 60%, 35%); }
+.ts-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ts-submit-btn--ready {
+  animation: ts-glow-ring 2s ease-out infinite;
+}
+
+/* ════════════════════════════════════════
+   STATUS BANNERS
+   ════════════════════════════════════════ */
+.ts-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  animation: ts-fade-in 0.3s ease both;
+}
+.ts-banner--success {
+  background: var(--ts-emerald-dim);
+  border: 1px solid var(--ts-emerald-border);
+  color: var(--ts-emerald);
+}
+.ts-banner--rejected {
+  background: var(--ts-red-dim);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: var(--ts-red);
+}
+.ts-banner__reason {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+.ts-resubmit-btn {
+  margin-left: auto;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ts-red-dim);
+  border: 1px solid rgba(248,113,113,0.3);
+  color: var(--ts-red);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 150ms;
+}
+.ts-resubmit-btn:hover { background: rgba(248,113,113,0.2); }
+
+/* ════════════════════════════════════════
+   MODAL — Add Task / Confirm Submit
+   ════════════════════════════════════════ */
+.ts-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: ts-fade-in 0.2s ease both;
+}
+.ts-modal {
+  background: var(--ts-bg-card);
+  border: 1px solid var(--ts-border);
+  border-radius: 18px;
+  padding: 28px;
+  width: 420px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ts-modal__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ts-text);
+}
+.ts-modal__sub {
+  font-size: 12px;
+  color: var(--ts-text-muted);
+  margin-top: 2px;
+}
+.ts-modal__list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ts-modal__task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--ts-bg-inner);
+  border: 1px solid var(--ts-border);
+  border-radius: var(--ts-radius-item);
+  cursor: pointer;
+  transition: all 150ms;
+}
+.ts-modal__task-item:hover {
+  background: var(--ts-bg-card-hover);
+  border-color: var(--ts-emerald-border);
+}
+.ts-modal__task-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ts-text);
+}
+.ts-modal__task-sprint {
+  font-size: 11px;
+  color: var(--ts-text-muted);
+  margin-top: 2px;
+}
+.ts-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.ts-modal__cancel-btn {
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--ts-border);
+  background: var(--ts-bg-inner);
+  color: var(--ts-text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 150ms;
+}
+.ts-modal__cancel-btn:hover { background: var(--ts-bg-card-hover); }
+.ts-modal__confirm-btn {
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: none;
+  background: hsl(265, 60%, 30%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 150ms;
+}
+.ts-modal__confirm-btn:hover { background: hsl(265, 60%, 38%); }
+
+/* ════════════════════════════════════════
+   AUTO-SAVE INDICATOR
+   ════════════════════════════════════════ */
+.ts-autosave {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ts-text-muted);
+  margin-left: auto;
+}
+.ts-autosave--saving { color: var(--ts-amber); }
+.ts-autosave--saved  { color: var(--ts-emerald); }
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .ts-grid thead th.ts-col-day  { min-width: 70px; }
+  .ts-hour-input                 { width: 52px; padding: 5px 6px; }
+  .ts-submit-bar                 { flex-direction: column; align-items: stretch; }
+  .ts-submit-btn                 { justify-content: center; }
+}

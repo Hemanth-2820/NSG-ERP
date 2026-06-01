@@ -1,0 +1,417 @@
+/* ============================================================
+   Employee.css — scoped styles for the Employee Dashboard
+   All colours, spacing, and animations live here.
+   index.css is NOT touched.
+   ============================================================ */
+
+/* ── Scoping root: all rules live under .emp-root ── */
+
+/* ── Design tokens (dark emerald theme) ── */
+.emp-root {
+  --emp-bg-card:        #16213e;
+  --emp-bg-card-hover:  #1a2747;
+  --emp-bg-card-inner:  #1e2d4a;
+  --emp-border:         rgba(255, 255, 255, 0.08);
+  --emp-border-subtle:  rgba(255, 255, 255, 0.05);
+
+  --emp-text-primary:   #e8edf5;
+  --emp-text-secondary: rgba(232, 237, 245, 0.55);
+  --emp-text-muted:     rgba(232, 237, 245, 0.28);
+
+  --emp-emerald:        #10b981;
+  --emp-emerald-dim:    rgba(16, 185, 129, 0.12);
+  --emp-emerald-border: rgba(16, 185, 129, 0.25);
+
+  --emp-blue:           #60a5fa;
+  --emp-blue-dim:       rgba(96, 165, 250, 0.12);
+
+  --emp-violet:         #a78bfa;
+  --emp-violet-dim:     rgba(167, 139, 250, 0.12);
+
+  --emp-amber:          #fbbf24;
+  --emp-amber-dim:      rgba(245, 158, 11, 0.12);
+  --emp-amber-border:   rgba(245, 158, 11, 0.30);
+
+  --emp-red:            #f87171;
+  --emp-red-dim:        rgba(239, 68, 68, 0.12);
+
+  --emp-radius-card:    16px;
+  --emp-radius-item:    10px;
+
+  font-family: 'Geist', 'DM Sans', 'Inter', sans-serif;
+  color: var(--emp-text-primary);
+}
+
+/* ── Spinner ── */
+@keyframes emp-spin {
+  to { transform: rotate(360deg); }
+}
+.emp-spin {
+  animation: emp-spin 0.8s linear infinite;
+}
+
+/* ── Card base ── */
+.emp-card {
+  background: var(--emp-bg-card);
+  border: 1px solid var(--emp-border);
+  border-radius: var(--emp-radius-card);
+  padding: 20px;
+}
+
+/* ── Section header ── */
+.emp-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.emp-section-header__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.emp-section-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--emp-text-primary);
+}
+.emp-badge-count {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 2px 9px;
+}
+
+/* ── View-all link ── */
+.emp-view-all {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--emp-border-subtle);
+}
+.emp-view-all button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--emp-blue);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  transition: opacity 150ms;
+}
+.emp-view-all button:hover { opacity: 0.75; }
+
+/* ── Welcome Banner ── */
+.emp-welcome {
+  border-radius: var(--emp-radius-card);
+  background: linear-gradient(135deg, hsl(265, 60%, 13%), hsl(240, 45%, 10%));
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--emp-border);
+  transition: border-color 300ms;
+}
+.emp-welcome--late {
+  border-color: var(--emp-amber) !important;
+}
+.emp-welcome__glow {
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.emp-welcome__greeting {
+  color: var(--emp-text-secondary);
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+.emp-welcome__name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.emp-welcome__meta {
+  color: var(--emp-text-muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+.emp-welcome__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Late warning pill */
+.emp-late-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--emp-amber-dim);
+  border: 1px solid var(--emp-amber-border);
+  border-radius: 8px;
+  padding: 4px 12px;
+  margin-bottom: 10px;
+  color: var(--emp-amber);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Clock-in button ── */
+.emp-clockin-wrap { position: relative; }
+.emp-clockin-btn {
+  height: 44px;
+  padding: 0 20px;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  transition: background 300ms, transform 150ms, opacity 150ms;
+}
+.emp-clockin-btn:disabled { opacity: 0.8; cursor: wait; }
+.emp-clockin-btn:active:not(:disabled) { transform: scale(0.97); }
+.emp-clockin-btn--in  { background: hsl(158, 90%, 30%); }
+.emp-clockin-btn--out { background: hsl(0,   60%, 30%); }
+.emp-clockin-btn--in:hover:not(:disabled)  { background: hsl(158, 90%, 36%); }
+.emp-clockin-btn--out:hover:not(:disabled) { background: hsl(0,   60%, 36%); }
+.emp-clockin-elapsed {
+  background: rgba(255,255,255,0.15);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+}
+.emp-gps-tooltip {
+  position: absolute;
+  top: 110%; left: 0;
+  z-index: 10;
+  background: #111827;
+  border: 1px solid rgba(239,68,68,0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  color: var(--emp-red);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Quick action button ── */
+.emp-quick-btn {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 200ms;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+}
+.emp-quick-btn:hover {
+  background: var(--emp-bg-card-hover);
+  border-color: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+/* ── Task row ── */
+.emp-task-row {
+  padding: 10px 14px;
+  border-radius: var(--emp-radius-item);
+  background: var(--emp-bg-card-inner);
+  border: 1px solid var(--emp-border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 150ms;
+  position: relative;
+}
+.emp-task-row:hover { background: var(--emp-bg-card-hover); }
+.emp-task-title {
+  flex: 1;
+  font-size: 13px;
+  color: var(--emp-text-primary);
+  transition: color 150ms;
+}
+.emp-task-title--done {
+  color: var(--emp-text-muted);
+  text-decoration: line-through;
+}
+
+/* Priority badges */
+.emp-priority {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.emp-priority--high   { background: var(--emp-red-dim);    color: var(--emp-red);    }
+.emp-priority--medium { background: var(--emp-amber-dim);  color: var(--emp-amber);  }
+.emp-priority--low    { background: var(--emp-emerald-dim);color: var(--emp-emerald);}
+
+/* Status chip */
+.emp-status-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: opacity 150ms;
+  white-space: nowrap;
+}
+.emp-status-chip:hover { opacity: 0.75; }
+
+/* Status dropdown */
+.emp-status-dropdown {
+  position: absolute;
+  right: 0; top: 110%;
+  z-index: 20;
+  background: #111827;
+  border: 1px solid var(--emp-border);
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 130px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.emp-status-dropdown__item {
+  padding: 8px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--emp-text-secondary);
+  transition: background 120ms;
+}
+.emp-status-dropdown__item:hover { background: rgba(255,255,255,0.07); }
+
+/* ── Pending action row ── */
+.emp-action-row {
+  padding: 10px 14px;
+  border-radius: var(--emp-radius-item);
+  border: 1px solid;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 200ms;
+}
+.emp-action-row--active { background: var(--emp-bg-card-inner); }
+.emp-action-row--done   { background: var(--emp-emerald-dim);   }
+
+.emp-action-checkbox {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 200ms;
+  font-size: 10px;
+  font-weight: 900;
+  color: #fff;
+}
+.emp-action-checkbox--checked { background: var(--emp-emerald); border-color: var(--emp-emerald); }
+
+.emp-action-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--emp-text-primary);
+  transition: color 150ms;
+}
+.emp-action-label--done {
+  color: var(--emp-text-muted);
+  text-decoration: line-through;
+}
+.emp-action-sub {
+  font-size: 11px;
+  color: var(--emp-text-muted);
+  margin: 2px 0 0;
+}
+
+/* ── Notification row ── */
+.emp-notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--emp-radius-item);
+  cursor: pointer;
+  border: 1px solid;
+  min-height: 52px;
+  transition: all 180ms;
+}
+.emp-notif-row--unread {
+  background: var(--emp-emerald-dim);
+  border-color: var(--emp-emerald-border);
+}
+.emp-notif-row--read {
+  background: transparent;
+  border-color: var(--emp-border-subtle);
+}
+.emp-notif-row:hover { background: var(--emp-bg-card-inner); }
+
+.emp-notif-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.emp-notif-msg {
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.5;
+  color: var(--emp-text-primary);
+}
+.emp-notif-msg--read { color: var(--emp-text-muted); font-weight: 400; }
+.emp-notif-time {
+  font-size: 10px;
+  color: var(--emp-text-muted);
+  margin: 3px 0 0;
+}
+.emp-notif-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--emp-emerald);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+/* ── Dashboard grid layout ── */
+.emp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+.emp-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  grid-template-rows: auto auto;
+  gap: 16px;
+}
+.emp-grid__tasks { grid-row: 1 / 3; }
+
+@media (max-width: 860px) {
+  .emp-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: unset;
+  }
+  .emp-grid__tasks { grid-row: unset; }
+}

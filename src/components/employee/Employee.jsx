@@ -31,7 +31,7 @@ export default function Employee({ activeTab }) {
   }
 
   return (
-    <div className="component-container">
+    <div className="component-container emp-root">
       <div className="component-header">
         <div>
           <h1>Employee Dashboard</h1>

@@ -9,6 +9,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab }) {
   const isAssetsActive = activeTab === 'assets';
   const isMessagingActive = activeTab === 'messaging';
 
+export default function EmployeeSidebar({ activeTab, setActiveTab }) {
   return (
     <div className="nav-group">
       <span className="nav-group-title">Staff Modules</span>
@@ -113,4 +114,3 @@ export default function EmployeeSidebar({ activeTab, setActiveTab }) {
     </div>
   );
 }
-

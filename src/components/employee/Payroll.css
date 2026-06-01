@@ -1,0 +1,643 @@
+/* ============================================================
+   Payroll.css — scoped styles for the Employee Payroll module
+   Matches att-root design tokens from Attendance.css
+   ============================================================ */
+
+/* ── Design tokens (payroll-specific) ── */
+.pay-root {
+  --pay-bg:              #0f172a;
+  --pay-bg-card:         #16213e;
+  --pay-bg-card-hover:   #1a2747;
+  --pay-bg-inner:        #1e2d4a;
+  --pay-border:          rgba(255, 255, 255, 0.08);
+  --pay-border-subtle:   rgba(255, 255, 255, 0.05);
+
+  --pay-text:            #e8edf5;
+  --pay-text-dim:        rgba(232, 237, 245, 0.55);
+  --pay-text-muted:      rgba(232, 237, 245, 0.28);
+
+  --pay-emerald:         #10b981;
+  --pay-emerald-dim:     rgba(16, 185, 129, 0.12);
+  --pay-emerald-border:  rgba(16, 185, 129, 0.25);
+  --pay-blue:            #60a5fa;
+  --pay-blue-dim:        rgba(96, 165, 250, 0.12);
+  --pay-amber:           #fbbf24;
+  --pay-amber-dim:       rgba(251, 191, 36, 0.12);
+  --pay-red:             #f87171;
+  --pay-red-dim:         rgba(248, 113, 113, 0.12);
+  --pay-violet:          #a78bfa;
+  --pay-violet-dim:      rgba(167, 139, 250, 0.12);
+  --pay-violet-border:   rgba(167, 139, 250, 0.30);
+
+  --pay-radius-card:     16px;
+  --pay-radius-item:     10px;
+
+  font-family: 'Geist', 'DM Sans', 'Inter', sans-serif;
+  color: var(--pay-text);
+}
+
+/* ── Animations ── */
+@keyframes pay-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pay-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pay-slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pay-spin    { animation: pay-spin 0.8s linear infinite; }
+.pay-fade-in { animation: pay-fade-in 0.3s ease both; }
+
+/* ── Page layout ── */
+.pay-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+/* ── Card base ── */
+.pay-card {
+  background: var(--pay-bg-card);
+  border: 1px solid var(--pay-border);
+  border-radius: var(--pay-radius-card);
+  padding: 24px;
+}
+
+/* ── Section header ── */
+.pay-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.pay-section-header__icon  { flex-shrink: 0; }
+.pay-section-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--pay-text);
+}
+
+/* ════════════════════════════════════════
+   SUB-TAB SWITCHER (pill)
+   ════════════════════════════════════════ */
+.pay-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--pay-bg-inner);
+  border: 1px solid var(--pay-border);
+  border-radius: 12px;
+  padding: 5px;
+}
+.pay-tab {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pay-text-dim);
+  cursor: pointer;
+  transition: all 150ms;
+  font-family: inherit;
+  white-space: nowrap;
+  text-align: center;
+}
+.pay-tab:hover:not(.pay-tab--active) {
+  background: var(--pay-bg-card-hover);
+  color: var(--pay-text);
+}
+.pay-tab--active {
+  background: var(--pay-bg-card);
+  color: var(--pay-emerald);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* ════════════════════════════════════════
+   PAYSLIPS TAB
+   ════════════════════════════════════════ */
+.pay-slip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.pay-slip-card {
+  background: var(--pay-bg-inner);
+  border: 1px solid var(--pay-border);
+  border-radius: var(--pay-radius-item);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 150ms;
+}
+.pay-slip-card:hover {
+  border-color: var(--pay-emerald-border);
+}
+.pay-slip-card__month {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pay-text);
+}
+.pay-slip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--pay-emerald-dim);
+  border: 1px solid var(--pay-emerald-border);
+  color: var(--pay-emerald);
+}
+.pay-slip-amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pay-slip-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.pay-slip-row__label { color: var(--pay-text-muted); font-weight: 500; }
+.pay-slip-row__value { color: var(--pay-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pay-slip-row__value--red    { color: var(--pay-red); }
+.pay-slip-row__value--green  { color: var(--pay-emerald); }
+.pay-slip-divider {
+  border: none;
+  border-top: 1px solid var(--pay-border-subtle);
+}
+.pay-download-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--pay-border);
+  border-radius: 8px;
+  background: var(--pay-bg-card);
+  color: var(--pay-text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms;
+  font-family: inherit;
+}
+.pay-download-btn:hover {
+  border-color: var(--pay-blue-dim);
+  background: var(--pay-blue-dim);
+  color: var(--pay-blue);
+}
+.pay-download-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ════════════════════════════════════════
+   CTC BREAKDOWN TAB
+   ════════════════════════════════════════ */
+.pay-ctc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.pay-ctc-table-wrap {
+  background: var(--pay-bg-inner);
+  border: 1px solid var(--pay-border);
+  border-radius: var(--pay-radius-item);
+  overflow: hidden;
+}
+.pay-ctc-table-head {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--pay-border);
+}
+.pay-ctc-table-head--earn   { color: var(--pay-emerald); background: var(--pay-emerald-dim); }
+.pay-ctc-table-head--deduct { color: var(--pay-red);     background: var(--pay-red-dim); }
+.pay-ctc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--pay-border-subtle);
+  font-size: 13px;
+}
+.pay-ctc-row:last-child { border-bottom: none; }
+.pay-ctc-row__name  { color: var(--pay-text-dim); font-weight: 500; }
+.pay-ctc-row__value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pay-ctc-row__value--earn   { color: var(--pay-emerald); }
+.pay-ctc-row__value--deduct { color: var(--pay-red); }
+.pay-ctc-net {
+  background: linear-gradient(135deg, hsl(265,40%,18%), hsl(265,50%,14%));
+  border: 1px solid var(--pay-violet-border);
+  border-radius: var(--pay-radius-item);
+  padding: 20px 24px;
+  text-align: center;
+}
+.pay-ctc-net__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pay-violet);
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+.pay-ctc-net__amount {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--pay-violet);
+  font-variant-numeric: tabular-nums;
+}
+.pay-ctc-net__sub {
+  font-size: 11px;
+  color: var(--pay-text-muted);
+  margin-top: 6px;
+}
+
+/* ════════════════════════════════════════
+   TDS DECLARATION TAB
+   ════════════════════════════════════════ */
+.pay-tds-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pay-tds-section {
+  background: var(--pay-bg-inner);
+  border: 1px solid var(--pay-border);
+  border-radius: var(--pay-radius-item);
+  overflow: hidden;
+}
+.pay-tds-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--pay-border);
+  background: rgba(255,255,255,0.02);
+}
+.pay-tds-section-head__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pay-text);
+}
+.pay-tds-section-head__cap {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--pay-text-muted);
+}
+.pay-tds-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Form fields */
+.pay-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pay-form-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pay-text-muted);
+}
+.pay-form-input,
+.pay-form-select {
+  background: var(--pay-bg-card);
+  border: 1px solid var(--pay-border);
+  border-radius: var(--pay-radius-item);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--pay-text);
+  font-family: inherit;
+  transition: border-color 150ms;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.pay-form-input:focus,
+.pay-form-select:focus { border-color: rgba(96, 165, 250, 0.5); }
+.pay-form-input::placeholder { color: var(--pay-text-muted); }
+.pay-form-input:disabled,
+.pay-form-select:disabled { opacity: 0.45; cursor: not-allowed; }
+.pay-form-select { appearance: none; cursor: pointer; }
+.pay-form-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+.pay-cap-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--pay-text-muted);
+}
+.pay-cap-bar__track {
+  flex: 1;
+  height: 4px;
+  background: var(--pay-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.pay-cap-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--pay-emerald);
+  transition: width 300ms;
+}
+.pay-cap-bar__fill--warn { background: var(--pay-amber); }
+.pay-cap-bar__fill--over { background: var(--pay-red); }
+.pay-cap-warn {
+  font-size: 11px;
+  color: var(--pay-amber);
+  font-weight: 600;
+}
+
+/* Radio group */
+.pay-radio-group {
+  display: flex;
+  gap: 8px;
+}
+.pay-radio-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--pay-border);
+  background: var(--pay-bg-card);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pay-text-dim);
+  cursor: pointer;
+  transition: all 150ms;
+}
+.pay-radio-option--selected {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: var(--pay-blue-dim);
+  color: var(--pay-blue);
+}
+.pay-radio-option input { display: none; }
+
+/* File upload */
+.pay-file-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--pay-bg-card);
+  border: 1px dashed var(--pay-border);
+  border-radius: var(--pay-radius-item);
+  cursor: pointer;
+  transition: all 150ms;
+}
+.pay-file-upload:hover { border-color: var(--pay-emerald-border); }
+.pay-file-upload input[type="file"] { display: none; }
+.pay-file-upload__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pay-text-dim);
+}
+.pay-file-upload__name {
+  font-size: 11px;
+  color: var(--pay-emerald);
+  margin-left: 4px;
+}
+.pay-progress-bar {
+  height: 3px;
+  background: var(--pay-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.pay-progress-bar__fill {
+  height: 100%;
+  background: var(--pay-blue);
+  border-radius: 3px;
+  transition: width 200ms;
+}
+
+/* TDS estimate */
+.pay-tds-estimate {
+  background: var(--pay-violet-dim);
+  border: 1px solid var(--pay-violet-border);
+  border-radius: var(--pay-radius-item);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pay-tds-estimate__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pay-violet);
+}
+.pay-tds-estimate__value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--pay-violet);
+  font-variant-numeric: tabular-nums;
+}
+.pay-tds-estimate__sub {
+  font-size: 10px;
+  color: var(--pay-text-muted);
+  margin-top: 2px;
+}
+
+/* TDS submit button */
+.pay-submit-btn {
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: hsl(150, 60%, 24%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 200ms;
+  font-family: inherit;
+  margin-top: 4px;
+}
+.pay-submit-btn:hover:not(:disabled) { background: hsl(150, 60%, 30%); }
+.pay-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Toast / banner */
+.pay-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  animation: pay-fade-in 0.3s ease both;
+}
+.pay-banner--success {
+  background: var(--pay-emerald-dim);
+  border: 1px solid var(--pay-emerald-border);
+  color: var(--pay-emerald);
+}
+.pay-banner--error {
+  background: var(--pay-red-dim);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: var(--pay-red);
+}
+
+/* ════════════════════════════════════════
+   TAX CALCULATOR TAB
+   ════════════════════════════════════════ */
+.pay-calc-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.pay-regime-toggle {
+  display: flex;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.pay-regime-btn {
+  flex: 1;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--pay-border);
+  background: var(--pay-bg-inner);
+  color: var(--pay-text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 150ms;
+}
+.pay-regime-btn--active {
+  background: var(--pay-violet-dim);
+  border-color: var(--pay-violet-border);
+  color: var(--pay-violet);
+}
+.pay-calc-btn {
+  grid-column: 1 / -1;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: hsl(265, 60%, 26%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 200ms;
+}
+.pay-calc-btn:hover { background: hsl(265, 60%, 34%); }
+
+/* Results table */
+.pay-calc-results {
+  animation: pay-slide-down 0.3s ease both;
+}
+.pay-calc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pay-calc-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pay-text-muted);
+  background: var(--pay-bg-inner);
+  border-bottom: 1px solid var(--pay-border);
+}
+.pay-calc-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--pay-border-subtle);
+  color: var(--pay-text);
+}
+.pay-calc-table td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pay-calc-table tr:last-child td { border-bottom: none; }
+.pay-calc-table tr.pay-calc-row--total td {
+  background: var(--pay-bg-inner);
+  border-top: 1px solid var(--pay-border);
+  font-weight: 800;
+  color: var(--pay-violet);
+  font-size: 14px;
+}
+.pay-calc-slab {
+  margin-top: 16px;
+}
+.pay-calc-slab__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pay-text-muted);
+  margin-bottom: 10px;
+}
+.pay-slab-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--pay-border-subtle);
+  color: var(--pay-text-dim);
+}
+.pay-slab-item:last-child { border-bottom: none; }
+.pay-slab-item__tax { font-weight: 700; color: var(--pay-text); }
+
+/* Monthly TDS highlight */
+.pay-monthly-tds {
+  background: var(--pay-bg-inner);
+  border: 1px solid var(--pay-emerald-border);
+  border-radius: var(--pay-radius-item);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+.pay-monthly-tds__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pay-text-muted);
+}
+.pay-monthly-tds__value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--pay-emerald);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .pay-ctc-grid  { grid-template-columns: 1fr; }
+  .pay-calc-form { grid-template-columns: 1fr; }
+  .pay-slip-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .pay-tabs      { flex-wrap: wrap; }
+  .pay-slip-grid { grid-template-columns: 1fr; }
+}

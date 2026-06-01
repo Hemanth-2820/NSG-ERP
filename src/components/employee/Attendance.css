@@ -1,0 +1,725 @@
+/* ============================================================
+   Attendance.css — scoped styles for the Employee Attendance module
+   Matches emp-root design tokens from Employee.css
+   ============================================================ */
+
+/* ── Design tokens (attendance-specific) ── */
+.att-root {
+  --clock-in-active:    hsl(150, 60%, 28%);
+  --clock-out-active:   hsl(0, 60%, 28%);
+  --gps-ok:             hsl(150, 70%, 50%);
+  --gps-warn:           hsl(35, 90%, 60%);
+  --gps-error:          hsl(0, 70%, 55%);
+  --wfh-badge:          hsl(210, 70%, 50%);
+
+  --att-bg:             #0f172a;
+  --att-bg-card:        #16213e;
+  --att-bg-card-hover:  #1a2747;
+  --att-bg-inner:       #1e2d4a;
+  --att-border:         rgba(255, 255, 255, 0.08);
+  --att-border-subtle:  rgba(255, 255, 255, 0.05);
+
+  --att-text:           #e8edf5;
+  --att-text-dim:       rgba(232, 237, 245, 0.55);
+  --att-text-muted:     rgba(232, 237, 245, 0.28);
+
+  --att-emerald:        #10b981;
+  --att-emerald-dim:    rgba(16, 185, 129, 0.12);
+  --att-emerald-border: rgba(16, 185, 129, 0.25);
+  --att-blue:           #60a5fa;
+  --att-blue-dim:       rgba(96, 165, 250, 0.12);
+  --att-amber:          #fbbf24;
+  --att-amber-dim:      rgba(251, 191, 36, 0.12);
+  --att-red:            #f87171;
+  --att-red-dim:        rgba(248, 113, 113, 0.12);
+  --att-violet:         #a78bfa;
+
+  --att-radius-card:    16px;
+  --att-radius-item:    10px;
+
+  font-family: 'Geist', 'DM Sans', 'Inter', sans-serif;
+  color: var(--att-text);
+}
+
+/* ── Animations ── */
+@keyframes att-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes att-pulse-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0.5); }
+  70%  { box-shadow: 0 0 0 18px rgba(16, 185, 129, 0);  }
+  100% { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0);   }
+}
+@keyframes att-pulse-ring-red {
+  0%   { box-shadow: 0 0 0 0   rgba(248, 113, 113, 0.5); }
+  70%  { box-shadow: 0 0 0 18px rgba(248, 113, 113, 0);  }
+  100% { box-shadow: 0 0 0 0   rgba(248, 113, 113, 0);   }
+}
+@keyframes att-tick {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+@keyframes att-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes att-ripple {
+  0%   { transform: scale(0); opacity: 0.4; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.att-spin { animation: att-spin 0.8s linear infinite; }
+.att-fade-in { animation: att-fade-in 0.3s ease both; }
+
+/* ── Page layout ── */
+.att-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+/* ── Top grid: clock panel + status card ── */
+.att-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Bottom grid: log | WFH form | correction form ── */
+.att-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Card base (shared) ── */
+.att-card {
+  background: var(--att-bg-card);
+  border: 1px solid var(--att-border);
+  border-radius: var(--att-radius-card);
+  padding: 24px;
+}
+
+/* ── Section header ── */
+.att-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.att-section-header__icon { flex-shrink: 0; }
+.att-section-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--att-text);
+}
+
+/* ════════════════════════════════════════
+   CLOCK IN/OUT PANEL
+   ════════════════════════════════════════ */
+.att-clock-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+/* Giant circular clock button */
+.att-clock-btn-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  flex-shrink: 0;
+}
+
+.att-clock-btn {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  transition: transform 200ms, box-shadow 200ms;
+  position: relative;
+  overflow: hidden;
+  outline: none;
+}
+
+.att-clock-btn--idle {
+  background: radial-gradient(circle at 40% 35%, hsl(150, 55%, 22%), hsl(150, 60%, 14%));
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+  border: 2px solid rgba(16, 185, 129, 0.3);
+}
+.att-clock-btn--idle:hover:not(:disabled) {
+  transform: scale(1.04);
+  box-shadow: 0 0 60px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.att-clock-btn--searching {
+  background: radial-gradient(circle at 40% 35%, hsl(35, 60%, 22%), hsl(35, 60%, 14%));
+  box-shadow: 0 0 40px rgba(251,191,36,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+  border: 2px solid rgba(251,191,36,0.3);
+  cursor: wait;
+}
+
+.att-clock-btn--clocked-in {
+  background: radial-gradient(circle at 40% 35%, hsl(150, 55%, 20%), hsl(150, 60%, 12%));
+  box-shadow: 0 0 40px rgba(16,185,129,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+  border: 2px solid rgba(16, 185, 129, 0.5);
+  animation: att-pulse-ring 2.5s ease-out infinite;
+}
+.att-clock-btn--clocked-in:hover:not(:disabled) {
+  background: radial-gradient(circle at 40% 35%, hsl(0, 55%, 22%), hsl(0, 60%, 14%));
+  border-color: rgba(248, 113, 113, 0.5);
+  box-shadow: 0 0 40px rgba(248,113,113,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+  animation: att-pulse-ring-red 2.5s ease-out infinite;
+}
+
+.att-clock-btn--already {
+  background: radial-gradient(circle at 40% 35%, hsl(210, 40%, 18%), hsl(210, 40%, 12%));
+  box-shadow: 0 0 20px rgba(96,165,250,0.1);
+  border: 2px solid rgba(96, 165, 250, 0.2);
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Ripple effect */
+.att-clock-btn__ripple {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  transform: scale(0);
+  animation: att-ripple 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+.att-clock-btn__label {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  z-index: 1;
+  text-transform: uppercase;
+}
+.att-clock-btn__time {
+  font-size: 28px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  font-family: 'DM Mono', 'Courier New', monospace;
+  color: rgba(255,255,255,0.9);
+  letter-spacing: 0.02em;
+  z-index: 1;
+  animation: att-tick 1s ease-in-out infinite alternate;
+}
+.att-clock-btn__sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  font-weight: 500;
+  z-index: 1;
+}
+
+/* Elapsed timer badge */
+.att-elapsed-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--att-emerald-dim);
+  border: 1px solid var(--att-emerald-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--att-emerald);
+  font-variant-numeric: tabular-nums;
+}
+
+/* GPS status row */
+.att-gps-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+.att-gps-row--ok {
+  color: var(--gps-ok);
+  border-color: rgba(80, 200, 120, 0.25);
+  background: rgba(80, 200, 120, 0.07);
+}
+.att-gps-row--warn {
+  color: var(--gps-warn);
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.07);
+}
+.att-gps-row--error {
+  color: var(--gps-error);
+  border-color: rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.07);
+}
+.att-gps-row--searching {
+  color: var(--att-amber);
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.07);
+}
+
+/* Already-clocked message */
+.att-already-msg {
+  font-size: 12px;
+  color: var(--att-blue);
+  text-align: center;
+  padding: 8px 16px;
+  background: var(--att-blue-dim);
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+/* ════════════════════════════════════════
+   TODAY'S STATUS CARD
+   ════════════════════════════════════════ */
+.att-status-card {
+  min-height: 120px;
+}
+.att-status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.att-status-cell {
+  background: var(--att-bg-inner);
+  border: 1px solid var(--att-border-subtle);
+  border-radius: var(--att-radius-item);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.att-status-cell__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--att-text-muted);
+}
+.att-status-cell__value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--att-text);
+  font-family: 'DM Mono', 'Courier New', monospace;
+}
+.att-status-cell__value--emerald { color: var(--att-emerald); }
+.att-status-cell__value--blue    { color: var(--att-blue); }
+.att-status-cell__value--amber   { color: var(--att-amber); }
+.att-status-cell__sub {
+  font-size: 11px;
+  color: var(--att-text-muted);
+}
+
+/* Work mode badge */
+.att-work-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.att-work-mode-badge--office {
+  background: var(--att-emerald-dim);
+  border: 1px solid var(--att-emerald-border);
+  color: var(--att-emerald);
+}
+.att-work-mode-badge--wfh {
+  background: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  color: var(--wfh-badge);
+}
+.att-work-mode-badge--absent {
+  background: var(--att-red-dim);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: var(--att-red);
+}
+
+/* ════════════════════════════════════════
+   ATTENDANCE LOG TABLE
+   ════════════════════════════════════════ */
+.att-log-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.att-log-table th {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--att-text-muted);
+  padding: 0 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--att-border-subtle);
+}
+.att-log-table td {
+  padding: 0 8px;
+  height: 48px;
+  font-size: 12px;
+  color: var(--att-text-dim);
+  border-bottom: 1px solid var(--att-border-subtle);
+  font-variant-numeric: tabular-nums;
+}
+.att-log-table tr:last-child td { border-bottom: none; }
+.att-log-table tr:hover td {
+  background: var(--att-bg-inner);
+}
+
+.att-log-date { font-weight: 600; color: var(--att-text); }
+.att-log-today { color: var(--att-emerald) !important; font-weight: 700; }
+
+/* Status pill inside table */
+.att-log-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.att-log-pill--present  { background: var(--att-emerald-dim); color: var(--att-emerald); border: 1px solid var(--att-emerald-border); }
+.att-log-pill--wfh      { background: var(--att-blue-dim);    color: var(--att-blue);    border: 1px solid rgba(96,165,250,0.25); }
+.att-log-pill--absent   { background: var(--att-red-dim);     color: var(--att-red);     border: 1px solid rgba(248,113,113,0.25); }
+.att-log-pill--late     { background: var(--att-amber-dim);   color: var(--att-amber);   border: 1px solid rgba(251,191,36,0.25); }
+.att-log-pill--holiday  { background: rgba(167,139,250,0.12); color: var(--att-violet);  border: 1px solid rgba(167,139,250,0.25); }
+
+/* Month nav */
+.att-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.att-month-nav__btn {
+  background: var(--att-bg-inner);
+  border: 1px solid var(--att-border);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--att-text-dim);
+  transition: all 150ms;
+}
+.att-month-nav__btn:hover {
+  background: var(--att-bg-card-hover);
+  color: var(--att-text);
+}
+.att-month-nav__label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--att-text);
+}
+
+/* ════════════════════════════════════════
+   WFH REQUEST FORM
+   ════════════════════════════════════════ */
+.att-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.att-form-field:last-of-type { margin-bottom: 0; }
+
+.att-form-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--att-text-muted);
+}
+
+.att-form-input,
+.att-form-textarea {
+  background: var(--att-bg-inner);
+  border: 1px solid var(--att-border);
+  border-radius: var(--att-radius-item);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--att-text);
+  font-family: inherit;
+  transition: border-color 150ms;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.att-form-input:focus,
+.att-form-textarea:focus {
+  border-color: rgba(96, 165, 250, 0.5);
+}
+.att-form-input::placeholder,
+.att-form-textarea::placeholder {
+  color: var(--att-text-muted);
+}
+.att-form-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+/* Dark date input */
+.att-form-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+.att-form-input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+.att-form-error {
+  font-size: 11px;
+  color: var(--att-red);
+  margin-top: 2px;
+}
+
+/* GPS auto-capture badge in form */
+.att-gps-capture-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms;
+  border: 1px solid;
+}
+.att-gps-capture-badge--idle {
+  background: var(--att-bg-inner);
+  border-color: var(--att-border);
+  color: var(--att-text-dim);
+}
+.att-gps-capture-badge--captured {
+  background: var(--att-emerald-dim);
+  border-color: var(--att-emerald-border);
+  color: var(--att-emerald);
+}
+.att-gps-capture-badge--failed {
+  background: var(--att-red-dim);
+  border-color: rgba(248, 113, 113, 0.25);
+  color: var(--att-red);
+}
+
+/* Radio group */
+.att-radio-group {
+  display: flex;
+  gap: 8px;
+}
+.att-radio-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--att-border);
+  background: var(--att-bg-inner);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--att-text-dim);
+  cursor: pointer;
+  transition: all 150ms;
+}
+.att-radio-option--selected {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: var(--att-blue-dim);
+  color: var(--att-blue);
+}
+.att-radio-option input { display: none; }
+
+/* Submit button */
+.att-submit-btn {
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: hsl(150, 60%, 24%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 200ms, transform 120ms;
+  margin-top: 16px;
+  font-family: inherit;
+}
+.att-submit-btn:hover:not(:disabled) { background: hsl(150, 60%, 30%); }
+.att-submit-btn:active:not(:disabled) { transform: scale(0.98); }
+.att-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.att-submit-btn--blue {
+  background: hsl(215, 70%, 32%);
+}
+.att-submit-btn--blue:hover:not(:disabled) { background: hsl(215, 70%, 38%); }
+
+/* Success toast */
+.att-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 12px;
+  animation: att-fade-in 0.3s ease both;
+}
+.att-toast--success {
+  background: var(--att-emerald-dim);
+  border: 1px solid var(--att-emerald-border);
+  color: var(--att-emerald);
+}
+.att-toast--error {
+  background: var(--att-red-dim);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: var(--att-red);
+}
+
+/* Photo upload */
+.att-photo-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.att-photo-upload__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--att-bg-inner);
+  border: 1px solid var(--att-border);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--att-text-dim);
+  cursor: pointer;
+  transition: all 150ms;
+  white-space: nowrap;
+}
+.att-photo-upload__btn:hover {
+  background: var(--att-bg-card-hover);
+  color: var(--att-text);
+}
+.att-photo-upload__name {
+  font-size: 11px;
+  color: var(--att-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.att-photo-upload input[type="file"] { display: none; }
+
+/* Photo preview */
+.att-photo-preview {
+  width: 100%;
+  max-height: 100px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--att-border);
+  margin-top: 8px;
+}
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  .att-bottom-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .att-top-grid {
+    grid-template-columns: 1fr;
+  }
+  .att-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .att-clock-btn-wrap,
+  .att-clock-btn {
+    width: 140px;
+    height: 140px;
+  }
+  .att-clock-btn__time { font-size: 20px; }
+  .att-clock-btn__label { font-size: 15px; }
+}
+/* ── Pagination ─────────────────────────────────────────── */
+.att-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.att-pagination__pages {
+  display: flex;
+  gap: 4px;
+}
+
+.att-pagination__page {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.att-pagination__page:hover {
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+
+.att-pagination__page--active {
+  background: #a78bfa;
+  border-color: #a78bfa;
+  color: #fff;
+}
+
+.att-pagination__info {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary, #9ca3af);
+  margin: 6px 0 0;
+}

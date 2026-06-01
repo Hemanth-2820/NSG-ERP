@@ -1,0 +1,422 @@
+/* ── Tasks Module – scoped under .tk-root ─────────────────────────────────── */
+
+.tk-root {
+  --tk-emerald:       #10b981;
+  --tk-emerald-dim:   rgba(16,185,129,0.1);
+  --tk-bg:            #0d1117;
+  --tk-surface:       #161b22;
+  --tk-surface-2:     #1c2330;
+  --tk-border:        rgba(255,255,255,0.07);
+  --tk-text-primary:  #e6edf3;
+  --tk-text-secondary:#8b949e;
+  --tk-text-muted:    #6e7681;
+  --tk-selected:      hsl(265,40%,18%);
+  --tk-subtask-done:  hsl(150,70%,50%);
+  --tk-ac-done:       hsl(150,70%,50%);
+  --tk-pr-btn:        hsl(265,70%,35%);
+
+  padding: 28px 32px;
+  min-height: 100vh;
+  background: var(--tk-bg);
+  color: var(--tk-text-primary);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  box-sizing: border-box;
+}
+
+/* ── Page Header ─────────────────────────────────────────────────────────────── */
+.tk-page-header { margin-bottom: 20px; }
+.tk-page-title {
+  font-size: 1.75rem; font-weight: 800;
+  color: var(--tk-text-primary); margin: 0 0 4px;
+  letter-spacing: -0.5px;
+}
+.tk-page-breadcrumb { font-size: 0.75rem; color: var(--tk-text-muted); }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────────── */
+.tk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.tk-sprint-select {
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+  border-radius: 8px;
+  color: var(--tk-text-primary);
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+.tk-sprint-select:focus { border-color: var(--tk-emerald); }
+.tk-filter-chips { display: flex; gap: 6px; }
+.tk-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--tk-border);
+  background: transparent;
+  color: var(--tk-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tk-chip:hover { border-color: var(--tk-emerald); color: var(--tk-emerald); }
+.tk-chip--active {
+  background: var(--tk-emerald-dim);
+  border-color: var(--tk-emerald);
+  color: var(--tk-emerald);
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────────── */
+.tk-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.tk-layout--split {
+  grid-template-columns: 1fr 380px;
+}
+@media (max-width: 960px) {
+  .tk-layout--split { grid-template-columns: 1fr; }
+}
+
+/* ── Task List ───────────────────────────────────────────────────────────────── */
+.tk-tasklist { display: flex; flex-direction: column; gap: 20px; }
+.tk-sprint-group { display: flex; flex-direction: column; gap: 8px; }
+.tk-sprint-group-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--tk-text-muted);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tk-border);
+  margin-bottom: 4px;
+}
+
+/* ── Task Card ───────────────────────────────────────────────────────────────── */
+.tk-task-card {
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+  border-left: 3px solid transparent;
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.15s;
+}
+.tk-task-card:hover {
+  border-left-color: var(--tk-emerald);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  transform: translateX(2px);
+}
+.tk-task-card--selected {
+  border-left-color: hsl(265,70%,60%) !important;
+  background: var(--tk-selected);
+  box-shadow: 0 0 0 1px hsl(265,40%,30%);
+}
+.tk-task-card--done { opacity: 0.7; }
+
+.tk-task-card__top {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 12px;
+  margin-bottom: 6px;
+}
+.tk-task-card__bottom {
+  display: flex; align-items: center; gap: 8px;
+}
+.tk-sprint-label {
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--tk-text-muted);
+}
+.tk-sp-badge {
+  font-size: 0.68rem; font-weight: 700;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--tk-border);
+  border-radius: 20px;
+  padding: 2px 8px;
+  color: var(--tk-text-secondary);
+}
+.tk-task-card__title {
+  font-size: 0.88rem; font-weight: 600;
+  color: var(--tk-text-primary);
+  margin: 0; flex: 1;
+  line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tk-task-card__meta {
+  display: flex; align-items: center; gap: 8px;
+}
+.tk-priority-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.tk-priority-label {
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: capitalize;
+}
+.tk-status-chip {
+  font-size: 0.7rem; font-weight: 700;
+  border: 1px solid; border-radius: 20px;
+  padding: 2px 8px; margin-left: auto;
+}
+.tk-progress-wrap {
+  display: flex; align-items: center; gap: 6px;
+  margin-left: auto; width: 120px; flex-shrink: 0;
+}
+.tk-progress-bar {
+  flex: 1; height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px; overflow: hidden;
+}
+.tk-progress-fill {
+  height: 100%; border-radius: 2px;
+  transition: width 0.4s ease;
+}
+.tk-progress-label {
+  font-size: 0.65rem; color: var(--tk-text-muted); white-space: nowrap;
+}
+
+/* ── Detail Panel ────────────────────────────────────────────────────────────── */
+.tk-detail-panel {
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  overflow: hidden;
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  animation: tk-slide-in 0.28s cubic-bezier(.4,0,.2,1);
+}
+@keyframes tk-slide-in {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.tk-detail-panel::-webkit-scrollbar { width: 4px; }
+.tk-detail-panel::-webkit-scrollbar-track { background: transparent; }
+.tk-detail-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.tk-detail-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--tk-border);
+  background: var(--tk-surface-2);
+}
+.tk-detail-header__top {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 8px;
+}
+.tk-detail-sprint {
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--tk-emerald);
+}
+.tk-detail-close {
+  background: none; border: none;
+  color: var(--tk-text-muted); cursor: pointer;
+  font-size: 0.85rem; padding: 4px 6px;
+  border-radius: 4px; transition: background 0.15s;
+}
+.tk-detail-close:hover { background: rgba(255,255,255,0.06); color: var(--tk-text-primary); }
+.tk-detail-title {
+  font-size: 1rem; font-weight: 700;
+  color: var(--tk-text-primary);
+  margin: 0 0 8px; line-height: 1.4;
+}
+.tk-detail-meta { display: flex; align-items: center; gap: 8px; }
+
+.tk-detail-body { padding: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+.tk-detail-section-label {
+  font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--tk-text-muted); margin: 12px 0 6px;
+}
+.tk-detail-desc {
+  font-size: 0.82rem; color: var(--tk-text-secondary);
+  line-height: 1.7; margin: 0;
+}
+
+/* Status update row */
+.tk-status-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.tk-status-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--tk-border);
+  background: transparent;
+  color: var(--tk-text-secondary);
+  font-size: 0.75rem; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tk-status-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--tk-text-primary); }
+
+/* ── Subtasks ─────────────────────────────────────────────────────────────────── */
+.tk-subtasks { display: flex; flex-direction: column; gap: 0; }
+.tk-subtask-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--tk-border);
+  cursor: pointer;
+  transition: background 0.12s;
+  min-height: 36px;
+}
+.tk-subtask-row:last-of-type { border-bottom: none; }
+.tk-subtask-row:hover { background: rgba(255,255,255,0.02); }
+.tk-subtask-cb {
+  width: 16px; height: 16px; flex-shrink: 0;
+  border: 1.5px solid var(--tk-border);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; font-weight: 700;
+  transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
+}
+.tk-subtask-cb--checked {
+  background: var(--tk-subtask-done);
+  border-color: var(--tk-subtask-done);
+  color: #000;
+  transform: scale(1.1);
+}
+.tk-subtask-title { font-size: 0.8rem; color: var(--tk-text-secondary); }
+.tk-subtask-title--done {
+  text-decoration: line-through;
+  color: var(--tk-text-muted);
+}
+.tk-subtasks-complete {
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--tk-subtask-done);
+  margin-top: 6px; padding: 6px 10px;
+  background: rgba(16,185,129,0.08);
+  border-radius: 6px;
+}
+
+/* ── Acceptance Criteria ─────────────────────────────────────────────────────── */
+.tk-acceptance { display: flex; flex-direction: column; gap: 0; }
+.tk-ac-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--tk-border);
+  cursor: pointer;
+  font-size: 0.78rem; color: var(--tk-text-secondary);
+  line-height: 1.5;
+  transition: background 0.12s;
+}
+.tk-ac-row:last-of-type { border-bottom: none; }
+.tk-ac-row:hover { background: rgba(255,255,255,0.02); }
+.tk-ac-row--done { color: var(--tk-text-muted); text-decoration: line-through; }
+.tk-ac-cb {
+  width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px;
+  border: 1.5px solid var(--tk-border); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.55rem; font-weight: 700;
+  transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
+}
+.tk-ac-cb--checked {
+  background: var(--tk-ac-done);
+  border-color: var(--tk-ac-done);
+  color: #000;
+}
+
+/* ── PR Submit Form ──────────────────────────────────────────────────────────── */
+.tk-pr-section { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.tk-rejected-banner {
+  display: flex; gap: 10px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px; padding: 12px 14px;
+  font-size: 0.78rem;
+}
+.tk-rejected-banner strong { color: #f87171; display: block; margin-bottom: 2px; }
+.tk-rejected-banner p { color: var(--tk-text-secondary); margin: 0; }
+
+.tk-pr-submitted {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.tk-pr-status-chip {
+  font-size: 0.75rem; font-weight: 700;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--tk-border);
+  border-radius: 20px; padding: 4px 12px;
+  color: var(--tk-text-secondary);
+}
+.tk-pr-link {
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--tk-emerald); text-decoration: none;
+}
+.tk-pr-link:hover { text-decoration: underline; }
+
+.tk-submit-pr-btn {
+  padding: 9px 16px;
+  background: var(--tk-pr-btn);
+  border: 1px solid hsl(265,70%,45%);
+  border-radius: 8px;
+  color: hsl(265,90%,80%);
+  font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; width: 100%;
+  transition: background 0.15s;
+}
+.tk-submit-pr-btn:hover { background: hsl(265,70%,40%); }
+
+.tk-pr-form {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+.tk-pr-form--open { max-height: 300px; }
+
+.tk-field-group { display: flex; flex-direction: column; gap: 5px; }
+.tk-label { font-size: 0.72rem; font-weight: 600; color: var(--tk-text-secondary); }
+.tk-req    { color: var(--tk-emerald); }
+.tk-optional { color: var(--tk-text-muted); font-weight: 400; }
+
+.tk-input, .tk-textarea {
+  background: var(--tk-surface-2);
+  border: 1px solid var(--tk-border);
+  border-radius: 7px;
+  color: var(--tk-text-primary);
+  padding: 8px 10px; font-size: 0.82rem;
+  outline: none; width: 100%; box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.tk-input:focus, .tk-textarea:focus {
+  border-color: var(--tk-emerald);
+  box-shadow: 0 0 0 2px rgba(16,185,129,0.15);
+}
+.tk-input--err { border-color: #f87171 !important; }
+.tk-err-msg { font-size: 0.7rem; color: #f87171; }
+.tk-textarea { resize: vertical; }
+
+.tk-confirm-btn {
+  padding: 9px;
+  background: var(--tk-emerald);
+  border: none; border-radius: 7px;
+  color: #000; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 7px;
+  transition: background 0.15s, opacity 0.15s;
+}
+.tk-confirm-btn:hover { background: #0ea372; }
+.tk-confirm-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+/* ── Spinner ─────────────────────────────────────────────────────────────────── */
+.tk-spin {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid transparent; border-top-color: #000;
+  border-radius: 50%; animation: tk-spin 0.6s linear infinite;
+}
+@keyframes tk-spin { to { transform: rotate(360deg); } }
+
+/* ── Empty ───────────────────────────────────────────────────────────────────── */
+.tk-empty {
+  padding: 40px; text-align: center;
+  color: var(--tk-text-muted); font-size: 0.85rem;
+}
