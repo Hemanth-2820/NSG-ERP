@@ -1,85 +1,53 @@
-import React, { useState } from 'react';
-import { 
-  Target, ChevronRight, CheckCircle, AlertTriangle, Link, 
-  BarChart, Calendar
-} from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Target, Users, TrendingUp, TrendingDown, CheckCircle2, Link as LinkIcon, Edit2, X, Filter, BarChart2, AlertCircle } from 'lucide-react';
 import '../CEO.css';
 
-// ==========================================
-// MOCK DATA
-// ==========================================
-const mockOKRs = [
+const MOCK_DATA = [
   { 
-    id: 1, 
-    title: 'Launch Client Portal MVP', 
-    status: 'On Track', 
-    progress: 75,
-    owner: 'Product Team',
+    id: 1, title: 'Achieve Market Leadership in Enterprise Segment', 
+    status: 'On Track', progress: 75, owner: 'Sales & Marketing', quarter: 'Q2', year: '2026',
     krs: [
-      { id: 11, title: 'Achieve 95% test coverage', target: 95, current: 80, unit: '%' },
-      { id: 12, title: 'Onboard 5 beta clients', target: 5, current: 4, unit: 'clients' },
-      { id: 13, title: 'Release production build', target: 100, current: 100, unit: '%' }
+      { id: 11, title: 'Increase Enterprise ARR by 40%', target: 40, current: 32, unit: '%', sprintLink: 'Sprint 24: Enterprise Expansion' },
+      { id: 12, title: 'Onboard 5 Fortune 500 clients', target: 5, current: 4, unit: 'clients' }
     ]
   },
   { 
-    id: 2, 
-    title: 'Reduce Churn Rate to < 2%', 
-    status: 'At Risk', 
-    progress: 45,
-    owner: 'Customer Success',
+    id: 2, title: 'Transform Digital Operational Excellence', 
+    status: 'At Risk', progress: 42, owner: 'IT Dept', quarter: 'Q2', year: '2026',
     krs: [
-      { id: 21, title: 'Conduct 50 check-in calls', target: 50, current: 12, unit: 'calls' },
-      { id: 22, title: 'Implement automated health score', target: 100, current: 60, unit: '%' }
+      { id: 21, title: 'Migrate legacy on-prem to Cloud', target: 100, current: 40, unit: '%', sprintLink: 'Sprint 22: AWS Migration' },
+      { id: 22, title: 'Reduce infra costs by 25%', target: 25, current: 10, unit: '%' }
     ]
   },
   { 
-    id: 3, 
-    title: 'Expand to European Market', 
-    status: 'Behind', 
-    progress: 15,
-    owner: 'Sales & Marketing',
+    id: 3, title: 'Global Talent Acquisition Drive', 
+    status: 'Off Track', progress: 20, owner: 'HR Dept', quarter: 'Q3', year: '2026',
     krs: [
-      { id: 31, title: 'Hire Regional Director', target: 1, current: 0, unit: 'hire' },
-      { id: 32, title: 'Secure 3 partner agencies', target: 3, current: 1, unit: 'partners' }
+      { id: 31, title: 'Hire 50 Senior Engineers', target: 50, current: 10, unit: 'hires', sprintLink: 'Sprint 28: EU Hiring' },
+      { id: 32, title: 'Launch Employer Branding Campaign', target: 100, current: 20, unit: '%' }
+    ]
+  },
+  { 
+    id: 4, title: 'Launch AI-Powered Core Product', 
+    status: 'On Track', progress: 60, owner: 'Product', quarter: 'Q2', year: '2026',
+    krs: [
+      { id: 41, title: 'Complete AI Beta Testing', target: 100, current: 80, unit: '%' },
+      { id: 42, title: 'Train 500 users on new features', target: 500, current: 300, unit: 'users' }
     ]
   }
 ];
 
-// Helper for SVG Progress Ring
-const ProgressRing = ({ progress, color, size = 64, strokeWidth = 6 }) => {
+const ProgressRing = ({ progress, color, size = 48, strokeWidth = 4 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (progress / 100) * circumference;
-
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
       <svg width={size} height={size}>
-        <circle
-          stroke="var(--ceo-divider)"
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-        <circle
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-          style={{ transition: 'stroke-dashoffset 0.5s ease-out' }}
-        />
+        <circle stroke="var(--ceo-divider)" strokeWidth={strokeWidth} fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
+        <circle stroke={color} strokeWidth={strokeWidth} strokeDasharray={`${circumference} ${circumference}`} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" r={radius} cx={size / 2} cy={size / 2} style={{ transition: 'stroke-dashoffset 0.5s ease-out' }} />
       </svg>
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '14px', fontWeight: 700, color: 'var(--ceo-text-primary)'
-      }}>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700 }}>
         {progress}%
       </div>
     </div>
@@ -87,150 +55,209 @@ const ProgressRing = ({ progress, color, size = 64, strokeWidth = 6 }) => {
 };
 
 export default function StrategyOKRs() {
-  const [selectedOkrId, setSelectedOkrId] = useState(mockOKRs[0].id);
-  const [quarter, setQuarter] = useState('Q3');
+  const [okrs, setOkrs] = useState(MOCK_DATA);
+  const [quarter, setQuarter] = useState('Q2');
+  const [year, setYear] = useState('2026');
+  
+  // Filtering logic
+  const filteredOkrs = useMemo(() => {
+    return okrs.filter(o => o.quarter === quarter && o.year === year);
+  }, [okrs, quarter, year]);
 
-  const selectedOkr = mockOKRs.find(o => o.id === selectedOkrId);
+  // Make sure selected ID exists in the filtered list
+  const [selectedOkrId, setSelectedOkrId] = useState(null);
+  
+  // Auto-select first item when filters change
+  React.useEffect(() => {
+    if (filteredOkrs.length > 0 && !filteredOkrs.find(o => o.id === selectedOkrId)) {
+      setSelectedOkrId(filteredOkrs[0].id);
+    } else if (filteredOkrs.length === 0) {
+      setSelectedOkrId(null);
+    }
+  }, [filteredOkrs, selectedOkrId]);
+
+  const selectedOkr = filteredOkrs.find(o => o.id === selectedOkrId);
+
+  // Dynamic KPI Stats based on filters
+  const totalObjs = filteredOkrs.length;
+  const atRiskObjs = filteredOkrs.filter(o => o.status !== 'On Track').length;
+  const totalKrs = filteredOkrs.reduce((acc, o) => acc + o.krs.length, 0);
+  const avgCompletion = totalObjs > 0 ? Math.round(filteredOkrs.reduce((acc, o) => acc + o.progress, 0) / totalObjs) : 0;
+  
+  const kpiStats = [
+    { label: 'Strategic Objectives', val: totalObjs.toString(), sub: `${atRiskObjs} At Risk/Off Track`, status: atRiskObjs > 0 ? 'warning' : 'success' },
+    { label: 'Active Key Results', val: totalKrs.toString(), sub: `${avgCompletion}% Avg Completion`, status: 'primary' },
+    { label: 'Organization Alignment', val: '92%', sub: 'Target: 95%', status: 'success' },
+    { label: 'Strategic Risk Index', val: atRiskObjs > totalObjs/2 ? 'High' : 'Low', sub: 'Resource Constraints', status: atRiskObjs > totalObjs/2 ? 'danger' : 'success' },
+  ];
+
+  // Inline edit state
+  const [editingKrId, setEditingKrId] = useState(null);
+  const [editValue, setEditValue] = useState('');
 
   const getStatusColor = (status) => {
     if (status === 'On Track') return 'var(--ceo-success)';
     if (status === 'At Risk') return 'var(--ceo-warning)';
-    if (status === 'Behind') return 'var(--ceo-danger)';
-    return 'var(--ceo-primary)';
+    return 'var(--ceo-danger)';
+  };
+
+  const saveKrProgress = (krId) => {
+    setOkrs(prev => prev.map(okr => {
+      if (okr.id !== selectedOkrId) return okr;
+      const newKrs = okr.krs.map(kr => 
+        kr.id === krId ? { ...kr, current: Number(editValue) } : kr
+      );
+      // Recalculate OKR progress (simple average for mockup)
+      const newProgress = Math.round(newKrs.reduce((acc, curr) => acc + Math.min(100, (curr.current/curr.target)*100), 0) / newKrs.length);
+      return { ...okr, krs: newKrs, progress: newProgress };
+    }));
+    setEditingKrId(null);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '32px' }}>
       
-      {/* HEADER */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 className="ceo-typography-page-title">Strategy & OKRs</h1>
-        <p className="ceo-typography-body" style={{ marginTop: '4px' }}>Align enterprise execution with strategic objectives.</p>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 className="ceo-typography-page-title">Strategy & OKRs</h1>
+          <p className="ceo-typography-body" style={{ marginTop: '4px' }}>Monitor top-level objectives, manage key results, and track global execution.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', background: '#FFF', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--ceo-border)', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Filter size={16} color="var(--ceo-text-muted)" />
+          <select value={quarter} onChange={(e) => setQuarter(e.target.value)} className="ceo-form-input" style={{ border: 'none', fontWeight: 700, fontSize: '14px', outline: 'none', background: 'transparent', cursor: 'pointer', padding: '0 8px', height: 'auto' }}>
+            <option value="Q1">Q1</option>
+            <option value="Q2">Q2</option>
+            <option value="Q3">Q3</option>
+            <option value="Q4">Q4</option>
+          </select>
+          <div style={{ width: '1px', height: '20px', background: 'var(--ceo-divider)' }}></div>
+          <select value={year} onChange={(e) => setYear(e.target.value)} className="ceo-form-input" style={{ border: 'none', fontWeight: 700, fontSize: '14px', outline: 'none', background: 'transparent', cursor: 'pointer', padding: '0 8px', height: 'auto' }}>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+          </select>
+        </div>
       </div>
 
-      {/* CSS GRID LAYOUT */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        {kpiStats.map((k, i) => (
+          <div key={i} style={{ background: '#FFF', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+            <div style={{ color: 'var(--ceo-text-secondary)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{k.label}</div>
+            <div style={{ fontSize: '24px', fontWeight: 700, marginTop: '4px', color: 'var(--ceo-text-primary)' }}>{k.val}</div>
+            <div style={{ fontSize: '12px', color: `var(--ceo-${k.status})`, fontWeight: 600, marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {k.status === 'success' ? <TrendingUp size={14} /> : k.status === 'danger' ? <TrendingDown size={14} /> : <AlertCircle size={14} />}
+              {k.sub}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '340px 1fr',
-        gridTemplateRows: '52px 1fr',
-        gridTemplateAreas: `
-          "qselect qselect"
-          "okrlist okrdetail"
-        `,
+        gridTemplateColumns: '400px minmax(0, 1fr)',
         gap: '24px',
-        flex: 1
+        flex: 1,
+        minHeight: '500px'
       }}>
         
-        {/* QUARTER SELECTOR */}
-        <div style={{ gridArea: 'qselect', display: 'flex', gap: '8px', borderBottom: '1px solid var(--ceo-border)' }}>
-          {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
-            <button
-              key={q}
-              onClick={() => setQuarter(q)}
-              style={{
-                padding: '12px 24px',
-                background: quarter === q ? 'var(--tab-active-bg)' : 'transparent',
-                color: quarter === q ? 'var(--ceo-primary)' : 'var(--ceo-text-secondary)',
-                border: 'none',
-                borderBottom: quarter === q ? '2px solid var(--ceo-primary)' : '2px solid transparent',
-                borderRadius: '4px 4px 0 0',
-                fontWeight: 600,
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {q} 2025
-            </button>
-          ))}
-          <div style={{ flex: 1 }}></div>
-          <button className="ceo-btn ceo-btn-primary" style={{ padding: '6px 16px', height: '36px', alignSelf: 'center' }}>
-            <Target size={16}/> New Objective
-          </button>
-        </div>
-
-        {/* OKR LIST */}
-        <div style={{ gridArea: 'okrlist', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', paddingRight: '4px' }}>
-          {mockOKRs.map(okr => (
-            <div 
-              key={okr.id}
-              onClick={() => setSelectedOkrId(okr.id)}
-              style={{
-                background: selectedOkrId === okr.id ? 'var(--ceo-hover)' : 'var(--ceo-card-bg)',
-                border: selectedOkrId === okr.id ? '1px solid var(--ceo-primary)' : '1px solid var(--ceo-border)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: selectedOkrId === okr.id ? '0 4px 12px rgba(37, 99, 235, 0.1)' : 'var(--ceo-shadow)'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                <span className={`ceo-badge ${okr.status === 'On Track' ? 'success' : okr.status === 'At Risk' ? 'warning' : 'critical'}`}>
-                  {okr.status}
-                </span>
-                <ProgressRing progress={okr.progress} color={getStatusColor(okr.status)} size={48} strokeWidth={4} />
+        {/* LIST */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', paddingRight: '4px' }}>
+          {filteredOkrs.length > 0 ? filteredOkrs.map(okr => (
+            <div key={okr.id} onClick={() => setSelectedOkrId(okr.id)} style={{
+              background: selectedOkrId === okr.id ? '#F8FAFC' : '#FFF',
+              border: selectedOkrId === okr.id ? '2px solid var(--ceo-primary)' : '1px solid var(--ceo-border)',
+              borderRadius: '8px', padding: '16px', cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                <span className={`ceo-badge ${okr.status === 'On Track' ? 'success' : okr.status === 'At Risk' ? 'warning' : 'danger'}`} style={{ fontWeight: 600, padding: '4px 8px', fontSize: '11px' }}>{okr.status.toUpperCase()}</span>
+                <ProgressRing progress={okr.progress} color={getStatusColor(okr.status)} size={42} strokeWidth={4} />
               </div>
-              <div className="ceo-typography-section-title" style={{ fontSize: '15px', lineHeight: 1.3 }}>{okr.title}</div>
-              <div className="ceo-typography-meta" style={{ marginTop: '8px' }}>Owner: {okr.owner}</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1.4, marginBottom: '12px', color: 'var(--ceo-text-primary)' }}>{okr.title}</div>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--ceo-text-secondary)', fontWeight: 500 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} color="var(--ceo-text-muted)"/> {okr.owner}</div>
+              </div>
             </div>
-          ))}
+          )) : (
+            <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--ceo-text-muted)', background: '#FFF', borderRadius: '12px', border: '1px dashed var(--ceo-border)' }}>
+              <Target size={48} style={{ opacity: 0.2, margin: '0 auto 16px auto' }} />
+              <div style={{ fontSize: '15px', fontWeight: 600 }}>No OKRs found</div>
+              <div style={{ fontSize: '13px', marginTop: '4px' }}>Try selecting a different quarter or year.</div>
+            </div>
+          )}
         </div>
 
-        {/* OKR DETAIL */}
-        <div className="ceo-command-panel" style={{ gridArea: 'okrdetail', display: 'flex', flexDirection: 'column' }}>
+        {/* DETAIL */}
+        <div className="ceo-command-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--ceo-border)' }}>
           {selectedOkr ? (
             <>
-              <div className="ceo-command-header" style={{ padding: '32px 32px 24px 32px', display: 'flex', gap: '32px', alignItems: 'center' }}>
-                <ProgressRing progress={selectedOkr.progress} color={getStatusColor(selectedOkr.status)} size={100} strokeWidth={8} />
-                <div style={{ flex: 1 }}>
-                  <span className={`ceo-badge ${selectedOkr.status === 'On Track' ? 'success' : selectedOkr.status === 'At Risk' ? 'warning' : 'critical'}`} style={{ marginBottom: '12px' }}>
-                    {selectedOkr.status}
-                  </span>
-                  <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--ceo-text-primary)', marginBottom: '8px' }}>{selectedOkr.title}</div>
-                  <div className="ceo-typography-body">Owned by {selectedOkr.owner}</div>
+              <div className="ceo-command-header" style={{ padding: '24px', borderBottom: '1px solid var(--ceo-divider)', background: '#F8FAFC' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <span className={`ceo-badge ${selectedOkr.status === 'On Track' ? 'success' : selectedOkr.status === 'At Risk' ? 'warning' : 'danger'}`} style={{ fontSize: '11px', fontWeight: 700 }}>{selectedOkr.status.toUpperCase()}</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-muted)' }}>{selectedOkr.quarter} {selectedOkr.year}</span>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', color: 'var(--ceo-text-primary)' }}>{selectedOkr.title}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--ceo-text-secondary)', fontWeight: 500 }}>
+                  <Users size={14} color="var(--ceo-text-muted)" /> Owner: {selectedOkr.owner}
                 </div>
               </div>
 
-              <div className="ceo-command-content" style={{ padding: '0 32px 32px 32px', overflowY: 'auto' }}>
-                <div className="ceo-typography-section-title" style={{ fontSize: '14px', marginBottom: '24px', color: 'var(--ceo-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Key Results ({selectedOkr.krs.length})
+              <div className="ceo-command-content" style={{ padding: '24px', overflowY: 'auto' }}>
+                <div className="ceo-typography-section-title" style={{ fontSize: '13px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Target size={16} color="var(--ceo-primary)" /> MEASURABLE KEY RESULTS
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {selectedOkr.krs.map(kr => {
                     const pct = Math.min(100, (kr.current / kr.target) * 100);
-                    const isCompleted = pct === 100;
                     return (
-                      <div key={kr.id} style={{ 
-                        background: 'var(--ceo-bg)', 
-                        border: '1px solid var(--ceo-border)', 
-                        padding: '24px', 
-                        borderRadius: '12px' 
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'flex-start' }}>
-                          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>{kr.title}</div>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: isCompleted ? 'var(--ceo-success)' : 'var(--ceo-text-primary)', background: 'var(--ceo-card-bg)', padding: '4px 12px', borderRadius: '16px', border: '1px solid var(--ceo-border)' }}>
-                            {kr.current} / {kr.target} <span style={{ color: 'var(--ceo-text-muted)', fontWeight: 500 }}>{kr.unit}</span>
+                      <div key={kr.id} style={{ border: '1px solid var(--ceo-border)', padding: '16px', borderRadius: '8px', background: '#FFF' }}>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>{kr.title}</div>
+                            {kr.sprintLink && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#F1F5F9', color: 'var(--ceo-text-secondary)', fontSize: '11px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', marginTop: '6px' }}>
+                                <LinkIcon size={12} /> CASCADED: {kr.sprintLink}
+                              </div>
+                            )}
                           </div>
+                          
+                          {/* INLINE EDITING */}
+                          {editingKrId === kr.id ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <input 
+                                autoFocus
+                                type="number" 
+                                value={editValue} 
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && saveKrProgress(kr.id)}
+                                style={{ width: '60px', padding: '6px', border: '1px solid var(--ceo-primary)', borderRadius: '4px', fontSize: '13px', fontWeight: 600, outline: 'none' }}
+                              />
+                              <button onClick={() => saveKrProgress(kr.id)} style={{ background: 'var(--ceo-success)', color: '#FFF', border: 'none', borderRadius: '4px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <CheckCircle2 size={14} />
+                              </button>
+                              <button onClick={() => setEditingKrId(null)} style={{ background: '#E2E8F0', color: '#475569', border: 'none', borderRadius: '4px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ceo-text-primary)' }}>
+                                {kr.current} / {kr.target} <span style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 500 }}>{kr.unit}</span>
+                              </div>
+                              <button 
+                                onClick={() => { setEditingKrId(kr.id); setEditValue(kr.current); }}
+                                className="ceo-btn"
+                                style={{ padding: '6px 10px', fontSize: '11px' }}
+                              >
+                                <Edit2 size={12} style={{ marginRight: '4px' }}/> Update
+                              </button>
+                            </div>
+                          )}
+
                         </div>
 
-                        {/* KR Progress Bar */}
-                        <div style={{ height: '12px', background: 'var(--ceo-divider)', borderRadius: '6px', overflow: 'hidden', marginBottom: '16px' }}>
-                          <div style={{ 
-                            height: '100%', width: `${pct}%`, 
-                            background: isCompleted ? 'var(--ceo-success)' : 'var(--ceo-primary)',
-                            borderRadius: '6px', transition: 'width 0.5s ease-out'
-                          }}></div>
-                        </div>
-
-                        {/* Cascade Link */}
-                        <div style={{ borderTop: '1px dashed var(--ceo-divider)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ceo-text-secondary)', fontSize: '13px', fontWeight: 500 }}>
-                            <Link size={14} color="var(--ceo-text-muted)" />
-                            {isCompleted ? 'Cascade complete' : 'Cascaded to Engineering Sprint 42'}
-                          </div>
-                          {!isCompleted && <button className="ceo-btn" style={{ padding: '4px 12px', fontSize: '12px' }}>Update Progress</button>}
+                        <div style={{ height: '8px', background: 'var(--ceo-divider)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? 'var(--ceo-success)' : 'var(--ceo-primary)', borderRadius: '4px', transition: 'width 0.5s ease-out, background 0.3s' }}></div>
                         </div>
                       </div>
                     );
@@ -239,8 +266,9 @@ export default function StrategyOKRs() {
               </div>
             </>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--ceo-text-muted)' }}>
-              Select an Objective to view Key Results
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--ceo-text-muted)', background: '#F8FAFC' }}>
+               <BarChart2 size={64} style={{ opacity: 0.1, marginBottom: '24px' }} />
+               <div style={{ fontSize: '18px', fontWeight: 600 }}>Select an OKR to view details</div>
             </div>
           )}
         </div>

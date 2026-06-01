@@ -86,7 +86,7 @@ export default function Dashboard() {
       </div>
 
       {/* CSS GRID LAYOUT */}
-      <div style={{
+      <div className="ceo-dashboard-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
         gridTemplateRows: 'auto 1fr auto',
@@ -100,7 +100,7 @@ export default function Dashboard() {
       }}>
         
         {/* ZONE: KPI STRIP */}
-        <div style={{ gridArea: 'kpi', display: 'flex', gap: '24px' }}>
+        <div className="ceo-kpi-strip" style={{ gridArea: 'kpi', display: 'flex', gap: '24px' }}>
           {kpiData.map(kpi => (
             <div key={kpi.id} className="ceo-command-panel kpi-panel" style={{ flex: 1 }}>
               <div>

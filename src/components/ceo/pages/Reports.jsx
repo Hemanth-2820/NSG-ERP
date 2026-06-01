@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Download, Calendar, Filter, FileSpreadsheet, Activity, ChevronDown
 } from 'lucide-react';
@@ -43,11 +43,84 @@ const mockAttendanceData = [
   { dept: 'Operations', present: 96, wfh: 20, leave: 4 },
 ];
 
+const mockLeaveTrendsData = [
+  { month: 'Jan', casual: 120, sick: 45 },
+  { month: 'Feb', casual: 90, sick: 50 },
+  { month: 'Mar', casual: 150, sick: 60 },
+  { month: 'Apr', casual: 80, sick: 40 },
+  { month: 'May', casual: 200, sick: 55 },
+  { month: 'Jun', casual: 250, sick: 70 },
+  { month: 'Jul', casual: 180, sick: 65 },
+];
+
+const mockProjectStatusData = [
+  { name: 'Completed', value: 45 },
+  { name: 'In Progress', value: 35 },
+  { name: 'At Risk', value: 12 },
+  { name: 'Delayed', value: 8 },
+];
+
+const mockAttritionData = [
+  { month: 'Jan', rate: 2.1 },
+  { month: 'Feb', rate: 2.4 },
+  { month: 'Mar', rate: 3.0 },
+  { month: 'Apr', rate: 3.5 },
+  { month: 'May', rate: 3.2 },
+  { month: 'Jun', rate: 4.1 },
+  { month: 'Jul', rate: 4.2 },
+];
+
 const COLORS = ['var(--ceo-primary)', 'var(--ceo-success)', 'var(--ceo-warning)', 'var(--ceo-purple)', 'var(--ceo-danger)'];
 
 export default function Reports() {
   const [activeReport, setActiveReport] = useState('Headcount');
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedDept, setSelectedDept] = useState('All Departments');
+  const [dateRange, setDateRange] = useState('Jan 1 - Jul 31, 2025');
+
+  // Dynamic filtering logic to simulate real ERP data changes
+  const applyFilters = (data, isPercentage = false) => {
+    let result = [...data];
+    
+    // Simulate Date Range
+    if (dateRange === 'Last 30 Days') result = result.slice(-1);
+    else if (dateRange === 'Last Quarter') result = result.slice(-3);
+    
+    // Simulate Department
+    if (selectedDept !== 'All Departments') {
+      const multipliers = { 'Engineering': 0.4, 'Sales': 0.2, 'HR': 0.05, 'Marketing': 0.15, 'Operations': 0.2 };
+      const m = multipliers[selectedDept] || 1;
+      
+      result = result.map(item => {
+        let newItem = { ...item };
+        for (let key in newItem) {
+          if (typeof newItem[key] === 'number') {
+            if (isPercentage || ['rate', 'present', 'wfh', 'leave'].includes(key)) {
+              // Jitter percentages slightly instead of multiplying
+              let jitter = (Math.random() * 6 - 3); // -3 to +3
+              newItem[key] = Number(Math.max(0, Math.min(100, newItem[key] + jitter)).toFixed(1));
+            } else {
+              // Multiply raw counts
+              newItem[key] = Math.max(1, Math.round(newItem[key] * m));
+            }
+          }
+        }
+        return newItem;
+      });
+    }
+    return result;
+  };
+
+  const filteredHeadcount = useMemo(() => applyFilters(mockHeadcountData), [selectedDept, dateRange]);
+  const filteredPayroll = useMemo(() => applyFilters(mockPayrollData), [selectedDept, dateRange]);
+  const filteredLeave = useMemo(() => applyFilters(mockLeaveTrendsData), [selectedDept, dateRange]);
+  const filteredProject = useMemo(() => applyFilters(mockProjectStatusData), [selectedDept, dateRange]);
+  const filteredAttrition = useMemo(() => applyFilters(mockAttritionData, true), [selectedDept, dateRange]);
+  
+  const filteredAttendance = useMemo(() => {
+    if (selectedDept !== 'All Departments') return mockAttendanceData.filter(d => d.dept === selectedDept);
+    return mockAttendanceData;
+  }, [selectedDept]);
 
   const handleExport = () => {
     setIsExporting(true);
@@ -58,7 +131,7 @@ export default function Reports() {
     if (activeReport === 'Headcount') {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={mockHeadcountData}>
+          <LineChart data={filteredHeadcount}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--ceo-border)" vertical={false} />
             <XAxis dataKey="month" stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
@@ -71,7 +144,7 @@ export default function Reports() {
     } else if (activeReport === 'Payroll Cost') {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={mockPayrollData}>
+          <LineChart data={filteredPayroll}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--ceo-border)" vertical={false} />
             <XAxis dataKey="month" stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}M`} />
@@ -81,10 +154,10 @@ export default function Reports() {
           </LineChart>
         </ResponsiveContainer>
       );
-    } else {
+    } else if (activeReport === 'Attendance') {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={mockAttendanceData}>
+          <BarChart data={filteredAttendance}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--ceo-border)" vertical={false} />
             <XAxis dataKey="dept" stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
@@ -94,6 +167,47 @@ export default function Reports() {
             <Bar dataKey="wfh" name="WFH %" fill="var(--ceo-purple)" radius={[4, 4, 0, 0]} />
             <Bar dataKey="leave" name="Leave %" fill="var(--ceo-warning)" radius={[4, 4, 0, 0]} />
           </BarChart>
+        </ResponsiveContainer>
+      );
+    } else if (activeReport === 'Leave Trends') {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={filteredLeave}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ceo-border)" vertical={false} />
+            <XAxis dataKey="month" stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+            <Tooltip cursor={{ fill: 'var(--ceo-bg)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--ceo-border)' }} />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+            <Bar dataKey="casual" name="Casual Leaves" fill="var(--ceo-warning)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="sick" name="Sick Leaves" fill="var(--ceo-danger)" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    } else if (activeReport === 'Project Status') {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={filteredProject} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value" label={({name, value}) => `${name}: ${value}`}>
+              {filteredProject.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid var(--ceo-border)' }} />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+          </PieChart>
+        </ResponsiveContainer>
+      );
+    } else {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={filteredAttrition}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ceo-border)" vertical={false} />
+            <XAxis dataKey="month" stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
+            <Tooltip cursor={{ fill: 'var(--ceo-bg)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--ceo-border)' }} formatter={(v) => [`${v}%`, 'Attrition Rate']} />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+            <Line type="monotone" dataKey="rate" name="Attrition Rate" stroke="var(--ceo-purple)" strokeWidth={3} dot={{ r: 4 }} />
+          </LineChart>
         </ResponsiveContainer>
       );
     }
@@ -117,7 +231,7 @@ export default function Reports() {
           <th>Change (MoM)</th>
         </tr>
       );
-    } else {
+    } else if (activeReport === 'Attendance') {
       return (
         <tr>
           <th>Department</th>
@@ -126,12 +240,35 @@ export default function Reports() {
           <th>Leave (%)</th>
         </tr>
       );
+    } else if (activeReport === 'Leave Trends') {
+      return (
+        <tr>
+          <th>Month</th>
+          <th>Casual Leaves</th>
+          <th>Sick Leaves</th>
+          <th>Total Leaves</th>
+        </tr>
+      );
+    } else if (activeReport === 'Project Status') {
+      return (
+        <tr>
+          <th>Status Category</th>
+          <th>Number of Projects</th>
+        </tr>
+      );
+    } else {
+      return (
+        <tr>
+          <th>Month</th>
+          <th>Attrition Rate (%)</th>
+        </tr>
+      );
     }
   };
 
   const renderTableRows = () => {
     if (activeReport === 'Headcount') {
-      return mockHeadcountData.map((d, i) => (
+      return filteredHeadcount.map((d, i) => (
         <tr key={i}>
           <td style={{ fontWeight: 600 }}>{d.month}</td>
           <td>{d.count}</td>
@@ -140,9 +277,9 @@ export default function Reports() {
         </tr>
       ));
     } else if (activeReport === 'Payroll Cost') {
-      return mockPayrollData.map((d, i) => {
-        const prev = i > 0 ? mockPayrollData[i-1].cost : d.cost;
-        const change = ((d.cost - prev) / prev * 100).toFixed(1);
+      return filteredPayroll.map((d, i) => {
+        const prev = i > 0 ? filteredPayroll[i-1].cost : d.cost;
+        const change = prev ? ((d.cost - prev) / prev * 100).toFixed(1) : 0;
         return (
           <tr key={i}>
             <td style={{ fontWeight: 600 }}>{d.month}</td>
@@ -155,13 +292,38 @@ export default function Reports() {
           </tr>
         );
       });
-    } else {
-      return mockAttendanceData.map((d, i) => (
+    } else if (activeReport === 'Attendance') {
+      return filteredAttendance.map((d, i) => (
         <tr key={i}>
           <td style={{ fontWeight: 600 }}>{d.dept}</td>
           <td>{d.present}%</td>
           <td>{d.wfh}%</td>
           <td>{d.leave}%</td>
+        </tr>
+      ));
+    } else if (activeReport === 'Leave Trends') {
+      return filteredLeave.map((d, i) => (
+        <tr key={i}>
+          <td style={{ fontWeight: 600 }}>{d.month}</td>
+          <td>{d.casual}</td>
+          <td>{d.sick}</td>
+          <td style={{ fontWeight: 700 }}>{d.casual + d.sick}</td>
+        </tr>
+      ));
+    } else if (activeReport === 'Project Status') {
+      return filteredProject.map((d, i) => (
+        <tr key={i}>
+          <td style={{ fontWeight: 600 }}>{d.name}</td>
+          <td>{d.value}</td>
+        </tr>
+      ));
+    } else {
+      return filteredAttrition.map((d, i) => (
+        <tr key={i}>
+          <td style={{ fontWeight: 600 }}>{d.month}</td>
+          <td style={{ color: d.rate > 3.5 ? 'var(--ceo-danger)' : 'var(--ceo-text-primary)', fontWeight: d.rate > 3.5 ? 700 : 400 }}>
+            {d.rate}%
+          </td>
         </tr>
       ));
     }
@@ -218,15 +380,26 @@ export default function Reports() {
 
         {/* FILTERS TOOLBAR */}
         <div style={{ gridArea: 'filters', display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: 'var(--ceo-card-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '6px 12px', alignItems: 'center', gap: '8px', boxShadow: 'var(--ceo-shadow)', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', background: 'var(--ceo-card-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '6px 12px', alignItems: 'center', gap: '8px', boxShadow: 'var(--ceo-shadow)' }}>
             <Calendar size={16} color="var(--ceo-text-secondary)" />
-            <span style={{ fontSize: '13px', fontWeight: 500 }}>Jan 1, 2025 - Jul 31, 2025</span>
+            <select value={dateRange} onChange={e => setDateRange(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontWeight: 500, cursor: 'pointer', paddingRight: '8px' }}>
+              <option value="Jan 1 - Jul 31, 2025">Jan 1 - Jul 31, 2025</option>
+              <option value="Last 30 Days">Last 30 Days</option>
+              <option value="Last Quarter">Last Quarter</option>
+              <option value="Year to Date">Year to Date</option>
+            </select>
           </div>
           
-          <div style={{ display: 'flex', background: 'var(--ceo-card-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '6px 12px', alignItems: 'center', gap: '8px', boxShadow: 'var(--ceo-shadow)', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', background: 'var(--ceo-card-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '6px 12px', alignItems: 'center', gap: '8px', boxShadow: 'var(--ceo-shadow)' }}>
             <Filter size={16} color="var(--ceo-text-secondary)" />
-            <span style={{ fontSize: '13px', fontWeight: 500 }}>All Departments</span>
-            <ChevronDown size={14} color="var(--ceo-text-muted)" />
+            <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontWeight: 500, cursor: 'pointer', paddingRight: '8px' }}>
+              <option value="All Departments">All Departments</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Sales">Sales</option>
+              <option value="HR">HR</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Operations">Operations</option>
+            </select>
           </div>
 
           <div style={{ flex: 1 }}></div>
