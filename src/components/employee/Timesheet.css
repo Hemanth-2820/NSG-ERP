@@ -5,16 +5,16 @@
 
 /* ── Design tokens (timesheet-specific) ── */
 .ts-root {
-  --ts-bg:              #0f172a;
-  --ts-bg-card:         #16213e;
-  --ts-bg-card-hover:   #1a2747;
-  --ts-bg-inner:        #1e2d4a;
-  --ts-border:          rgba(255, 255, 255, 0.08);
-  --ts-border-subtle:   rgba(255, 255, 255, 0.05);
+  --ts-bg:              var(--bg-primary);
+  --ts-bg-card:         var(--bg-secondary);
+  --ts-bg-card-hover:   var(--bg-tertiary);
+  --ts-bg-inner:        var(--bg-primary);
+  --ts-border:          var(--border-color);
+  --ts-border-subtle:   var(--border-color);
 
-  --ts-text:            #e8edf5;
-  --ts-text-dim:        rgba(232, 237, 245, 0.55);
-  --ts-text-muted:      rgba(232, 237, 245, 0.28);
+  --ts-text:            var(--text-primary);
+  --ts-text-dim:        var(--text-secondary);
+  --ts-text-muted:      var(--text-muted);
 
   --ts-emerald:         #10b981;
   --ts-emerald-dim:     rgba(16, 185, 129, 0.12);

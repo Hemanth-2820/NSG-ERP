@@ -8,15 +8,15 @@
 
 /* ── Design tokens (dark emerald theme) ── */
 .emp-root {
-  --emp-bg-card:        #16213e;
-  --emp-bg-card-hover:  #1a2747;
-  --emp-bg-card-inner:  #1e2d4a;
-  --emp-border:         rgba(255, 255, 255, 0.08);
-  --emp-border-subtle:  rgba(255, 255, 255, 0.05);
+  --emp-bg-card:        var(--bg-secondary);
+  --emp-bg-card-hover:  var(--bg-tertiary);
+  --emp-bg-card-inner:  var(--bg-primary);
+  --emp-border:         var(--border-color);
+  --emp-border-subtle:  var(--border-color);
 
-  --emp-text-primary:   #e8edf5;
-  --emp-text-secondary: rgba(232, 237, 245, 0.55);
-  --emp-text-muted:     rgba(232, 237, 245, 0.28);
+  --emp-text-primary:   var(--text-primary);
+  --emp-text-secondary: var(--text-secondary);
+  --emp-text-muted:     var(--text-muted);
 
   --emp-emerald:        #10b981;
   --emp-emerald-dim:    rgba(16, 185, 129, 0.12);

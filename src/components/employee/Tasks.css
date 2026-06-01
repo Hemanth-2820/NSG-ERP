@@ -3,14 +3,14 @@
 .tk-root {
   --tk-emerald:       #10b981;
   --tk-emerald-dim:   rgba(16,185,129,0.1);
-  --tk-bg:            #0d1117;
-  --tk-surface:       #161b22;
-  --tk-surface-2:     #1c2330;
-  --tk-border:        rgba(255,255,255,0.07);
-  --tk-text-primary:  #e6edf3;
-  --tk-text-secondary:#8b949e;
-  --tk-text-muted:    #6e7681;
-  --tk-selected:      hsl(265,40%,18%);
+  --tk-bg:            var(--bg-primary);
+  --tk-surface:       var(--bg-secondary);
+  --tk-surface-2:     var(--bg-tertiary);
+  --tk-border:        var(--border-color);
+  --tk-text-primary:  var(--text-primary);
+  --tk-text-secondary:var(--text-secondary);
+  --tk-text-muted:    var(--text-muted);
+  --tk-selected:      var(--bg-tertiary);
   --tk-subtask-done:  hsl(150,70%,50%);
   --tk-ac-done:       hsl(150,70%,50%);
   --tk-pr-btn:        hsl(265,70%,35%);

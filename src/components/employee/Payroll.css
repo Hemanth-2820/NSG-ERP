@@ -5,16 +5,16 @@
 
 /* ── Design tokens (payroll-specific) ── */
 .pay-root {
-  --pay-bg:              #0f172a;
-  --pay-bg-card:         #16213e;
-  --pay-bg-card-hover:   #1a2747;
-  --pay-bg-inner:        #1e2d4a;
-  --pay-border:          rgba(255, 255, 255, 0.08);
-  --pay-border-subtle:   rgba(255, 255, 255, 0.05);
+  --pay-bg:              var(--bg-primary);
+  --pay-bg-card:         var(--bg-secondary);
+  --pay-bg-card-hover:   var(--bg-tertiary);
+  --pay-bg-inner:        var(--bg-primary);
+  --pay-border:          var(--border-color);
+  --pay-border-subtle:   var(--border-color);
 
-  --pay-text:            #e8edf5;
-  --pay-text-dim:        rgba(232, 237, 245, 0.55);
-  --pay-text-muted:      rgba(232, 237, 245, 0.28);
+  --pay-text:            var(--text-primary);
+  --pay-text-dim:        var(--text-secondary);
+  --pay-text-muted:      var(--text-muted);
 
   --pay-emerald:         #10b981;
   --pay-emerald-dim:     rgba(16, 185, 129, 0.12);

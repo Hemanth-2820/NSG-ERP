@@ -12,16 +12,16 @@
   --gps-error:          hsl(0, 70%, 55%);
   --wfh-badge:          hsl(210, 70%, 50%);
 
-  --att-bg:             #0f172a;
-  --att-bg-card:        #16213e;
-  --att-bg-card-hover:  #1a2747;
-  --att-bg-inner:       #1e2d4a;
-  --att-border:         rgba(255, 255, 255, 0.08);
-  --att-border-subtle:  rgba(255, 255, 255, 0.05);
+  --att-bg:             var(--bg-primary);
+  --att-bg-card:        var(--bg-secondary);
+  --att-bg-card-hover:  var(--bg-tertiary);
+  --att-bg-inner:       var(--bg-primary);
+  --att-border:         var(--border-color);
+  --att-border-subtle:  var(--border-color);
 
-  --att-text:           #e8edf5;
-  --att-text-dim:       rgba(232, 237, 245, 0.55);
-  --att-text-muted:     rgba(232, 237, 245, 0.28);
+  --att-text:           var(--text-primary);
+  --att-text-dim:       var(--text-secondary);
+  --att-text-muted:     var(--text-muted);
 
   --att-emerald:        #10b981;
   --att-emerald-dim:    rgba(16, 185, 129, 0.12);
