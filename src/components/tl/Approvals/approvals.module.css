@@ -1,0 +1,244 @@
+.approvalsContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: 'Inter', sans-serif;
+  padding: 24px;
+  gap: 20px;
+}
+
+.topTabs {
+  display: flex;
+  gap: 16px;
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  align-items: center;
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.tabBtn:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+.tabBtnActive {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.tabBtnActive:hover {
+  background-color: #2563eb;
+}
+
+.badge {
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 12px;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 20px;
+  flex: 1;
+  min-height: 500px;
+}
+
+.listPanel, .detailPanel {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.panelTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.listItem {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.listItem:hover {
+  border-color: #cbd5e1;
+}
+
+.listItemSelected {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.employeeName {
+  font-weight: 600;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.slaBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.itemDesc {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.itemActions {
+  display: flex;
+  gap: 8px;
+}
+
+.btnApprove, .btnReject {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.btnApprove {
+  background-color: #10b981;
+  color: #ffffff;
+}
+.btnApprove:hover { background-color: #059669; }
+
+.btnReject {
+  background-color: #ffffff;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+.btnReject:hover { background-color: rgba(239, 68, 68, 0.1); }
+
+.detailHeader {
+  margin-bottom: 24px;
+}
+
+.detailSection {
+  margin-bottom: 24px;
+}
+
+.detailLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.detailValue {
+  font-size: 14px;
+  color: #334155;
+  background-color: #f8fafc;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.warningBox {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  padding: 12px;
+  color: #d97706;
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.gitBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+.table th, .table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+.table th {
+  color: #64748b;
+  font-weight: 600;
+}
+.table td {
+  color: #334155;
+}
+
+.bigActionRow {
+  display: flex;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.bigActionRow .btnApprove, .bigActionRow .btnReject {
+  padding: 12px 24px;
+  font-size: 14px;
+  flex: 1;
+}

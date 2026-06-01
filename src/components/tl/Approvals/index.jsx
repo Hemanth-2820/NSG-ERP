@@ -1,0 +1,287 @@
+import React, { useState } from 'react';
+import styles from './approvals.module.css';
+import { leaveRequests, timesheetReviews, wfhRequests, attendanceCorrections } from './mockData';
+import { AlertTriangle, MapPin, CheckCircle, Clock, FileText, Camera, GitCommit, Calendar } from 'lucide-react';
+
+const Approvals = () => {
+  const [activeTab, setActiveTab] = useState('leave');
+  
+  const [leaves, setLeaves] = useState(leaveRequests);
+  const [timesheets, setTimesheets] = useState(timesheetReviews);
+  const [wfhs, setWfhs] = useState(wfhRequests);
+  const [corrections, setCorrections] = useState(attendanceCorrections);
+
+  const [selectedId, setSelectedId] = useState(null);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSelectedId(null);
+  };
+
+  const handleAction = (id, actionType) => {
+    if (activeTab === 'leave') {
+      setLeaves(prev => prev.filter(item => item.id !== id));
+    } else if (activeTab === 'timesheet') {
+      setTimesheets(prev => prev.filter(item => item.id !== id));
+    } else if (activeTab === 'wfh') {
+      setWfhs(prev => prev.filter(item => item.id !== id));
+    } else if (activeTab === 'corrections') {
+      setCorrections(prev => prev.filter(item => item.id !== id));
+    }
+    if (selectedId === id) setSelectedId(null);
+  };
+
+  // Helper to get current list and selected item
+  let currentList = [];
+  let selectedItem = null;
+  if (activeTab === 'leave') {
+    currentList = leaves;
+    selectedItem = leaves.find(l => l.id === selectedId);
+  } else if (activeTab === 'timesheet') {
+    currentList = timesheets;
+    selectedItem = timesheets.find(t => t.id === selectedId);
+  } else if (activeTab === 'wfh') {
+    currentList = wfhs;
+    selectedItem = wfhs.find(w => w.id === selectedId);
+  } else if (activeTab === 'corrections') {
+    currentList = corrections;
+    selectedItem = corrections.find(c => c.id === selectedId);
+  }
+
+  // --- RENDER DETAIL PANELS ---
+  
+  const renderLeaveDetails = (item) => (
+    <>
+      <div className={styles.detailHeader}>
+        <h2 style={{ fontSize: '20px', margin: '0 0 8px 0', color: '#0f172a' }}>{item.employee}</h2>
+        <span style={{ color: '#94a3b8', fontSize: '14px' }}>{item.type} • {item.days} Days</span>
+      </div>
+      
+      {item.overlapWarning && (
+        <div className={styles.warningBox}>
+          <AlertTriangle size={18} />
+          <div>
+            <strong>Calendar Conflict Detected</strong>
+            <p style={{ margin: '4px 0 0 0' }}>{item.overlapWarning}</p>
+          </div>
+        </div>
+      )}
+
+      <div className={styles.detailSection}>
+        <span className={styles.detailLabel}>Requested Dates</span>
+        <div className={styles.detailValue}>{item.dates}</div>
+      </div>
+      
+      <div className={styles.detailSection}>
+        <span className={styles.detailLabel}>Reason</span>
+        <div className={styles.detailValue}>{item.reason}</div>
+      </div>
+    </>
+  );
+
+  const renderTimesheetDetails = (item) => (
+    <>
+      <div className={styles.detailHeader}>
+        <h2 style={{ fontSize: '20px', margin: '0 0 8px 0', color: '#0f172a' }}>{item.employee}</h2>
+        <span style={{ color: '#94a3b8', fontSize: '14px' }}>Week of {item.weekOf}</span>
+      </div>
+
+      <div className={styles.gitBadge}>
+        <GitCommit size={14} />
+        {item.gitCommits} Git Commits Matching Logged Hours
+      </div>
+
+      <div className={styles.detailSection} style={{ marginTop: '24px' }}>
+        <span className={styles.detailLabel}>Weekly Hours Grid</span>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{item.hours.Mon}h</td>
+              <td>{item.hours.Tue}h</td>
+              <td>{item.hours.Wed}h</td>
+              <td>{item.hours.Thu}h</td>
+              <td>{item.hours.Fri}h</td>
+              <td>{item.hours.Sat}h</td>
+              <td>{item.hours.Sun}h</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className={styles.detailSection}>
+        <span className={styles.detailLabel}>Total Logged</span>
+        <div className={styles.detailValue} style={{ fontSize: '18px', fontWeight: 'bold' }}>{item.totalHours} Hours</div>
+      </div>
+    </>
+  );
+
+  const renderWfhDetails = (item) => (
+    <>
+      <div className={styles.detailHeader}>
+        <h2 style={{ fontSize: '20px', margin: '0 0 8px 0', color: '#0f172a' }}>{item.employee}</h2>
+        <span style={{ color: '#94a3b8', fontSize: '14px' }}>WFH Request for {item.date}</span>
+      </div>
+
+      {item.locationVerified && (
+        <div className={styles.gitBadge} style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderColor: 'rgba(59, 130, 246, 0.2)', marginBottom: '24px' }}>
+          <MapPin size={14} />
+          Home Location Verified in System
+        </div>
+      )}
+
+      <div className={styles.detailSection}>
+        <span className={styles.detailLabel}>Reason</span>
+        <div className={styles.detailValue}>{item.reason}</div>
+      </div>
+    </>
+  );
+
+  const renderCorrectionDetails = (item) => (
+    <>
+      <div className={styles.detailHeader}>
+        <h2 style={{ fontSize: '20px', margin: '0 0 8px 0', color: '#0f172a' }}>{item.employee}</h2>
+        <span style={{ color: '#94a3b8', fontSize: '14px' }}>Attendance Correction for {item.date}</span>
+      </div>
+
+      <div className={styles.detailSection}>
+        <span className={styles.detailLabel}>Requested Times</span>
+        <div className={styles.detailValue}>{item.requestedTimes}</div>
+      </div>
+
+      <div className={styles.detailSection}>
+        <span className={styles.detailLabel}>Reason</span>
+        <div className={styles.detailValue}>{item.reason}</div>
+      </div>
+
+      <div className={styles.detailSection}>
+        <span className={styles.detailLabel}>System Verification</span>
+        <table className={styles.table}>
+          <tbody>
+            <tr>
+              <td style={{ color: '#94a3b8' }}>Photo Evidence</td>
+              <td>{item.photoEvidence ? <span style={{ color: '#10b981' }}><Camera size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }}/> Provided</span> : 'None'}</td>
+            </tr>
+            <tr>
+              <td style={{ color: '#94a3b8' }}>GPS Coordinates</td>
+              <td><MapPin size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: '#3b82f6' }}/> {item.gpsCoords}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+
+  return (
+    <div className={styles.approvalsContainer}>
+      
+      {/* TABS */}
+      <div className={styles.topTabs}>
+        <button 
+          className={`${styles.tabBtn} ${activeTab === 'leave' ? styles.tabBtnActive : ''}`}
+          onClick={() => handleTabChange('leave')}
+        >
+          <Calendar size={16} /> Leave 
+          {leaves.length > 0 && <span className={styles.badge}>{leaves.length}</span>}
+        </button>
+        <button 
+          className={`${styles.tabBtn} ${activeTab === 'timesheet' ? styles.tabBtnActive : ''}`}
+          onClick={() => handleTabChange('timesheet')}
+        >
+          <Clock size={16} /> Timesheet
+          {timesheets.length > 0 && <span className={styles.badge}>{timesheets.length}</span>}
+        </button>
+        <button 
+          className={`${styles.tabBtn} ${activeTab === 'wfh' ? styles.tabBtnActive : ''}`}
+          onClick={() => handleTabChange('wfh')}
+        >
+          <FileText size={16} /> WFH
+          {wfhs.length > 0 && <span className={styles.badge}>{wfhs.length}</span>}
+        </button>
+        <button 
+          className={`${styles.tabBtn} ${activeTab === 'corrections' ? styles.tabBtnActive : ''}`}
+          onClick={() => handleTabChange('corrections')}
+        >
+          <CheckCircle size={16} /> Attendance Corrections
+          {corrections.length > 0 && <span className={styles.badge}>{corrections.length}</span>}
+        </button>
+      </div>
+
+      {/* 2-PANE LAYOUT */}
+      <div className={styles.mainGrid}>
+        
+        {/* LIST PANEL */}
+        <div className={styles.listPanel}>
+          <div className={styles.panelTitle}>Pending Requests</div>
+          
+          {currentList.length === 0 ? (
+            <div style={{ color: '#64748b', textAlign: 'center', marginTop: '40px' }}>No pending requests in this queue.</div>
+          ) : (
+            currentList.map(item => (
+              <div 
+                key={item.id} 
+                className={`${styles.listItem} ${selectedId === item.id ? styles.listItemSelected : ''}`}
+                onClick={() => setSelectedId(item.id)}
+              >
+                <div className={styles.itemHeader}>
+                  <span className={styles.employeeName}>{item.employee}</span>
+                  {activeTab === 'corrections' && <span className={styles.slaBadge}>{item.slaRemaining} SLA</span>}
+                </div>
+                
+                <div className={styles.itemDesc}>
+                  {activeTab === 'leave' && `${item.type} (${item.days} days)`}
+                  {activeTab === 'timesheet' && `${item.totalHours} hrs logged`}
+                  {activeTab === 'wfh' && `${item.date}`}
+                  {activeTab === 'corrections' && `${item.date}`}
+                </div>
+                
+                <div className={styles.itemActions}>
+                  <button 
+                    className={styles.btnApprove} 
+                    onClick={(e) => { e.stopPropagation(); handleAction(item.id, 'approve'); }}
+                  >
+                    Approve
+                  </button>
+                  <button 
+                    className={styles.btnReject} 
+                    onClick={(e) => { e.stopPropagation(); handleAction(item.id, 'reject'); }}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* DETAIL PANEL */}
+        <div className={styles.detailPanel}>
+          <div className={styles.panelTitle}>Request Details</div>
+          
+          {!selectedItem ? (
+            <div style={{ color: '#64748b', textAlign: 'center', marginTop: '40px' }}>Select a request from the list to view details.</div>
+          ) : (
+            <div>
+              {activeTab === 'leave' && renderLeaveDetails(selectedItem)}
+              {activeTab === 'timesheet' && renderTimesheetDetails(selectedItem)}
+              {activeTab === 'wfh' && renderWfhDetails(selectedItem)}
+              {activeTab === 'corrections' && renderCorrectionDetails(selectedItem)}
+              
+              <div className={styles.bigActionRow}>
+                <button className={styles.btnApprove} onClick={() => handleAction(selectedId, 'approve')}>Approve Request</button>
+                <button className={styles.btnReject} onClick={() => handleAction(selectedId, 'reject')}>Reject Request</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default Approvals;
