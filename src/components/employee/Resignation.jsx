@@ -11,21 +11,42 @@ const defaultChecklist = [
   { id: 'kt_upload', label: 'KT document upload', completed: false, fileName: null }
 ];
 
-export default function Resignation() {
-  // --- States ---
-  const [resignationData, setResignationData] = useState(() => {
+const EMPLOYEE_ID = 102;
+
+export default function Resignation({ db, onUpdateDb }) {
+  // Derive resignation from shared db if available, else from localStorage
+  const getDbRecord = () =>
+    db?.resignations?.find(r => r.employee_id === EMPLOYEE_ID) || null;
+
+  const getInitialData = () => {
+    const dbRecord = getDbRecord();
+    if (dbRecord) {
+      return {
+        submissionDate: dbRecord.resignation_date,
+        lwdDate: dbRecord.LWD,
+        reason: dbRecord.reason || '',
+        daysServed: dbRecord.daysServed || 8
+      };
+    }
     const saved = localStorage.getItem('nsg_employee_resignation_data');
     return saved ? JSON.parse(saved) : null;
-  });
+  };
+
+  const [resignationData, setResignationData] = useState(getInitialData);
 
   const [checklist, setChecklist] = useState(() => {
     const saved = localStorage.getItem('nsg_employee_resignation_checklist');
     return saved ? JSON.parse(saved) : defaultChecklist;
   });
 
-  const [earlyReliefStatus, setEarlyReliefStatus] = useState(() => {
+  // Read early relief status from db.resignations live
+  const getEarlyReliefStatus = () => {
+    const dbRecord = getDbRecord();
+    if (dbRecord?.earlyRelief) return dbRecord.earlyRelief;
     return localStorage.getItem('nsg_employee_resignation_early_relief') || null;
-  });
+  };
+
+  const [earlyReliefStatus, setEarlyReliefStatus] = useState(getEarlyReliefStatus);
 
   const [toast, setToast] = useState(null);
 
@@ -52,12 +73,32 @@ export default function Resignation() {
 
   // --- Handlers ---
   const handleResignSubmit = (data) => {
-    // Add simulated served days
     const submission = {
       ...data,
-      daysServed: 8 // default simulated days served for testing notice progress
+      daysServed: 8
     };
     setResignationData(submission);
+
+    // Write to shared db.resignations so HR Exits & FnF module sees it
+    if (db && onUpdateDb) {
+      const newRecord = {
+        id: Date.now(),
+        employee_id: EMPLOYEE_ID,
+        resignation_date: data.submissionDate,
+        LWD: data.lwdDate,
+        status: 'pending',
+        reason: data.reason || '',
+        daysServed: 8,
+        earlyRelief: null,
+        submitted_at: new Date().toISOString()
+      };
+      // Remove any existing record for this employee first
+      const filtered = (db.resignations || []).filter(r => r.employee_id !== EMPLOYEE_ID);
+      onUpdateDb({ ...db, resignations: [...filtered, newRecord] });
+    } else {
+      localStorage.setItem('nsg_employee_resignation_data', JSON.stringify(submission));
+    }
+
     showToast('Resignation submitted successfully.');
   };
 
@@ -93,6 +134,15 @@ export default function Resignation() {
 
   const handleRequestEarlyRelief = () => {
     setEarlyReliefStatus('requested');
+    // Write early relief request to db.resignations
+    if (db && onUpdateDb) {
+      const updated = (db.resignations || []).map(r =>
+        r.employee_id === EMPLOYEE_ID ? { ...r, earlyRelief: 'requested' } : r
+      );
+      onUpdateDb({ ...db, resignations: updated });
+    } else {
+      localStorage.setItem('nsg_employee_resignation_early_relief', 'requested');
+    }
     showToast('Early relief requested.');
   };
 
@@ -116,7 +166,15 @@ export default function Resignation() {
     setResignationData(null);
     setChecklist(defaultChecklist);
     setEarlyReliefStatus(null);
-    showToast('Resignation state reset for testing.');
+    // Remove from shared db.resignations
+    if (db && onUpdateDb) {
+      const filtered = (db.resignations || []).filter(r => r.employee_id !== EMPLOYEE_ID);
+      onUpdateDb({ ...db, resignations: filtered });
+    } else {
+      localStorage.removeItem('nsg_employee_resignation_data');
+      localStorage.removeItem('nsg_employee_resignation_early_relief');
+    }
+    showToast('Resignation withdrawn.');
   };
 
   const showToast = (msg) => {
@@ -234,56 +292,48 @@ export default function Resignation() {
         
         {/* left/main area: Form OR Submission status card */}
         <div className="area-main">
-          {resignationData ? (
-            /* RESIGNED State card */
-            <div className="status-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent-green)' }}>
-                <CheckCircle2 size={24} />
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                    Resignation Submitted
-                  </h3>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Submitted on {resignationData.submissionDate}
-                  </span>
-                </div>
-              </div>
-
-              <div 
-                style={{
-                  borderTop: '1px solid var(--border-color)',
-                  borderBottom: '1px solid var(--border-color)',
-                  padding: '16px 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  fontSize: '12px'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Effective Resignation Date</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{resignationData.submissionDate}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Requested Last Working Day (LWD)</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{resignationData.lwdDate}</span>
-                </div>
-                {resignationData.reason && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Reason Provided</span>
-                    <p style={{ margin: 0, padding: '10px', borderRadius: '6px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                      "{resignationData.reason}"
-                    </p>
+          {resignationData ? (() => {
+              const dbRecord = db?.resignations?.find(r => r.employee_id === EMPLOYEE_ID);
+              const hrStatus = dbRecord?.status || 'pending';
+              const confirmedLwd = dbRecord?.LWD || resignationData.lwdDate;
+              return (
+                <div className="status-card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent-green)' }}>
+                    <CheckCircle2 size={24} />
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>Resignation Submitted</h3>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Submitted on {resignationData.submissionDate}</span>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '11px' }}>
-                <Calendar size={14} />
-                <span>Exit checklist clearing is currently active. HR clearance is pending LWD confirmation.</span>
-              </div>
-            </div>
-          ) : (
+                  <div style={{ borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Effective Resignation Date</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{resignationData.submissionDate}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Last Working Day (LWD)</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{confirmedLwd}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>HR Approval Status</span>
+                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '12px', textTransform: 'capitalize', backgroundColor: hrStatus === 'approved' ? 'rgba(59,130,246,0.1)' : hrStatus === 'cleared' ? 'rgba(16,185,129,0.1)' : 'rgba(251,191,36,0.1)', color: hrStatus === 'approved' ? '#3b82f6' : hrStatus === 'cleared' ? '#10b981' : '#f59e0b' }}>
+                        {hrStatus === 'pending' ? '⏳ Awaiting HR Review' : hrStatus === 'approved' ? '✓ LWD Confirmed by HR' : '✓ ' + hrStatus}
+                      </span>
+                    </div>
+                    {resignationData.reason && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Reason Provided</span>
+                        <p style={{ margin: 0, padding: '10px', borderRadius: '6px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>"{resignationData.reason}"</p>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                    <Calendar size={14} />
+                    <span>Exit checklist clearing is currently active. HR clearance is pending LWD confirmation.</span>
+                  </div>
+                </div>
+              );
+            })() : (
             /* NOT-RESIGNED State form */
             <ResignationForm onSubmit={handleResignSubmit} />
           )}

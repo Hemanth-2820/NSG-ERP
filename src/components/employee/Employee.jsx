@@ -40,7 +40,7 @@ export default function Employee({ activeTab, db, onUpdateDb }) {
   }
 
   if (activeTab === 'resignation') {
-    return <Resignation />;
+    return <Resignation db={db} onUpdateDb={onUpdateDb} />;
   }
 
   if (activeTab === 'help') {
