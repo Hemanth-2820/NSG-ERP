@@ -4,8 +4,33 @@ import Resignation from './Resignation';
 import Help from './Help';
 import Assets from './Assets';
 import Messaging from './Messaging';
+import Attendance from './Attendance';
+import Timesheet from './Timesheet';
+import Tasks from './Tasks';
+import Leave from './Leave';
+import Payroll from './Payroll';
 
 export default function Employee({ activeTab }) {
+  if (activeTab === 'attendance') {
+    return <Attendance />;
+  }
+
+  if (activeTab === 'timesheet') {
+    return <Timesheet />;
+  }
+
+  if (activeTab === 'tasks') {
+    return <Tasks />;
+  }
+
+  if (activeTab === 'leave') {
+    return <Leave />;
+  }
+
+  if (activeTab === 'payroll') {
+    return <Payroll />;
+  }
+
   if (activeTab === 'expenses') {
     return <Expenses />;
   }
@@ -47,4 +72,4 @@ export default function Employee({ activeTab }) {
       </div>
     </div>
   );
-}
+}
