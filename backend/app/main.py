@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
+from app.routers import auth, attendance
 
 # Auto-create tables for SQLite development.
 # For production environments, database migrations (like Alembic) are recommended.
@@ -31,6 +32,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(auth.router)
+app.include_router(attendance.router)
+
 @app.get("/")
 def read_root():
     return {
@@ -42,4 +47,5 @@ def read_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+
 
