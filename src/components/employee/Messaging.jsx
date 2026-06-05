@@ -219,10 +219,110 @@ export default function Messaging({ db, onUpdateDb }) {
     }
   };
 
+  const socketRef = useRef(null);
+
+  // Initialize WebSocket connection for real-time messaging
+  useEffect(() => {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/employee-portal/ws/Jane-Smith`;
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+
+    socket.onmessage = (event) => {
+      try {
+        const newMsg = JSON.parse(event.data);
+        const isCorporateChannel = DEFAULT_CHAT_CHANNELS.some(c => c.id === newMsg.channel_id);
+
+        if (isCorporateChannel) {
+          if (db && onUpdateDb) {
+            const currentChannels = db.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
+            const updatedChannels = currentChannels.map(c => {
+              if (c.id === newMsg.channel_id) {
+                const alreadyExists = (c.messages || []).some(m => m.id === newMsg.id);
+                if (alreadyExists) return c;
+                return {
+                  ...c,
+                  messages: [
+                    ...(c.messages || []),
+                    {
+                      id: newMsg.id,
+                      sender: newMsg.sender,
+                      text: newMsg.text,
+                      time: new Date(newMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                      isMe: newMsg.sender === 'Jane Smith'
+                    }
+                  ]
+                };
+              }
+              return c;
+            });
+            onUpdateDb({ ...db, chatChannels: updatedChannels });
+          }
+        } else {
+          // Update DM/custom rooms
+          setRooms(prevRooms => {
+            const room = prevRooms[newMsg.channel_id] || {
+              id: newMsg.channel_id,
+              name: teammates.find(c => c.id === newMsg.channel_id)?.name || 'Teammate',
+              type: 'dm',
+              messages: []
+            };
+            const alreadyExists = (room.messages || []).some(m => m.id === newMsg.id);
+            if (alreadyExists) return prevRooms;
+            
+            const updatedRooms = {
+              ...prevRooms,
+              [newMsg.channel_id]: {
+                ...room,
+                messages: [
+                  ...(room.messages || []),
+                  {
+                    id: newMsg.id,
+                    sender: newMsg.sender,
+                    text: newMsg.text,
+                    time: new Date(newMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    isMe: newMsg.sender === 'Jane Smith'
+                  }
+                ]
+              }
+            };
+            if (db && onUpdateDb) {
+              onUpdateDb({ ...db, employeeChatRooms: updatedRooms });
+            }
+            return updatedRooms;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse incoming WebSocket message:", e);
+      }
+    };
+
+    socket.onerror = (e) => {
+      console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [db, onUpdateDb]);
+
   // Send Message
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!inputText.trim() && attachedFiles.length === 0) return;
+
+    // Send via WebSocket if connection is active
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        channel_id: activeRoomId,
+        text: inputText.trim(),
+        sender: 'Jane Smith'
+      }));
+      setInputText('');
+      setAttachedFiles([]);
+      setShowEmojiPicker(false);
+      return;
+    }
 
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMessage = {
@@ -500,12 +600,16 @@ export default function Messaging({ db, onUpdateDb }) {
           display: flex;
           flex-direction: column;
           background-color: var(--bg-secondary);
+          height: 100%;
+          min-height: 0;
         }
 
         .chat-main {
           display: flex;
           flex-direction: column;
           background-color: var(--bg-primary);
+          height: 100%;
+          min-height: 0;
         }
 
         .chat-msg-row {

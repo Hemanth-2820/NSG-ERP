@@ -18,6 +18,14 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # Pydantic schemas
 class ClockInRequest(BaseModel):
     work_mode: str = "office"  # office, wfh
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+class GeofenceSettingsUpdate(BaseModel):
+    enabled: bool
+    latitude: float
+    longitude: float
+    radius: float
 
 class ClockOutResponse(BaseModel):
     id: int
@@ -96,6 +104,21 @@ def verify_manager_role(user: models.User):
 
 # ─── Employee Endpoints ───────────────────────────────────────────────────────
 
+import math
+
+def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371000.0  # Earth radius in meters
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    
+    a = math.sin(delta_phi / 2.0) ** 2 + \
+        math.cos(phi1) * math.cos(phi2) * \
+        math.sin(delta_lambda / 2.0) ** 2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return R * c
+
 @router.post("/clock-in", response_model=AttendanceLogResponse, status_code=status.HTTP_201_CREATED)
 def clock_in(req: ClockInRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     local_now = datetime.now(IST)
@@ -113,6 +136,33 @@ def clock_in(req: ClockInRequest, current_user: models.User = Depends(security.g
             detail="You have already clocked in today."
         )
     
+    # Validate location if geofencing is enabled and mode is office
+    if req.work_mode == "office":
+        enabled_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "geofence_enabled").first()
+        geofence_enabled = enabled_s.value.lower() == "true" if enabled_s else True
+        
+        if geofence_enabled:
+            if req.latitude is None or req.longitude is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Coordinates are required for Office clock-in validation."
+                )
+            
+            lat_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "office_latitude").first()
+            lng_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "office_longitude").first()
+            rad_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "allowed_radius").first()
+            
+            office_lat = float(lat_s.value) if lat_s else 12.9716
+            office_lng = float(lng_s.value) if lng_s else 77.5946
+            allowed_radius = float(rad_s.value) if rad_s else 100.0
+            
+            distance = calculate_haversine_distance(req.latitude, req.longitude, office_lat, office_lng)
+            if distance > allowed_radius:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Outside office perimeter. Current distance: {distance:.0f}m, Allowed: {allowed_radius:.0f}m."
+                )
+
     # Calculate lateness (threshold: clock-in after 09:30 AM local time)
     is_late = local_now.hour > 9 or (local_now.hour == 9 and local_now.minute > 30)
     attendance_status = "late" if is_late else "present"
@@ -376,3 +426,39 @@ def trigger_notification(req: ManualNotificationCreate, current_user: models.Use
     db.add(notification)
     db.commit()
     return {"status": "success", "message": f"Notification sent to employee {emp.name}."}
+
+
+# ─── Geofencing Configuration Endpoints ──────────────────────────────────────────
+
+@router.get("/geofence-settings")
+def get_geofence_settings(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    enabled_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "geofence_enabled").first()
+    lat_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "office_latitude").first()
+    lng_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "office_longitude").first()
+    rad_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == "allowed_radius").first()
+
+    return {
+        "enabled": enabled_s.value.lower() == "true" if enabled_s else True,
+        "latitude": float(lat_s.value) if lat_s else 12.9716,
+        "longitude": float(lng_s.value) if lng_s else 77.5946,
+        "radius": float(rad_s.value) if rad_s else 100.0
+    }
+
+@router.post("/geofence-settings")
+def update_geofence_settings(req: GeofenceSettingsUpdate, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    verify_manager_role(current_user)
+    
+    def set_key(key: str, val: str):
+        setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
+        if setting:
+            setting.value = val
+        else:
+            db.add(models.SystemSetting(key=key, value=val))
+
+    set_key("geofence_enabled", str(req.enabled).lower())
+    set_key("office_latitude", str(req.latitude))
+    set_key("office_longitude", str(req.longitude))
+    set_key("allowed_radius", str(req.radius))
+    
+    db.commit()
+    return {"status": "success", "message": "Geofencing settings updated successfully."}

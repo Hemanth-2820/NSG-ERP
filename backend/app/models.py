@@ -15,10 +15,35 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    emp_id = Column(String, unique=True, index=True, nullable=True)
+    phone = Column(String, nullable=True)
+    designation = Column(String, nullable=True)
+    status = Column(String, default="active")  # active, probation, terminated, suspended
+    join_date = Column(Date, nullable=True)
+    probation_end_date = Column(Date, nullable=True)
+    bank_name = Column(String, nullable=True)
+    account_number = Column(String, nullable=True)
+    ifsc_code = Column(String, nullable=True)
+    grade = Column(Integer, default=1)
+    manager = Column(String, nullable=True)
+    photo = Column(String, nullable=True)
+    documents = Column(Text, nullable=True)  # JSON-serialized list of docs
+
     # Relationships
     attendance_records = relationship("Attendance", back_populates="user", cascade="all, delete-orphan")
     attendance_corrections = relationship("AttendanceCorrection", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    timesheets = relationship("Timesheet", back_populates="user", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+    leave_balances = relationship("LeaveBalance", back_populates="user", cascade="all, delete-orphan")
+    leave_requests = relationship("LeaveRequest", back_populates="user", cascade="all, delete-orphan")
+    expense_claims = relationship("ExpenseClaim", back_populates="user", cascade="all, delete-orphan")
+    payslips = relationship("Payslip", back_populates="user", cascade="all, delete-orphan")
+    loans = relationship("Loan", back_populates="user", cascade="all, delete-orphan")
+    assets = relationship("Asset", back_populates="user", cascade="all, delete-orphan")
+    resignations = relationship("Resignation", back_populates="user", cascade="all, delete-orphan")
+    support_tickets = relationship("SupportTicket", back_populates="user", cascade="all, delete-orphan")
+    escalations = relationship("Escalation", back_populates="user", cascade="all, delete-orphan")
 
 class Attendance(Base):
     __tablename__ = "attendance"
@@ -63,4 +88,446 @@ class Notification(Base):
 
     # Relationships
     user = relationship("User", back_populates="notifications")
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, index=True, nullable=False)
+    value = Column(String, nullable=False)
+
+
+class Timesheet(Base):
+    __tablename__ = "timesheets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    week_start_date = Column(Date, nullable=False, index=True)
+    status = Column(String, default="draft")  # draft, submitted, approved, rejected
+    rejection_comment = Column(String, nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="timesheets")
+    rows = relationship("TimesheetRow", back_populates="timesheet", cascade="all, delete-orphan")
+
+
+class TimesheetRow(Base):
+    __tablename__ = "timesheet_rows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    timesheet_id = Column(Integer, ForeignKey("timesheets.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, nullable=True)
+    name = Column(String, nullable=False)
+    sprint = Column(String, nullable=False)
+    hours_mon = Column(Float, default=0.0)
+    hours_tue = Column(Float, default=0.0)
+    hours_wed = Column(Float, default=0.0)
+    hours_thu = Column(Float, default=0.0)
+    hours_fri = Column(Float, default=0.0)
+
+    # Relationships
+    timesheet = relationship("Timesheet", back_populates="rows")
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    project = Column(String, nullable=False)
+    sprint = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    priority = Column(String, default="medium")  # high, medium, low
+    status = Column(String, default="pending")  # pending, in-progress, done, blocked
+    sp = Column(Integer, default=1)
+    due = Column(Date, nullable=True)
+    pr_status = Column(String, nullable=True)  # pending, approved, rejected
+    pr_url = Column(String, nullable=True)
+    rejected_reason = Column(String, nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="tasks")
+    subtasks = relationship("TaskSubtask", back_populates="task", cascade="all, delete-orphan")
+
+
+class TaskSubtask(Base):
+    __tablename__ = "task_subtasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=False)
+    done = Column(Boolean, default=False)
+
+    # Relationships
+    task = relationship("Task", back_populates="subtasks")
+
+
+class LeaveBalance(Base):
+    __tablename__ = "leave_balances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    CL = Column(Float, default=0.0)
+    SL = Column(Float, default=0.0)
+    EL = Column(Float, default=0.0)
+    Maternity = Column(Float, default=0.0)
+    Paternity = Column(Float, default=0.0)
+    year = Column(Integer, default=2026)
+
+    # Relationships
+    user = relationship("User", back_populates="leave_balances")
+
+
+class LeaveRequest(Base):
+    __tablename__ = "leave_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    leave_type = Column(String, nullable=False)  # CL, SL, EL, etc.
+    from_date = Column(Date, nullable=False)
+    to_date = Column(Date, nullable=False)
+    days = Column(Float, nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(String, default="pending")  # pending, tl_approved, hr_approved, denied
+    tl_approved_at = Column(DateTime(timezone=True), nullable=True)
+    hr_approved_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="leave_requests")
+
+
+class ExpenseClaim(Base):
+    __tablename__ = "expense_claims"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    claim_date = Column(Date, nullable=False)
+    amount = Column(Float, nullable=False)
+    category = Column(String, nullable=False)
+    receipt_url = Column(String, nullable=True)
+    tl_approval = Column(String, default="pending")  # pending, approved, rejected
+    hr_approval = Column(String, default="pending")
+    status = Column(String, default="pending")  # pending, approved, rejected
+
+    # Relationships
+    user = relationship("User", back_populates="expense_claims")
+
+
+class Payslip(Base):
+    __tablename__ = "payslips"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    payroll_run_id = Column(Integer, nullable=True)
+    basic = Column(Float, nullable=False)
+    hra = Column(Float, nullable=False)
+    da = Column(Float, nullable=False)
+    allowances = Column(Float, nullable=False)
+    epf = Column(Float, nullable=False)
+    tds = Column(Float, nullable=False)
+    net = Column(Float, nullable=False)
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="payslips")
+
+
+class Loan(Base):
+    __tablename__ = "loans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    loan_amount = Column(Float, nullable=False)
+    emi_amount = Column(Float, nullable=False)
+    tenure = Column(Integer, nullable=False)
+    disbursed_at = Column(DateTime(timezone=True), nullable=True)
+    outstanding_balance = Column(Float, nullable=False)
+    status = Column(String, default="active")  # active, closed
+
+    # Relationships
+    user = relationship("User", back_populates="loans")
+
+
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id = Column(String, primary_key=True, index=True)  # AssetTag e.g. LAP-089
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    assetTag = Column(String, nullable=False)
+    type = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    serialNumber = Column(String, nullable=True)
+    issueDate = Column(Date, nullable=True)
+    condition = Column(String, nullable=True)
+    returnStatus = Column(String, default="Issued")  # Issued, Pending NOC, Returned
+    signedDate = Column(Date, nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="assets")
+
+
+class Resignation(Base):
+    __tablename__ = "resignations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    resignation_date = Column(Date, nullable=False)
+    LWD = Column(Date, nullable=False)
+    status = Column(String, default="pending")  # pending, approved, rejected, withdrawn
+    reason = Column(Text, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="resignations")
+
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    category = Column(String, nullable=False)
+    priority = Column(String, default="medium")  # high, medium, low
+    status = Column(String, default="open")  # open, in-progress, resolved, closed
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="support_tickets")
+
+
+class ChatChannel(Base):
+    __tablename__ = "chat_channels"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    label = Column(String, nullable=True)
+    type = Column(String, nullable=False)  # staff, grievance, management
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    channel_id = Column(String, ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False)
+    sender = Column(String, nullable=False)
+    text = Column(Text, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Escalation(Base):
+    __tablename__ = "escalations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=False)
+    task_link = Column(String, nullable=False)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+    severity = Column(String, default="Medium")  # Medium, High, Critical
+    ceo_viewed = Column(Boolean, default=False)
+    resolved = Column(Boolean, default=False)
+    dependencies = Column(String, nullable=True)  # Comma-separated dependencies list
+    description = Column(Text, nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="escalations")
+
+
+class Candidate(Base):
+    __tablename__ = "candidates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    phone = Column(String, nullable=True)
+    role = Column(String, nullable=False)
+    source = Column(String, nullable=True)
+    stage = Column(String, default="applied")  # applied, screening, interview, offer, joined, rejected
+    resume_url = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class JobHistory(Base):
+    __tablename__ = "job_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    event_type = Column(String, nullable=False)  # joining, compensation_change, department_transfer, etc.
+    old_dept = Column(String, nullable=True)
+    new_dept = Column(String, nullable=True)
+    old_role = Column(String, nullable=True)
+    new_role = Column(String, nullable=True)
+    old_grade = Column(Integer, nullable=True)
+    new_grade = Column(Integer, nullable=True)
+    manager = Column(String, nullable=True)
+    effective_date = Column(Date, nullable=False)
+    approved_by = Column(String, nullable=True)
+
+    employee = relationship("User", foreign_keys=[employee_id])
+
+
+class DisciplinaryTicket(Base):
+    __tablename__ = "disciplinary_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    issued_by = Column(String, nullable=False)
+    violation_type = Column(String, nullable=False)
+    severity = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    evidence_url = Column(String, nullable=True)
+    response_deadline = Column(DateTime(timezone=True), nullable=True)
+    employee_rebuttal = Column(Text, nullable=True)
+    status = Column(String, default="issued")  # issued, resolved
+
+    employee = relationship("User", foreign_keys=[employee_id])
+
+
+class PIP(Base):
+    __tablename__ = "pips"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    ticket_id = Column(Integer, ForeignKey("disciplinary_tickets.id", ondelete="SET NULL"), nullable=True)
+    manager_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    start_date = Column(Date, nullable=False)
+    duration_weeks = Column(Integer, default=4)
+    goals = Column(Text, nullable=True)  # JSON-serialized goals
+    status = Column(String, default="ongoing")  # ongoing, completed, failed
+    outcome = Column(String, default="pending")  # pending, passed, terminated
+
+    employee = relationship("User", foreign_keys=[employee_id])
+    manager = relationship("User", foreign_keys=[manager_id])
+
+
+class TrainingTrack(Base):
+    __tablename__ = "training_tracks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    department = Column(String, default="All")
+    modules = Column(Text, nullable=True)  # JSON-serialized modules
+    is_mandatory = Column(Boolean, default=False)
+
+
+class TrainingProgress(Base):
+    __tablename__ = "training_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    track_id = Column(Integer, ForeignKey("training_tracks.id", ondelete="CASCADE"), nullable=False)
+    completed_modules = Column(Integer, default=0)
+    quiz_score = Column(Float, default=0.0)
+    passed = Column(Boolean, default=False)
+
+    employee = relationship("User", foreign_keys=[employee_id])
+    track = relationship("TrainingTrack")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    initiator_id = Column(String, nullable=False)
+    module = Column(String, nullable=False)
+    record_id = Column(Integer, nullable=True)
+    action_type = Column(String, nullable=False)
+    change_diff = Column(Text, nullable=True)  # JSON string
+    ip_address = Column(String, nullable=True)
+    client_agent = Column(String, nullable=True)
+
+
+class TDSDeclaration(Base):
+    __tablename__ = "tds_declarations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    financial_year = Column(String, nullable=False)
+    declaration_type = Column(String, nullable=False)
+    declared_amount = Column(Float, nullable=False)
+    proof_url = Column(String, nullable=True)
+    status = Column(String, default="pending")  # pending, verified, rejected
+    verified_by = Column(String, nullable=True)
+
+    employee = relationship("User", foreign_keys=[employee_id])
+
+
+class PayrollRun(Base):
+    __tablename__ = "payroll_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
+    status = Column(String, default="draft")  # draft, maker_signed, checker_signed, bank_transferred
+    maker_id = Column(String, nullable=True)
+    maker_signed_at = Column(DateTime(timezone=True), nullable=True)
+    checker_id = Column(String, nullable=True)
+    checker_signed_at = Column(DateTime(timezone=True), nullable=True)
+    bank_transfer_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class TimesheetException(Base):
+    __tablename__ = "timesheet_exceptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    week_start_date = Column(Date, nullable=False)
+    exception_type = Column(String, nullable=False)  # underlogged, unsubmitted
+    logged_hours = Column(Float, default=0.0)
+    target_hours = Column(Float, default=8.0)
+    date = Column(Date, nullable=False)
+    tl_rejection_comment = Column(Text, nullable=True)
+    status = Column(String, default="open")  # open, resolved
+    days_overdue = Column(Integer, default=0)
+
+    employee = relationship("User", foreign_keys=[employee_id])
+
+
+class OnboardingTask(Base):
+    __tablename__ = "onboarding_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    instance_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_name = Column(String, nullable=False)
+    assigned_to = Column(String, nullable=False)  # IT, Employee, HR, TL
+    due_date = Column(Date, nullable=False)
+    is_mandatory = Column(Boolean, default=True)
+    requires_esign = Column(Boolean, default=False)
+    completed_at = Column(Date, nullable=True)
+    status = Column(String, default="pending")  # pending, completed
+
+    employee = relationship("User", foreign_keys=[instance_id])
+
+
+class EsignRequest(Base):
+    __tablename__ = "esign_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    document_name = Column(String, nullable=False)
+    status = Column(String, default="pending")  # pending, signed, voided
+    sent_at = Column(DateTime(timezone=True), server_default=func.now())
+    signed_at = Column(DateTime(timezone=True), nullable=True)
+
+    employee = relationship("User", foreign_keys=[employee_id])
+
+
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
+    priority = Column(String, default="Normal")  # Urgent, Normal, Low
+    audience = Column(String, default="All Employees")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    author = Column(String, default="CEO Office")
+    read_count = Column(Integer, default=0)
+    read_pct = Column(Float, default=0.0)
+
+
 

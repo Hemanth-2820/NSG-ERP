@@ -266,6 +266,14 @@ export default function App() {
         if (!parsed.assetRequests) parsed.assetRequests = [];
         if (!parsed.chatChannels || parsed.chatChannels.length === 0) parsed.chatChannels = INITIAL_CHAT_CHANNELS;
         if (!parsed.announcements || parsed.announcements.length === 0) parsed.announcements = INITIAL_ANNOUNCEMENTS;
+        if (!parsed.geofenceSettings) {
+          parsed.geofenceSettings = {
+            enabled: true,
+            latitude: 12.9716,
+            longitude: 77.5946,
+            radius: 100
+          };
+        }
         
         // Remove pre-seeded mock logs & corrections for active testing employee ID 102
         // This ensures a completely blank sheet so only your live actions show up!
@@ -310,7 +318,13 @@ export default function App() {
       assets: INITIAL_ASSETS,
       assetRequests: [],
       chatChannels: INITIAL_CHAT_CHANNELS,
-      announcements: INITIAL_ANNOUNCEMENTS
+      announcements: INITIAL_ANNOUNCEMENTS,
+      geofenceSettings: {
+        enabled: true,
+        latitude: 12.9716,
+        longitude: 77.5946,
+        radius: 100
+      }
     };
     localStorage.setItem('nsg_hr_db', JSON.stringify(seed));
     return seed;

@@ -66,6 +66,11 @@ export default function HuddleModal({ peer, onClose }) {
           disableDeepLinking: true  // Stop Jitsi from showing native app install popups
         },
         interfaceConfigOverwrite: {
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_BRAND_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+          HIDE_DEEP_LINKING_LOGO: true,
+          SHOW_POWERED_BY: false,
           TOOLBAR_BUTTONS: [
             'microphone', 'camera', 'desktop', 'fullscreen',
             'fodeviceselection', 'hangup', 'chat', 'settings', 
@@ -139,7 +144,7 @@ export default function HuddleModal({ peer, onClose }) {
 
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', letterSpacing: '-0.3px' }}>
-            Launching Jitsi Huddle...
+            Launching NSG ERP Huddle...
           </h3>
           <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
             Establishing direct client-side video link for {peer.name || 'Workspace'}
@@ -219,7 +224,7 @@ export default function HuddleModal({ peer, onClose }) {
             }}
           />
           <span style={{ fontSize: '13px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase', color: '#10b981' }}>
-            Jitsi Live Meeting
+            NSG ERP Live Meeting
           </span>
           <span style={{ fontSize: '13px', color: '#64748b' }}>|</span>
           <span style={{ fontSize: '13px', color: '#cbd5e1' }}>

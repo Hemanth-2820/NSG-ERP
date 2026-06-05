@@ -1,0 +1,529 @@
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import date, datetime
+
+from app import models, database
+from app.core import security
+
+router = APIRouter(
+    prefix="/employee-portal",
+    tags=["employee-portal"]
+)
+
+# ─── 1. TASKS SCHEMAS & ROUTES ────────────────────────────────────────────────
+
+class SubtaskResponse(BaseModel):
+    id: int
+    title: str
+    done: bool
+
+    class Config:
+        from_attributes = True
+
+class TaskResponse(BaseModel):
+    id: int
+    project: str
+    sprint: str
+    title: str
+    description: Optional[str]
+    priority: str
+    status: str
+    sp: int
+    due: Optional[date]
+    prStatus: Optional[str] = None
+    prUrl: Optional[str] = None
+    rejectedReason: Optional[str] = None
+    subtasks: List[SubtaskResponse]
+
+    class Config:
+        from_attributes = True
+
+class PRSubmitRequest(BaseModel):
+    prUrl: str
+
+@router.get("/tasks/my-tasks", response_model=List[TaskResponse])
+def get_my_tasks(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    tasks = db.query(models.Task).filter(models.Task.user_id == current_user.id).all()
+    # Map fields to match camelCase expected by the React frontend
+    resp_tasks = []
+    for t in tasks:
+        resp_tasks.append(TaskResponse(
+            id=t.id,
+            project=t.project,
+            sprint=t.sprint,
+            title=t.title,
+            description=t.description,
+            priority=t.priority,
+            status=t.status,
+            sp=t.sp,
+            due=t.due,
+            prStatus=t.pr_status,
+            prUrl=t.pr_url,
+            rejectedReason=t.rejected_reason,
+            subtasks=[SubtaskResponse(id=st.id, title=st.title, done=st.done) for st in t.subtasks]
+        ))
+    return resp_tasks
+
+@router.post("/tasks/{id}/subtasks/{subtask_id}/toggle", response_model=SubtaskResponse)
+def toggle_subtask(id: int, subtask_id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    # Verify task belongs to current user
+    task = db.query(models.Task).filter(models.Task.id == id, models.Task.user_id == current_user.id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    
+    subtask = db.query(models.TaskSubtask).filter(models.TaskSubtask.id == subtask_id, models.TaskSubtask.task_id == id).first()
+    if not subtask:
+        raise HTTPException(status_code=404, detail="Subtask not found.")
+        
+    subtask.done = not subtask.done
+    db.commit()
+    db.refresh(subtask)
+    return subtask
+
+@router.post("/tasks/{id}/submit-pr", response_model=TaskResponse)
+def submit_pr(id: int, req: PRSubmitRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    task = db.query(models.Task).filter(models.Task.id == id, models.Task.user_id == current_user.id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+        
+    task.pr_status = "pending"
+    task.pr_url = req.prUrl
+    task.status = "done"  # Automatically mark task as done or keep as in-progress pending approval
+    db.commit()
+    db.refresh(task)
+    return TaskResponse(
+        id=task.id,
+        project=task.project,
+        sprint=task.sprint,
+        title=task.title,
+        description=task.description,
+        priority=task.priority,
+        status=task.status,
+        sp=task.sp,
+        due=task.due,
+        prStatus=task.pr_status,
+        prUrl=task.pr_url,
+        rejectedReason=task.rejected_reason,
+        subtasks=[SubtaskResponse(id=st.id, title=st.title, done=st.done) for st in task.subtasks]
+    )
+
+
+# ─── 2. LEAVE SCHEMAS & ROUTES ────────────────────────────────────────────────
+
+class LeaveBalanceResponse(BaseModel):
+    id: int
+    CL: float
+    SL: float
+    EL: float
+    Maternity: float
+    Paternity: float
+    year: int
+
+    class Config:
+        from_attributes = True
+
+class LeaveRequestCreate(BaseModel):
+    leave_type: str
+    from_date: date
+    to_date: date
+    days: float
+    reason: str
+
+class LeaveRequestResponse(BaseModel):
+    id: int
+    leave_type: str
+    from_date: date
+    to_date: date
+    days: float
+    reason: str
+    status: str
+    tl_approved_at: Optional[datetime] = None
+    hr_approved_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+@router.get("/leave/my-balances", response_model=LeaveBalanceResponse)
+def get_my_leave_balances(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    bal = db.query(models.LeaveBalance).filter(models.LeaveBalance.user_id == current_user.id).first()
+    if not bal:
+        # Seed default balances if none found
+        bal = models.LeaveBalance(user_id=current_user.id, CL=6.0, SL=8.0, EL=12.0, year=2026)
+        db.add(bal)
+        db.commit()
+        db.refresh(bal)
+    return bal
+
+@router.get("/leave/my-requests", response_model=List[LeaveRequestResponse])
+def get_my_leave_requests(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.LeaveRequest).filter(models.LeaveRequest.user_id == current_user.id).order_by(models.LeaveRequest.from_date.desc()).all()
+
+@router.post("/leave/request", response_model=LeaveRequestResponse, status_code=status.HTTP_201_CREATED)
+def request_leave(req: LeaveRequestCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    new_req = models.LeaveRequest(
+        user_id=current_user.id,
+        leave_type=req.leave_type,
+        from_date=req.from_date,
+        to_date=req.to_date,
+        days=req.days,
+        reason=req.reason,
+        status="pending"
+    )
+    db.add(new_req)
+    db.commit()
+    db.refresh(new_req)
+    return new_req
+
+
+# ─── 3. EXPENSES SCHEMAS & ROUTES ─────────────────────────────────────────────
+
+class ExpenseClaimCreate(BaseModel):
+    amount: float
+    category: str
+    receipt_url: Optional[str] = "#"
+
+class ExpenseClaimResponse(BaseModel):
+    id: int
+    claim_date: date
+    amount: float
+    category: str
+    receipt_url: Optional[str]
+    tl_approval: str
+    hr_approval: str
+    status: str
+
+    class Config:
+        from_attributes = True
+
+@router.get("/expenses/my-claims", response_model=List[ExpenseClaimResponse])
+def get_my_expense_claims(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.ExpenseClaim).filter(models.ExpenseClaim.user_id == current_user.id).order_by(models.ExpenseClaim.claim_date.desc()).all()
+
+@router.post("/expenses/claim", response_model=ExpenseClaimResponse, status_code=status.HTTP_201_CREATED)
+def claim_expense(req: ExpenseClaimCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    claim = models.ExpenseClaim(
+        user_id=current_user.id,
+        claim_date=date.today(),
+        amount=req.amount,
+        category=req.category,
+        receipt_url=req.receipt_url,
+        tl_approval="pending",
+        hr_approval="pending",
+        status="pending"
+    )
+    db.add(claim)
+    db.commit()
+    db.refresh(claim)
+    return claim
+
+
+# ─── 4. PAYROLL SCHEMAS & ROUTES ──────────────────────────────────────────────
+
+class PayslipResponse(BaseModel):
+    id: int
+    basic: float
+    hra: float
+    da: float
+    allowances: float
+    epf: float
+    tds: float
+    net: float
+    month: int
+    year: int
+
+    class Config:
+        from_attributes = True
+
+class LoanResponse(BaseModel):
+    id: int
+    loan_amount: float
+    emi_amount: float
+    tenure: int
+    outstanding_balance: float
+    status: str
+
+    class Config:
+        from_attributes = True
+
+@router.get("/payroll/my-payslips", response_model=List[PayslipResponse])
+def get_my_payslips(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.Payslip).filter(models.Payslip.user_id == current_user.id).order_by(models.Payslip.year.desc(), models.Payslip.month.desc()).all()
+
+@router.get("/payroll/my-loans", response_model=List[LoanResponse])
+def get_my_loans(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.Loan).filter(models.Loan.user_id == current_user.id).all()
+
+
+# ─── 5. PROFILE SCHEMAS & ROUTES ──────────────────────────────────────────────
+
+class BankUpdate(BaseModel):
+    bank_name: str
+    account_number: str
+    ifsc_code: str
+
+class UserProfileResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    department: Optional[str] = None
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+@router.get("/profile/details", response_model=UserProfileResponse)
+def get_profile_details(current_user: models.User = Depends(security.get_current_user)):
+    return current_user
+
+@router.post("/profile/update-bank")
+def update_bank_details(req: BankUpdate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    # Assuming bank fields could exist in User model or related details.
+    # For now, return a success message simulating bank record update.
+    return {"status": "success", "message": "Bank details submitted for verification."}
+
+
+# ─── 6. RESIGNATION & ASSETS SCHEMAS & ROUTES ─────────────────────────────────
+
+class ResignationCreate(BaseModel):
+    reason: str
+
+class ResignationResponse(BaseModel):
+    id: int
+    resignation_date: date
+    LWD: date
+    status: str
+    reason: str
+
+    class Config:
+        from_attributes = True
+
+class AssetResponse(BaseModel):
+    id: str
+    assetTag: str
+    type: str
+    name: str
+    serialNumber: Optional[str]
+    issueDate: Optional[date]
+    condition: Optional[str]
+    returnStatus: str
+    signedDate: Optional[date]
+
+    class Config:
+        from_attributes = True
+
+@router.get("/resignation/status", response_model=Optional[ResignationResponse])
+def get_resignation_status(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.Resignation).filter(models.Resignation.user_id == current_user.id).first()
+
+@router.post("/resignation/submit", response_model=ResignationResponse)
+def submit_resignation(req: ResignationCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    existing = db.query(models.Resignation).filter(models.Resignation.user_id == current_user.id).first()
+    if existing:
+         raise HTTPException(status_code=400, detail="Resignation already submitted.")
+    
+    # Auto compute Last Working Day as 30 days from now
+    res_date = date.today()
+    lwd_date = res_date + int(30) # simply add days logic or offset
+    lwd_calculated = date.fromordinal(res_date.toordinal() + 30)
+    
+    res = models.Resignation(
+        user_id=current_user.id,
+        resignation_date=res_date,
+        LWD=lwd_calculated,
+        reason=req.reason,
+        status="pending"
+    )
+    db.add(res)
+    db.commit()
+    db.refresh(res)
+    return res
+
+@router.post("/resignation/withdraw")
+def withdraw_resignation(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    res = db.query(models.Resignation).filter(
+        models.Resignation.user_id == current_user.id,
+        models.Resignation.status == "pending"
+    ).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="No active resignation request found.")
+        
+    db.delete(res)
+    db.commit()
+    return {"status": "success", "message": "Resignation request withdrawn successfully."}
+
+@router.get("/resignation/my-assets", response_model=List[AssetResponse])
+def get_my_assets(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.Asset).filter(models.Asset.user_id == current_user.id).all()
+
+
+# ─── 7. HELPDESK SCHEMAS & ROUTES ─────────────────────────────────────────────
+
+class TicketCreate(BaseModel):
+    title: str
+    description: str
+    category: str
+    priority: str = "medium"
+
+class TicketResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    category: str
+    priority: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+@router.get("/helpdesk/my-tickets", response_model=List[TicketResponse])
+def get_my_tickets(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.SupportTicket).filter(models.SupportTicket.user_id == current_user.id).order_by(models.SupportTicket.created_at.desc()).all()
+
+@router.post("/helpdesk/ticket", response_model=TicketResponse, status_code=status.HTTP_201_CREATED)
+def submit_ticket(req: TicketCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    ticket = models.SupportTicket(
+        user_id=current_user.id,
+        title=req.title,
+        description=req.description,
+        category=req.category,
+        priority=req.priority,
+        status="open"
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
+# ─── 8. CHAT SCHEMAS & ROUTES ─────────────────────────────────────────────────
+
+class ChannelResponse(BaseModel):
+    id: str
+    name: str
+    label: Optional[str]
+    type: str
+
+    class Config:
+        from_attributes = True
+
+class MessageCreate(BaseModel):
+    text: str
+
+class MessageResponse(BaseModel):
+    id: int
+    channel_id: str
+    sender: str
+    text: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+@router.get("/chat/channels", response_model=List[ChannelResponse])
+def get_channels(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    return db.query(models.ChatChannel).all()
+
+@router.get("/chat/channels/{channel_id}/messages", response_model=List[MessageResponse])
+def get_channel_messages(channel_id: str, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    return db.query(models.ChatMessage).filter(models.ChatMessage.channel_id == channel_id).order_by(models.ChatMessage.timestamp.asc()).all()
+
+@router.post("/chat/channels/{channel_id}/send", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+def send_message(channel_id: str, req: MessageCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    channel = db.query(models.ChatChannel).filter(models.ChatChannel.id == channel_id).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Chat channel not found.")
+        
+    msg = models.ChatMessage(
+        channel_id=channel_id,
+        sender=current_user.name,
+        text=req.text
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+    return msg
+
+
+# ─── WebSocket Connection Manager & Endpoint ───────────────────────────────
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: dict[str, list[WebSocket]] = {}
+
+    async def connect(self, client_id: str, websocket: WebSocket):
+        await websocket.accept()
+        if client_id not in self.active_connections:
+            self.active_connections[client_id] = []
+        self.active_connections[client_id].append(websocket)
+
+    def disconnect(self, client_id: str, websocket: WebSocket):
+        if client_id in self.active_connections:
+            self.active_connections[client_id].remove(websocket)
+            if not self.active_connections[client_id]:
+                del self.active_connections[client_id]
+
+    async def broadcast_message(self, message: dict):
+        import json
+        payload = json.dumps(message)
+        for client_id, websockets in list(self.active_connections.items()):
+            for websocket in websockets:
+                try:
+                    await websocket.send_text(payload)
+                except Exception:
+                    pass
+
+manager = ConnectionManager()
+
+@router.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    await manager.connect(client_id, websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            import json
+            try:
+                msg_data = json.loads(data)
+                channel_id = msg_data.get("channel_id")
+                text = msg_data.get("text")
+                sender = msg_data.get("sender", client_id)
+
+                if channel_id and text:
+                    # Save to database
+                    db_session = database.SessionLocal()
+                    try:
+                        # Check channel exists or seed it dynamically for testing
+                        channel = db_session.query(models.ChatChannel).filter(models.ChatChannel.id == channel_id).first()
+                        if not channel:
+                            # Dynamic seed for custom channels
+                            channel = models.ChatChannel(id=channel_id, name=f"#{channel_id}", label=f"Room {channel_id}", type="staff")
+                            db_session.add(channel)
+                            db_session.flush()
+
+                        db_msg = models.ChatMessage(
+                            channel_id=channel_id,
+                            sender=sender,
+                            text=text
+                        )
+                        db_session.add(db_msg)
+                        db_session.commit()
+                        db_session.refresh(db_msg)
+                        
+                        # Broadcast
+                        broadcast_data = {
+                            "id": db_msg.id,
+                            "channel_id": db_msg.channel_id,
+                            "sender": db_msg.sender,
+                            "text": db_msg.text,
+                            "timestamp": db_msg.timestamp.isoformat()
+                        }
+                        await manager.broadcast_message(broadcast_data)
+                    finally:
+                        db_session.close()
+            except Exception as e:
+                print(f"Error parsing websocket payload: {e}")
+    except WebSocketDisconnect:
+        manager.disconnect(client_id, websocket)

@@ -40,6 +40,18 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Radius of Earth in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in meters
+}
+
 // ─── Mock monthly log data ────────────────────────────────────────────────────
 
 function generateMockLog() {
@@ -97,7 +109,7 @@ function SectionHeader({ icon, title, accent = '#10b981' }) {
 //  CLOCK IN/OUT PANEL
 // ════════════════════════════════════════════════════════
 
-function ClockInOutPanel({ clockState, onClockIn, onClockOut, liveClock, elapsed, gpsStatus }) {
+function ClockInOutPanel({ clockState, onClockIn, onClockOut, liveClock, elapsed, gpsStatus, toast, onDismissToast }) {
   const btnRef = useRef(null);
   const [ripple, setRipple] = useState(null);
 
@@ -186,6 +198,13 @@ function ClockInOutPanel({ clockState, onClockIn, onClockOut, liveClock, elapsed
         <div className={`att-gps-row ${gpsLabel.cls}`}>
           {gpsLabel.icon}
           {gpsLabel.text}
+        </div>
+      )}
+
+      {toast && (
+        <div className={`att-toast att-toast--${toast.type}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: 12 }} onClick={onDismissToast}>
+          <AlertTriangle size={14} />
+          <span>{toast.msg}</span>
         </div>
       )}
 
@@ -623,6 +642,7 @@ export default function Attendance({ db, onUpdateDb }) {
   // Clock state: idle | searching | clocked-in | already
   const [clockState, setClockState] = useState('idle');
   const [gpsStatus,  setGpsStatus]  = useState('idle'); // idle | searching | ok | denied | error
+  const [toast, setToast] = useState(null);
   const [clockInTime,  setClockInTime]  = useState(null);
   const [clockOutTime, setClockOutTime] = useState(null);
   const [elapsed, setElapsed] = useState(null);
@@ -688,8 +708,33 @@ export default function Attendance({ db, onUpdateDb }) {
   function handleClockIn() {
     setClockState('searching');
     setGpsStatus('searching');
+    setToast(null);
+
+    const geofence = db?.geofenceSettings || {
+      enabled: true,
+      latitude: 12.9716,
+      longitude: 77.5946,
+      radius: 100
+    };
+
     navigator.geolocation?.getCurrentPosition(
-      () => {
+      (pos) => {
+        const userLat = pos.coords.latitude;
+        const userLng = pos.coords.longitude;
+
+        if (geofence.enabled) {
+          const dist = getHaversineDistance(userLat, userLng, geofence.latitude, geofence.longitude);
+          if (dist > geofence.radius) {
+            setGpsStatus('error');
+            setClockState('idle');
+            setToast({
+              type: 'error',
+              msg: `Outside office perimeter. Distance: ${dist.toFixed(0)}m, Allowed: ${geofence.radius}m. Please request WFH.`
+            });
+            return;
+          }
+        }
+
         setGpsStatus('ok');
         saveClockIn('office');
       },
@@ -746,6 +791,8 @@ export default function Attendance({ db, onUpdateDb }) {
             liveClock={liveClock}
             elapsed={elapsed}
             gpsStatus={gpsStatus}
+            toast={toast}
+            onDismissToast={() => setToast(null)}
           />
           <TodayStatusCard
             clockState={clockState}
