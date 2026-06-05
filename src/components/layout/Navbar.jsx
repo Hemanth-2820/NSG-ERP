@@ -20,8 +20,8 @@ export default function Navbar({ activeRole, setActiveRole, navigateTo, hrDb = {
     { id: 'TL',       label: 'Team Lead',               icon: Award,    color: '#3b82f6', desc: 'Projects & delivery'      },
     { id: 'Employee', label: 'Staff Member',            icon: Briefcase,color: '#10b981', desc: 'Personal workspace'       },
   ];
-  const activeRoleDetails = roles.find(r => r.id === activeRole) || roles.find(r => r.id.toLowerCase() === (currentUser.role || 'employee').toLowerCase()) || roles[0];
-  const RoleIcon = activeRoleDetails.icon;
+  const userRoleDetails = roles.find(r => r.id.toLowerCase() === (currentUser.role || 'employee').toLowerCase()) || roles[0];
+  const RoleIcon = userRoleDetails.icon;
 
   // ── Derive live notifications from hrDb ────────────────────────────────────
   const buildNotifications = () => {
@@ -273,12 +273,12 @@ export default function Navbar({ activeRole, setActiveRole, navigateTo, hrDb = {
             className="role-selector-btn"
             onClick={() => { setShowRoleDropdown(v => !v); setShowNotifications(false); }}
           >
-            <div className="role-avatar" style={{ backgroundColor: activeRoleDetails.color }}>
+            <div className="role-avatar" style={{ backgroundColor: userRoleDetails.color }}>
               <RoleIcon size={18} color="#fff" />
             </div>
             <div className="role-info">
               <span className="user-name">{currentUser.name || 'Sarah Jenkins'}</span>
-              <span className="user-role" style={{ color: activeRoleDetails.color }}>{currentUser.designation || activeRoleDetails.label}</span>
+              <span className="user-role" style={{ color: userRoleDetails.color }}>{currentUser.designation || userRoleDetails.label}</span>
             </div>
             <ChevronDown size={16} className={`chevron-icon ${showRoleDropdown ? 'rotate' : ''}`} />
           </button>
@@ -310,22 +310,19 @@ export default function Navbar({ activeRole, setActiveRole, navigateTo, hrDb = {
               </div>
               <div className="dropdown-list">
                 {roles
-                  .filter(roleOption => {
-                    const u = (currentUser.role || 'employee').toLowerCase();
-                    const r = roleOption.id.toLowerCase();
-                    if (u === 'admin' || u === 'ceo') return true;
-                    if (u === 'hr') return ['hr', 'tl', 'employee'].includes(r);
-                    if (u === 'tl') return ['tl', 'employee'].includes(r);
-                    return r === 'employee';
-                  })
                   .map(roleOption => {
                     const Icon = roleOption.icon;
-                    const isSelected = roleOption.id === activeRole;
+                    const isSelected = roleOption.id.toLowerCase() === activeRole.toLowerCase();
                     return (
                       <button
                         key={roleOption.id}
                         className={`dropdown-itemrole ${isSelected ? 'selected' : ''}`}
-                        onClick={() => { setActiveRole(roleOption.id); setShowRoleDropdown(false); }}
+                        onClick={() => {
+                          setShowRoleDropdown(false);
+                          if (!isSelected) {
+                            onLogout();
+                          }
+                        }}
                       >
                         <div className="itemrole-icon" style={{ backgroundColor: `${roleOption.color}15`, color: roleOption.color }}>
                           <Icon size={18} />
