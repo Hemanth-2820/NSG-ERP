@@ -80,6 +80,10 @@ class EmployeeResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class EmployeeCreateResponse(BaseModel):
+    employee: EmployeeResponse
+    temporary_password: str
+
 class DocumentUploadRequest(BaseModel):
     doc_type: str
 
@@ -373,7 +377,7 @@ def update_candidate_stage(id: int, req: StageUpdateRequest, current_user: model
     db.refresh(cand)
     return cand
 
-@router.post("/candidates/{id}/join", response_model=EmployeeResponse)
+@router.post("/candidates/{id}/join", response_model=EmployeeCreateResponse)
 def transition_candidate_to_employee(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
     cand = db.query(models.Candidate).filter(models.Candidate.id == id).first()
@@ -403,7 +407,8 @@ def transition_candidate_to_employee(id: int, current_user: models.User = Depend
     ]
     
     # Hash default password (e.g. EmployeeName@123)
-    default_pwd = security.hash_password(f"{cand.name.replace(' ', '')}@123")
+    default_pwd_plain = f"{cand.name.replace(' ', '')}@123"
+    default_pwd = security.hash_password(default_pwd_plain)
     
     # Create employee User
     db_emp = models.User(
@@ -481,7 +486,7 @@ def transition_candidate_to_employee(id: int, current_user: models.User = Depend
     
     db.commit()
     db.refresh(db_emp)
-    return db_emp
+    return {"employee": db_emp, "temporary_password": default_pwd_plain}
 
 @router.delete("/candidates/{id}")
 def delete_candidate(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -499,7 +504,7 @@ def get_employees(current_user: models.User = Depends(security.get_current_user)
     verify_hr_role(current_user)
     return db.query(models.User).filter(models.User.role == "employee").all()
 
-@router.post("/employees", response_model=EmployeeResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/employees", response_model=EmployeeCreateResponse, status_code=status.HTTP_201_CREATED)
 def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
     exists = db.query(models.User).filter(models.User.email == req.email).first()
@@ -515,7 +520,8 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
         {"type": "Degree Certificate", "name": "bachelors_degree.pdf", "status": "pending", "date": req.join_date.isoformat()}
     ]
     
-    default_pwd = security.hash_password(f"{req.name.replace(' ', '')}@123")
+    default_pwd_plain = f"{req.name.replace(' ', '')}@123"
+    default_pwd = security.hash_password(default_pwd_plain)
     
     db_emp = models.User(
         name=req.name,
@@ -580,7 +586,7 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
 
     db.commit()
     db.refresh(db_emp)
-    return db_emp
+    return {"employee": db_emp, "temporary_password": default_pwd_plain}
 
 @router.post("/employees/{id}/confirm-probation", response_model=EmployeeResponse)
 def confirm_probation(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
