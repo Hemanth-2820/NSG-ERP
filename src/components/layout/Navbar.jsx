@@ -126,32 +126,38 @@ export default function Navbar({ activeRole, setActiveRole, navigateTo, hrDb = {
 
   // Global Notifications via WebSocket
   useEffect(() => {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const userName = currentUser.name || 'User';
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/employee-portal/ws/${encodeURIComponent(userName)}`;
-    const socket = new WebSocket(wsUrl);
+    let socket;
+    const connectTimer = setTimeout(() => {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const userName = currentUser.name || 'User';
+      const wsUrl = `${wsProtocol}//127.0.0.1:8000/employee-portal/ws/${encodeURIComponent(userName)}`;
+      socket = new WebSocket(wsUrl);
 
-    socket.onmessage = (event) => {
-      try {
-        const newMsg = JSON.parse(event.data);
-        const liveNotif = {
-          id: `ws-${Date.now()}`,
-          icon: Mail,
-          color: '#3b82f6',
-          title: `New Message: ${newMsg.sender}`,
-          sub: newMsg.text,
-          role: activeRole,
-          tab: 'messaging',
-          time: 'Just now'
-        };
-        setWsNotifications(prev => [liveNotif, ...prev]);
-      } catch (e) {
-        console.error("WebSocket Notification Error", e);
-      }
-    };
+      socket.onmessage = (event) => {
+        try {
+          const newMsg = JSON.parse(event.data);
+          const liveNotif = {
+            id: `ws-${Date.now()}`,
+            icon: Mail,
+            color: '#3b82f6',
+            title: `New Message: ${newMsg.sender}`,
+            sub: newMsg.text,
+            role: activeRole,
+            tab: 'messaging',
+            time: 'Just now'
+          };
+          setWsNotifications(prev => [liveNotif, ...prev]);
+        } catch (e) {
+          console.error("WebSocket Notification Error", e);
+        }
+      };
+    }, 100);
 
     return () => {
-      socket.close();
+      clearTimeout(connectTimer);
+      if (socket) {
+        socket.close();
+      }
     };
   }, [currentUser, activeRole]);
 

@@ -1,44 +1,38 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styles from './reports.module.css';
 import { TrendingUp, Users, PieChart, CalendarDays, Download } from 'lucide-react';
 
 const Reports = () => {
   const [activeView, setActiveView] = useState('velocity'); // 'velocity', 'productivity', 'completion', 'calendar'
+  
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // --- Mock Data ---
-  const velocityData = useMemo(() => [
-    { sprint: 'S1', actual: 35, planned: 40 },
-    { sprint: 'S2', actual: 42, planned: 40 },
-    { sprint: 'S3', actual: 48, planned: 45 },
-    { sprint: 'S4', actual: 55, planned: 50 },
-    { sprint: 'S5', actual: 60, planned: 60 }
-  ], []);
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const res = await fetch('http://localhost:8000/team-lead/reports', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setReportData(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
 
-  const productivityData = useMemo(() => [
-    { name: 'Sarah Jenkins', avatar: 'SJ', assigned: 24, completed: 22, compRate: '91%', avgHours: '3.2', onTimeRate: '88%' },
-    { name: 'Michael Chang', avatar: 'MC', assigned: 30, completed: 29, compRate: '96%', avgHours: '2.8', onTimeRate: '94%' },
-    { name: 'David Miller', avatar: 'DM', assigned: 18, completed: 15, compRate: '83%', avgHours: '4.5', onTimeRate: '75%' }
-  ], []);
-
-  const donutData = {
-    completed: 65,
-    inProgress: 20,
-    blocked: 10,
-    overdue: 5
-  };
-
-  const leaveCalendar = [
-    { day: 3, name: 'David Miller' },
-    { day: 12, name: 'Sarah Jenkins' },
-    { day: 13, name: 'Sarah Jenkins' },
-    { day: 24, name: 'Michael Chang' }
-  ];
-
-  const leavesDetailData = [
-    { name: 'David Miller', date: 'May 3, 2026', type: 'Sick Leave', duration: '1 Day', status: 'Approved' },
-    { name: 'Sarah Jenkins', date: 'May 12 - May 13, 2026', type: 'Annual Leave', duration: '2 Days', status: 'Approved' },
-    { name: 'Michael Chang', date: 'May 24, 2026', type: 'Casual Leave', duration: '1 Day', status: 'Approved' }
-  ];
+  const velocityData = reportData?.velocityData || [];
+  const productivityData = reportData?.productivityData || [];
+  const donutData = reportData?.donutData || { completed: 0, inProgress: 0, blocked: 0, overdue: 0 };
+  const leaveCalendar = reportData?.leaveCalendar || [];
+  const leavesDetailData = reportData?.leavesDetailData || [];
 
   const handleExportLeavesCSV = () => {
     const headers = ['Employee Name', 'Approved Date', 'Leave Type', 'Duration', 'Status'];
@@ -55,7 +49,7 @@ const Reports = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'Approved_Leaves_May_2026.csv');
+    link.setAttribute('download', 'Approved_Leaves_Report.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -66,14 +60,14 @@ const Reports = () => {
   // Velocity Line Chart Math (assuming viewBox="0 0 500 200")
   const xOffset = 50;
   const yOffset = 180;
-  const xStep = 400 / (velocityData.length - 1);
-  const maxVelocity = Math.max(...velocityData.map(d => Math.max(d.actual, d.planned))) + 10;
+  const xStep = velocityData.length > 1 ? 400 / (velocityData.length - 1) : 400;
+  const maxVelocity = velocityData.length > 0 ? Math.max(...velocityData.map(d => Math.max(d.actual, d.planned))) + 10 : 100;
   const yRatio = 150 / maxVelocity;
 
   const actualPath = velocityData.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xOffset + i * xStep} ${yOffset - d.actual * yRatio}`).join(' ');
   const plannedPath = velocityData.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xOffset + i * xStep} ${yOffset - d.planned * yRatio}`).join(' ');
   
-  const avgActual = velocityData.reduce((acc, curr) => acc + curr.actual, 0) / velocityData.length;
+  const avgActual = velocityData.length > 0 ? velocityData.reduce((acc, curr) => acc + curr.actual, 0) / velocityData.length : 0;
   const avgLineY = yOffset - avgActual * yRatio;
 
   // Donut Chart Math (viewBox="0 0 200 200", radius = 70, circumference = 2 * PI * 70 = 439.82)
@@ -82,6 +76,7 @@ const Reports = () => {
   let currentOffset = 0;
 
   const renderDonutSegment = (value, color) => {
+    if (!value) return null;
     const dashVal = (value / 100) * circumference;
     const dashGap = circumference - dashVal;
     const offset = currentOffset;
@@ -99,6 +94,10 @@ const Reports = () => {
       />
     );
   };
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading dynamic team reports...</div>;
+  }
 
   return (
     <div className={styles.container}>
@@ -148,9 +147,9 @@ const Reports = () => {
               <svg viewBox="0 0 500 200" className={styles.svgChart}>
                 <line x1="40" y1="180" x2="480" y2="180" className={styles.chartAxis} />
                 <line x1="40" y1="20" x2="40" y2="180" className={styles.chartAxis} />
-                <line x1="40" y1={avgLineY} x2="480" y2={avgLineY} className={styles.lineAverage} />
-                <path d={plannedPath} className={styles.linePlanned} />
-                <path d={actualPath} className={styles.lineActual} />
+                {velocityData.length > 0 && <line x1="40" y1={avgLineY} x2="480" y2={avgLineY} className={styles.lineAverage} />}
+                {velocityData.length > 0 && <path d={plannedPath} className={styles.linePlanned} />}
+                {velocityData.length > 0 && <path d={actualPath} className={styles.lineActual} />}
                 {velocityData.map((d, i) => {
                   const x = xOffset + i * xStep;
                   const yActual = yOffset - d.actual * yRatio;
@@ -178,6 +177,9 @@ const Reports = () => {
               </div>
               <svg viewBox="0 0 500 200" className={styles.svgChart}>
                 <line x1="40" y1="170" x2="480" y2="170" className={styles.chartAxis} />
+                {productivityData.length === 0 && (
+                  <text x="250" y="100" textAnchor="middle" fill="#94a3b8">No productivity data found</text>
+                )}
                 {productivityData.map((d, i) => {
                   const xBase = 70 + i * 140;
                   const yAssigned = 170 - d.assigned * 4.5;
@@ -208,6 +210,9 @@ const Reports = () => {
                     {renderDonutSegment(donutData.inProgress, 'var(--info)')}
                     {renderDonutSegment(donutData.blocked, 'var(--warning)')}
                     {renderDonutSegment(donutData.overdue, 'var(--danger)')}
+                    {donutData.completed === 0 && donutData.inProgress === 0 && donutData.blocked === 0 && donutData.overdue === 0 && (
+                      <circle cx="100" cy="100" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="15" />
+                    )}
                   </svg>
                   <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
                     <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)' }}>{donutData.completed}%</div>
@@ -236,7 +241,7 @@ const Reports = () => {
                   </div>
                   <div className={styles.donutLegendItem}>
                     <div className={styles.legendLabel}>
-                      <div className={styles.legendColor} style={{ background: 'var(--danger)' }}></div> Overdue
+                      <div className={styles.legendColor} style={{ background: 'var(--danger)' }}></div> To Do
                     </div>
                     <div className={styles.legendValue}>{donutData.overdue}%</div>
                   </div>
@@ -247,7 +252,7 @@ const Reports = () => {
 
           {activeView === 'calendar' && (
             <div>
-              <div className={styles.sectionTitle}>May 2026 - Approved Leaves</div>
+              <div className={styles.sectionTitle}>Approved Leaves Calendar</div>
               <div className={styles.calendarGrid}>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
                   <div key={d} className={styles.calHeader}>{d}</div>
@@ -291,7 +296,9 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {velocityData.map((d, i) => {
+                  {velocityData.length === 0 ? (
+                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No data available</td></tr>
+                  ) : velocityData.map((d, i) => {
                     const variance = d.actual - d.planned;
                     const isPositive = variance >= 0;
                     return (
@@ -337,7 +344,9 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {productivityData.map((user, i) => (
+                  {productivityData.length === 0 ? (
+                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No data available</td></tr>
+                  ) : productivityData.map((user, i) => (
                     <tr key={i}>
                       <td>
                         <div className={styles.userCell}>
@@ -364,28 +373,22 @@ const Reports = () => {
                 <thead>
                   <tr>
                     <th>Category</th>
-                    <th>Task Count</th>
                     <th>Percentage</th>
-                    <th>Priority Breakdown (H/M/L)</th>
-                    <th>Avg Days Open</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { category: 'Completed', count: 65, pct: '65%', priority: '22H / 30M / 13L', avgDays: '4.2 days', color: 'var(--success)' },
-                    { category: 'In Progress', count: 20, pct: '20%', priority: '8H / 10M / 2L', avgDays: '12.5 days', color: 'var(--info)' },
-                    { category: 'Blocked', count: 10, pct: '10%', priority: '5H / 4M / 1L', avgDays: '18.2 days', color: 'var(--warning)' },
-                    { category: 'Overdue', count: 5, pct: '5%', priority: '3H / 2M / 0L', avgDays: '25.0 days', color: 'var(--danger)' }
+                    { category: 'Completed', pct: `${donutData.completed}%`, color: 'var(--success)' },
+                    { category: 'In Progress', pct: `${donutData.inProgress}%`, color: 'var(--info)' },
+                    { category: 'Blocked', pct: `${donutData.blocked}%`, color: 'var(--warning)' },
+                    { category: 'To Do', pct: `${donutData.overdue}%`, color: 'var(--danger)' }
                   ].map((row, i) => (
                     <tr key={i}>
                       <td style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: row.color }}></span>
                         {row.category}
                       </td>
-                      <td>{row.count} tasks</td>
                       <td style={{ fontWeight: '600' }}>{row.pct}</td>
-                      <td>{row.priority}</td>
-                      <td>{row.avgDays}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -397,9 +400,11 @@ const Reports = () => {
             <div>
               <div className={styles.sectionTitle}>
                 Approved Leaves Records
-                <button onClick={handleExportLeavesCSV} className={styles.exportBtn}>
-                  <Download size={16} /> Export to CSV
-                </button>
+                {leavesDetailData.length > 0 && (
+                  <button onClick={handleExportLeavesCSV} className={styles.exportBtn}>
+                    <Download size={16} /> Export to CSV
+                  </button>
+                )}
               </div>
               <table className={styles.prodTable}>
                 <thead>
@@ -412,7 +417,9 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {leavesDetailData.map((l, i) => (
+                  {leavesDetailData.length === 0 ? (
+                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No approved leaves found</td></tr>
+                  ) : leavesDetailData.map((l, i) => (
                     <tr key={i}>
                       <td style={{ fontWeight: '600' }}>{l.name}</td>
                       <td>{l.date}</td>

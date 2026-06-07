@@ -138,53 +138,77 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
 
   const [huddlePeer, setHuddlePeer] = useState(null);
 
+  const [employees, setEmployees] = useState([
+    { id: 1, name: 'Alice Chen', avatar: 'https://ui-avatars.com/api/?name=Alice+Chen&background=0D8ABC&color=fff', status: 'Active' },
+    { id: 2, name: 'Bob Smith', avatar: 'https://ui-avatars.com/api/?name=Bob+Smith&background=3B82F6&color=fff', status: 'Active' },
+    { id: 3, name: 'Charlie Davis', avatar: 'https://ui-avatars.com/api/?name=Charlie+Davis&background=6B7280&color=fff', status: 'Active' },
+    { id: 4, name: 'Diana Prince', avatar: 'https://ui-avatars.com/api/?name=Diana+Prince&background=F59E0B&color=fff', status: 'On Leave' },
+    { id: 5, name: 'Evan Wright', avatar: 'https://ui-avatars.com/api/?name=Evan+Wright&background=EF4444&color=fff', status: 'Active' },
+    { id: 6, name: 'Fiona Gallagher', avatar: 'https://ui-avatars.com/api/?name=Fiona+Gallagher&background=10B981&color=fff', status: 'Active' },
+    { id: 7, name: 'George Hale', avatar: 'https://ui-avatars.com/api/?name=George+Hale&background=3B82F6&color=fff', status: 'Active' },
+    { id: 8, name: 'Hannah Lee', avatar: 'https://ui-avatars.com/api/?name=Hannah+Lee&background=F59E0B&color=fff', status: 'Active' },
+    { id: 9, name: 'Ivy Green', avatar: 'https://ui-avatars.com/api/?name=Ivy+Green&background=EF4444&color=fff', status: 'Active' },
+    { id: 10, name: 'Jack White', avatar: 'https://ui-avatars.com/api/?name=Jack+White&background=EF4444&color=fff', status: 'Active' },
+    { id: 11, name: 'Kevin Taylor', avatar: 'https://ui-avatars.com/api/?name=Kevin+Taylor&background=8B5CF6&color=fff', status: 'Active' },
+    { id: 12, name: 'Michael Chang', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100', status: 'Active' },
+    { id: 102, name: 'Sarah Jenkins', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100', status: 'Active' },
+    { id: 104, name: 'Emily Rodriguez', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100', status: 'Active' },
+    { id: 105, name: 'David Miller', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100', status: 'On Leave' }
+  ]);
+
   // Initialize WebSocket connection for real-time messaging
   useEffect(() => {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/employee-portal/ws/${encodeURIComponent(tlName)}`;
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
+    let socket;
+    const connectTimer = setTimeout(() => {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//127.0.0.1:8000/employee-portal/ws/${encodeURIComponent(tlName)}`;
+      socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
 
-    socket.onmessage = (event) => {
-      try {
-        const newMsg = JSON.parse(event.data);
-        const isCorporateChannel = chatChannels.some(c => c.id === newMsg.channel_id);
+      socket.onmessage = (event) => {
+        try {
+          const newMsg = JSON.parse(event.data);
+          const isCorporateChannel = chatChannels.some(c => c.id === newMsg.channel_id);
 
-        if (isCorporateChannel) {
-          fetchChannelsAndMessages();
-        } else {
-          // Update DM/custom rooms
-          setLocalDmMessages(prevRooms => {
-            const roomMsgs = prevRooms[newMsg.channel_id] || [];
-            const alreadyExists = roomMsgs.some(m => m.id === newMsg.id);
-            if (alreadyExists) return prevRooms;
-            
-            return {
-              ...prevRooms,
-              [newMsg.channel_id]: [
-                ...roomMsgs,
-                {
-                  id: newMsg.id,
-                  sender: newMsg.sender,
-                  avatar: employees.find(e => e.name === newMsg.sender || `dm-${e.id}` === newMsg.channel_id)?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(newMsg.sender),
-                  text: newMsg.text,
-                  timestamp: new Date(newMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                }
-              ]
-            };
-          });
+          if (isCorporateChannel) {
+            fetchChannelsAndMessages();
+          } else {
+            // Update DM/custom rooms
+            setLocalDmMessages(prevRooms => {
+              const roomMsgs = prevRooms[newMsg.channel_id] || [];
+              const alreadyExists = roomMsgs.some(m => m.id === newMsg.id);
+              if (alreadyExists) return prevRooms;
+              
+              return {
+                ...prevRooms,
+                [newMsg.channel_id]: [
+                  ...roomMsgs,
+                  {
+                    id: newMsg.id,
+                    sender: newMsg.sender,
+                    avatar: employees.find(e => e.name === newMsg.sender || `dm-${e.id}` === newMsg.channel_id)?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(newMsg.sender),
+                    text: newMsg.text,
+                    timestamp: new Date(newMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  }
+                ]
+              };
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse incoming WebSocket message:", e);
         }
-      } catch (e) {
-        console.error("Failed to parse incoming WebSocket message:", e);
-      }
-    };
+      };
 
-    socket.onerror = (e) => {
-      console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
-    };
+      socket.onerror = (e) => {
+        console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
+      };
+    }, 100);
 
     return () => {
-      socket.close();
+      clearTimeout(connectTimer);
+      if (socket) {
+        socket.close();
+      }
     };
   }, [db, onUpdateDb, chatChannels, employees]);
 
@@ -379,23 +403,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startOffset = useRef({ x: 0, y: 0 });
   
-  const [employees, setEmployees] = useState([
-    { id: 1, name: 'Alice Chen', avatar: 'https://ui-avatars.com/api/?name=Alice+Chen&background=0D8ABC&color=fff', status: 'Active' },
-    { id: 2, name: 'Bob Smith', avatar: 'https://ui-avatars.com/api/?name=Bob+Smith&background=3B82F6&color=fff', status: 'Active' },
-    { id: 3, name: 'Charlie Davis', avatar: 'https://ui-avatars.com/api/?name=Charlie+Davis&background=6B7280&color=fff', status: 'Active' },
-    { id: 4, name: 'Diana Prince', avatar: 'https://ui-avatars.com/api/?name=Diana+Prince&background=F59E0B&color=fff', status: 'On Leave' },
-    { id: 5, name: 'Evan Wright', avatar: 'https://ui-avatars.com/api/?name=Evan+Wright&background=EF4444&color=fff', status: 'Active' },
-    { id: 6, name: 'Fiona Gallagher', avatar: 'https://ui-avatars.com/api/?name=Fiona+Gallagher&background=10B981&color=fff', status: 'Active' },
-    { id: 7, name: 'George Hale', avatar: 'https://ui-avatars.com/api/?name=George+Hale&background=3B82F6&color=fff', status: 'Active' },
-    { id: 8, name: 'Hannah Lee', avatar: 'https://ui-avatars.com/api/?name=Hannah+Lee&background=F59E0B&color=fff', status: 'Active' },
-    { id: 9, name: 'Ivy Green', avatar: 'https://ui-avatars.com/api/?name=Ivy+Green&background=EF4444&color=fff', status: 'Active' },
-    { id: 10, name: 'Jack White', avatar: 'https://ui-avatars.com/api/?name=Jack+White&background=EF4444&color=fff', status: 'Active' },
-    { id: 11, name: 'Kevin Taylor', avatar: 'https://ui-avatars.com/api/?name=Kevin+Taylor&background=8B5CF6&color=fff', status: 'Active' },
-    { id: 12, name: 'Michael Chang', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100', status: 'Active' },
-    { id: 102, name: 'Sarah Jenkins', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100', status: 'Active' },
-    { id: 104, name: 'Emily Rodriguez', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100', status: 'Active' },
-    { id: 105, name: 'David Miller', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100', status: 'On Leave' }
-  ]);
+
 
   const globalDirectory = [
     { id: 106, name: 'Sophia Patel', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100', status: 'On Leave', role: 'Marketing Specialist' },

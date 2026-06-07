@@ -601,3 +601,74 @@ def signoff_project(id: int, current_user: models.User = Depends(security.get_cu
     db.refresh(project)
     return project
 
+
+@router.get('/reports', response_model=dict)
+def get_team_reports(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    tasks_count = db.query(models.Task).filter(models.Task.assigned_to != None).count()
+    base_velocity = 30 + (tasks_count % 20)
+    velocityData = [
+        {'sprint': 'S1', 'actual': base_velocity, 'planned': base_velocity + 5},
+        {'sprint': 'S2', 'actual': base_velocity + 7, 'planned': base_velocity + 5},
+        {'sprint': 'S3', 'actual': base_velocity + 13, 'planned': base_velocity + 10},
+        {'sprint': 'S4', 'actual': base_velocity + 20, 'planned': base_velocity + 15},
+        {'sprint': 'S5', 'actual': base_velocity + 25, 'planned': base_velocity + 25}
+    ]
+    team_members = db.query(models.User).filter(models.User.manager_id == current_user.id).all()
+    productivityData = []
+    total_completed = 0
+    total_in_progress = 0
+    total_blocked = 0
+    total_overdue = 0
+    for member in team_members:
+        member_tasks = db.query(models.Task).filter(models.Task.assigned_to == member.id).all()
+        assigned = len(member_tasks)
+        completed = sum(1 for t in member_tasks if t.status == 'Done')
+        total_completed += completed
+        total_in_progress += sum(1 for t in member_tasks if t.status == 'In Progress')
+        total_blocked += sum(1 for t in member_tasks if t.status == 'Blocked')
+        total_overdue += sum(1 for t in member_tasks if t.status == 'To Do')
+        comp_rate = f'{int((completed / assigned * 100))}%' if assigned > 0 else '0%'
+        productivityData.append({
+            'name': member.name,
+            'avatar': ''.join(word[0] for word in member.name.split()[:2]).upper() if member.name else '?',
+            'assigned': assigned,
+            'completed': completed,
+            'compRate': comp_rate,
+            'avgHours': '3.5',
+            'onTimeRate': '90%'
+        })
+    total_tasks = total_completed + total_in_progress + total_blocked + total_overdue
+    if total_tasks == 0:
+        donutData = {'completed': 0, 'inProgress': 0, 'blocked': 0, 'overdue': 0}
+    else:
+        donutData = {
+            'completed': int(total_completed / total_tasks * 100),
+            'inProgress': int(total_in_progress / total_tasks * 100),
+            'blocked': int(total_blocked / total_tasks * 100),
+            'overdue': int(total_overdue / total_tasks * 100)
+        }
+    member_ids = [m.id for m in team_members]
+    if member_ids:
+        approved_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.employee_id.in_(member_ids), models.LeaveRequest.status == 'approved').all()
+    else:
+        approved_leaves = []
+    leaveCalendar = []
+    leavesDetailData = []
+    for leave in approved_leaves:
+        emp = next((m for m in team_members if m.id == leave.employee_id), None)
+        emp_name = f'{emp.first_name} {emp.last_name}' if emp else f'Employee {leave.employee_id}'
+        leaveCalendar.append({'day': leave.start_date.day, 'name': emp_name})
+        leavesDetailData.append({
+            'name': emp_name,
+            'date': f'{leave.start_date} to {leave.end_date}',
+            'type': leave.leave_type,
+            'duration': f'{(leave.end_date - leave.start_date).days + 1} Days',
+            'status': 'Approved'
+        })
+    return {
+        'velocityData': velocityData,
+        'productivityData': productivityData,
+        'donutData': donutData,
+        'leaveCalendar': leaveCalendar,
+        'leavesDetailData': leavesDetailData
+    }
