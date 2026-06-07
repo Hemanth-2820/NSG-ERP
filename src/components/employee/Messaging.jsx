@@ -102,6 +102,8 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
   const employeeId = currentUser?.id || 102;
   const employeeName = currentUser?.name || 'Jane Smith';
 
+  const [dbChannels, setDbChannels] = useState([]);
+
   const getInitialRooms = () => {
     if (db?.employeeChatRooms) {
       return db.employeeChatRooms;
@@ -126,7 +128,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
     }
   }, [db]);
 
-  const [activeRoomId, setActiveRoomId] = useState('team-room');
+  const [activeRoomId, setActiveRoomId] = useState('general-channel');
   const [inputText, setInputText] = useState('');
   
   // Emoji & Attachment States
@@ -148,6 +150,66 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
   // Filter contacts to Sarah's team only (team_id === 'eng')
   const teammates = CONTACTS.filter((c) => c.teamId === 'eng');
 
+  const fetchChannelsAndMessages = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/employee-portal/chat/channels', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const chans = await res.json();
+        const loadedChannels = await Promise.all(chans.map(async (c) => {
+          try {
+            const msgRes = await fetch(`/api/employee-portal/chat/channels/${c.id}/messages`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (msgRes.ok) {
+              const msgs = await msgRes.json();
+              return {
+                id: c.id,
+                name: c.name,
+                label: c.label,
+                type: c.type,
+                members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+                messages: msgs.map(m => ({
+                  id: m.id,
+                  sender: m.sender,
+                  text: m.text,
+                  time: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isMe: m.sender === employeeName
+                }))
+              };
+            }
+          } catch (e) {
+            console.error("Error loading messages for channel", c.id, e);
+          }
+          return {
+            id: c.id,
+            name: c.name,
+            label: c.label,
+            type: c.type,
+            members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+            messages: []
+          };
+        }));
+        setDbChannels(loadedChannels);
+        if (onUpdateDb) {
+          onUpdateDb({
+            ...db,
+            chatChannels: loadedChannels
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load channels", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchChannelsAndMessages();
+  }, []);
+
   // Handle Resize
   useEffect(() => {
     const handleResize = () => {
@@ -163,14 +225,14 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
   // Auto Scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeRoomId, rooms]);
+  }, [activeRoomId, dbChannels, rooms]);
 
   // Sync to local storage
   useEffect(() => {
     localStorage.setItem('nsg_employee_chat_rooms', JSON.stringify(rooms));
   }, [rooms]);
 
-  const chatChannels = db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
+  const chatChannels = dbChannels.length > 0 ? dbChannels : (db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS);
 
   const activeRoom = chatChannels.find(c => c.id === activeRoomId) || rooms[activeRoomId] || (
     activeRoomId.startsWith('c') ? {
@@ -234,33 +296,10 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
     socket.onmessage = (event) => {
       try {
         const newMsg = JSON.parse(event.data);
-        const isCorporateChannel = DEFAULT_CHAT_CHANNELS.some(c => c.id === newMsg.channel_id);
+        const isCorporateChannel = chatChannels.some(c => c.id === newMsg.channel_id);
 
         if (isCorporateChannel) {
-          if (db && onUpdateDb) {
-            const currentChannels = db.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
-            const updatedChannels = currentChannels.map(c => {
-              if (c.id === newMsg.channel_id) {
-                const alreadyExists = (c.messages || []).some(m => m.id === newMsg.id);
-                if (alreadyExists) return c;
-                return {
-                  ...c,
-                  messages: [
-                    ...(c.messages || []),
-                    {
-                      id: newMsg.id,
-                      sender: newMsg.sender,
-                      text: newMsg.text,
-                      time: new Date(newMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                      isMe: newMsg.sender === employeeName
-                    }
-                  ]
-                };
-              }
-              return c;
-            });
-            onUpdateDb({ ...db, chatChannels: updatedChannels });
-          }
+          fetchChannelsAndMessages();
         } else {
           // Update DM/custom rooms
           setRooms(prevRooms => {
@@ -307,7 +346,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
     return () => {
       socket.close();
     };
-  }, [db, onUpdateDb, employeeName]);
+  }, [db, onUpdateDb, employeeName, chatChannels]);
 
   // Send Message
   const handleSendMessage = (e) => {

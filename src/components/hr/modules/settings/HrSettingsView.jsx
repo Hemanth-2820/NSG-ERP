@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, RefreshCw, MapPin, Loader, CheckCircle2, Building2 } from 'lucide-react';
 import { HOLIDAYS, LEAVE_POLICIES } from '../../mockData';
 
@@ -12,6 +12,30 @@ export function HrSettingsView({ db, onUpdateDb }) {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  useEffect(() => {
+    const fetchGeofenceSettings = async () => {
+      const token = localStorage.getItem('nsg_jwt_token');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/attendance/geofence-settings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setGeofence({
+            enabled: data.enabled,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            radius: data.radius
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch geofence settings", err);
+      }
+    };
+    fetchGeofenceSettings();
+  }, []);
+
   const handleResetDemoData = () => {
     if (confirm('Are you sure you want to reset the client-side simulated database? This will restore all original seed values.')) {
       localStorage.clear();
@@ -19,13 +43,48 @@ export function HrSettingsView({ db, onUpdateDb }) {
     }
   };
 
-  const handleSaveGeofence = () => {
+  const handleSaveGeofence = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    let success = true;
+    if (token) {
+      try {
+        const res = await fetch('/api/attendance/geofence-settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            enabled: geofence.enabled,
+            latitude: geofence.latitude,
+            longitude: geofence.longitude,
+            radius: geofence.radius
+          })
+        });
+        if (!res.ok) success = false;
+      } catch (err) {
+        console.error("Failed to save geofence settings to backend", err);
+        success = false;
+      }
+    }
     onUpdateDb({
       ...db,
       geofenceSettings: geofence
     });
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    if (success) {
+      if (window.toast) {
+        window.toast.success("Geofence settings saved successfully!");
+      } else {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } else {
+      if (window.toast) {
+        window.toast.error("Failed to save geofence settings.");
+      } else {
+        alert("Failed to save geofence settings.");
+      }
+    }
   };
 
   const handleLocateOffice = () => {
@@ -40,7 +99,11 @@ export function HrSettingsView({ db, onUpdateDb }) {
         setGpsLoading(false);
       },
       (error) => {
-        alert("Failed to retrieve current location. Please ensure location permissions are enabled in your browser.");
+        if (window.toast) {
+          window.toast.error("Failed to retrieve current location. Please ensure location permissions are enabled in your browser.");
+        } else {
+          alert("Failed to retrieve current location. Please ensure location permissions are enabled in your browser.");
+        }
         setGpsLoading(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }

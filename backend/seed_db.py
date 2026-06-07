@@ -134,6 +134,142 @@ for dept in depts:
             ))
             att_id += 1
 
+# 9. Create and seed objectives and key_results
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS objectives (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title VARCHAR NOT NULL,
+    status VARCHAR DEFAULT 'On Track',
+    progress INTEGER DEFAULT 0,
+    owner VARCHAR NOT NULL,
+    quarter VARCHAR DEFAULT 'Q2',
+    year VARCHAR DEFAULT '2026',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS key_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    objective_id INTEGER NOT NULL,
+    title VARCHAR NOT NULL,
+    target INTEGER NOT NULL,
+    current INTEGER DEFAULT 0,
+    unit VARCHAR NOT NULL,
+    sprint_link VARCHAR,
+    FOREIGN KEY (objective_id) REFERENCES objectives(id) ON DELETE CASCADE
+)
+""")
+
+cursor.execute("SELECT COUNT(*) FROM objectives")
+if cursor.fetchone()[0] == 0:
+    print("Seeding corporate OKRs...")
+    okrs_data = [
+        (1, 'Achieve Market Leadership in Enterprise Segment', 'On Track', 75, 'Sales & Marketing', 'Q2', '2026'),
+        (2, 'Transform Digital Operational Excellence', 'At Risk', 42, 'IT Dept', 'Q2', '2026'),
+        (3, 'Global Talent Acquisition Drive', 'Off Track', 20, 'HR Dept', 'Q3', '2026'),
+        (4, 'Launch AI-Powered Core Product', 'On Track', 60, 'Product', 'Q2', '2026')
+    ]
+    for o in okrs_data:
+        cursor.execute("""
+            INSERT INTO objectives (id, title, status, progress, owner, quarter, year)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, o)
+        
+    krs_data = [
+        (11, 1, 'Increase Enterprise ARR by 40%', 40, 32, '%', 'Sprint 24: Enterprise Expansion'),
+        (12, 1, 'Onboard 5 Fortune 500 clients', 5, 4, 'clients', None),
+        (21, 2, 'Migrate legacy on-prem to Cloud', 100, 40, '%', 'Sprint 22: AWS Migration'),
+        (22, 2, 'Reduce infra costs by 25%', 25, 10, '%', None),
+        (31, 3, 'Hire 50 Senior Engineers', 50, 10, 'hires', 'Sprint 28: EU Hiring'),
+        (32, 3, 'Launch Employer Branding Campaign', 100, 20, '%', None),
+        (41, 4, 'Complete AI Beta Testing', 100, 80, '%', None),
+        (42, 4, 'Train 500 users on new features', 500, 300, 'users', None)
+    ]
+    for k in krs_data:
+        cursor.execute("""
+            INSERT INTO key_results (id, objective_id, title, target, current, unit, sprint_link)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, k)
+
+# 10. Create and seed chat_channels and chat_messages
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS chat_channels (
+    id VARCHAR PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    label VARCHAR,
+    type VARCHAR NOT NULL
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id VARCHAR NOT NULL,
+    sender VARCHAR NOT NULL,
+    text TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (channel_id) REFERENCES chat_channels(id) ON DELETE CASCADE
+)
+""")
+
+cursor.execute("SELECT COUNT(*) FROM chat_channels")
+if cursor.fetchone()[0] == 0:
+    print("Seeding chat channels...")
+    channels_data = [
+        ('general-channel', '#general-channel', 'Company General Room', 'staff'),
+        ('team-room', '#team-room', 'Engineering Team Room', 'staff'),
+        ('grievance-room', '#grievance-room', 'HR Grievance (Private)', 'grievance'),
+        ('ceo-channel', '#ceo-channel', 'CEO Suite Room', 'management'),
+        ('tl-channel', '#tl-channel', 'Team Lead Forum', 'management')
+    ]
+    for c in channels_data:
+        cursor.execute("INSERT OR IGNORE INTO chat_channels (id, name, label, type) VALUES (?, ?, ?, ?)", c)
+        
+    messages_data = [
+        ('general-channel', 'CEO (John Doe)', 'Welcome to the unified NSG-ERP communications channel!', now_str),
+        ('team-room', 'Marcus Vance', 'Hey team, morning! Please drop your standup items here. Also, let\'s aim to deploy the new build by 4 PM.', now_str),
+        ('team-room', 'Alex Wong', 'Morning! Working on the payment gate validation fixes. PR is ready for review: #412.', now_str),
+        ('team-room', 'Sarah Jenkins', 'Morning! I\'m wrapping up the Asset Requests validation and mobile tab changes. I\'ll review your PR, Alex, right after.', now_str),
+        ('grievance-room', 'Sophia Reed (HR Officer)', 'Hello Sarah, welcome to your secure grievance portal. Anything shared here remains private. How can I assist you today?', now_str),
+        ('ceo-channel', 'CEO (John Doe)', "Sarah, let's audit the monthly payroll maker file before release.", now_str),
+        ('tl-channel', 'TL (Michael Vance)', 'Are the Shift A attendance exceptions fully resolved?', now_str)
+    ]
+    for m in messages_data:
+        cursor.execute("INSERT OR IGNORE INTO chat_messages (channel_id, sender, text, timestamp) VALUES (?, ?, ?, ?)", m)
+
+# 11. Seed candidates if table is empty
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR NOT NULL,
+    email VARCHAR UNIQUE NOT NULL,
+    phone VARCHAR,
+    role VARCHAR NOT NULL,
+    source VARCHAR,
+    stage VARCHAR DEFAULT 'applied',
+    resume_url VARCHAR,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+cursor.execute("SELECT COUNT(*) FROM candidates")
+if cursor.fetchone()[0] == 0:
+    print("Seeding candidates...")
+    candidates_data = [
+        (1, 'Vikram Malhotra', 'vikram.m@gmail.com', '+91 98765 43210', 'Senior React Developer', 'LinkedIn', 'interview', '#', now_str),
+        (2, 'Ananya Sharma', 'ananya.s@yahoo.com', '+91 87654 32109', 'Product Manager', 'Referral', 'applied', '#', now_str),
+        (3, 'Rohan Deshmukh', 'rohan.d@gmail.com', '+91 76543 21098', 'Junior UI/UX Designer', 'Job Board', 'screening', '#', now_str),
+        (4, 'Pooja Iyer', 'pooja.i@outlook.com', '+91 91234 56789', 'QA Automation Engineer', 'Direct', 'offer', '#', now_str),
+        (5, 'Amit Verma', 'amit.v@hotmail.com', '+91 92345 67890', 'DevOps Engineer', 'LinkedIn', 'joined', '#', now_str)
+    ]
+    for c in candidates_data:
+        cursor.execute("""
+            INSERT OR IGNORE INTO candidates (id, name, email, phone, role, source, stage, resume_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, c)
+
 conn.commit()
-print("Database successfully seeded with realistic interactive data (corrected default columns)!")
+print("Database successfully seeded with realistic interactive data (corrected default columns, strategy OKRs, chat data, and candidates)!")
 conn.close()
+

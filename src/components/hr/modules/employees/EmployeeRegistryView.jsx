@@ -1,12 +1,24 @@
-import React, { useState } from 'react';
-import { CheckCircle, Plus, Search, Download, Lock, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, Plus, Search, Download, Lock, RefreshCw, Trash2, Edit3 } from 'lucide-react';
 
 export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryParams }) {
+  const notify = (msg, type = 'success') => {
+    if (window.toast) {
+      if (type === 'error') window.toast.error(msg);
+      else if (type === 'warning') window.toast.warning(msg);
+      else window.toast.success(msg);
+    } else {
+      alert(msg);
+    }
+  };
+
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
+  const [apiEmployees, setApiEmployees] = useState(null);
+  const employeeList = apiEmployees || db.employees;
   
   const empIdStr = queryParams?.get('empId');
-  const selectedEmp = empIdStr ? db.employees.find(e => String(e.id) === empIdStr) : null;
+  const selectedEmp = empIdStr ? employeeList.find(e => String(e.id) === empIdStr) : null;
   const setSelectedEmp = (emp) => {
     setQueryParams({ empId: emp ? String(emp.id) : '', subTab: emp ? 'info' : '' });
   };
@@ -30,8 +42,66 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
   const [newJoinDate, setNewJoinDate] = useState(new Date().toISOString().split('T')[0]);
   const [newStatus, setNewStatus] = useState('probation');
 
-  const filtered = db.employees.filter(e => {
-    const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) || e.emp_id.toLowerCase().includes(search.toLowerCase());
+  // Edit Employee Modal States
+  const [isLoading, setIsLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editEmp, setEditEmp] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editDept, setEditDept] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editGrade, setEditGrade] = useState(3);
+  const [editManager, setEditManager] = useState('');
+  const [editPhoto, setEditPhoto] = useState('');
+
+  // Reset Password States
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmp, setResetEmp] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+
+  // Fetch employees from backend API
+  const fetchEmployees = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/hr-portal/employees', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const enriched = data.map(emp => ({
+          ...emp,
+          phone: emp.phone || '+91 99000 11000',
+          bank_name: emp.bank_name || 'HDFC Bank',
+          account_number: emp.account_number || '50100000000000',
+          ifsc_code: emp.ifsc_code || 'HDFC0000012',
+          grade: emp.grade || 3,
+          manager: emp.manager || 'John Doe',
+          documents: emp.documents ? (typeof emp.documents === 'string' ? JSON.parse(emp.documents) : emp.documents) : [
+            { type: 'Aadhaar Card', name: 'aadhaar_verify.pdf', status: 'verified', date: emp.join_date },
+            { type: 'Degree Certificate', name: 'bachelors_degree.pdf', status: 'pending', date: emp.join_date }
+          ]
+        }));
+        setApiEmployees(enriched);
+        onUpdateDb({
+          ...db,
+          employees: enriched
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch employees:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const filtered = employeeList.filter(e => {
+    const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) || (e.emp_id && e.emp_id.toLowerCase().includes(search.toLowerCase()));
     const matchesDept = deptFilter === 'All' || e.department === deptFilter;
     return matchesSearch && matchesDept;
   });
@@ -63,186 +133,260 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
     onUpdateDb({ ...db, auditLogs: newLogs });
   };
 
-  const handleAddEmployee = (e) => {
+  const handleAddEmployee = async (e) => {
     e.preventDefault();
-    const newEmp = {
-      id: Date.now(),
-      emp_id: `NSG-0${db.employees.length + 101}`,
-      name: newName,
-      email: newEmail,
-      phone: '+91 99887 76655',
-      department: newDept,
-      designation: newRole,
-      status: newStatus,
-      join_date: newJoinDate,
-      probation_end_date: new Date(new Date(newJoinDate).getTime() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      bank_name: 'HDFC Bank',
-      account_number: '50100' + Math.floor(100000000 + Math.random() * 900000000),
-      ifsc_code: 'HDFC0000012',
-      grade: 3,
-      manager: 'John Doe',
-      photo: newPhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80',
-      documents: [
-        { type: 'Aadhaar Card', name: 'aadhaar_verify.pdf', status: 'verified', date: new Date().toISOString().split('T')[0] },
-        { type: 'Degree Certificate', name: 'bachelors_degree.pdf', status: 'pending', date: new Date().toISOString().split('T')[0] }
-      ]
-    };
-    
-    // Add default training progress for the employee
-    const newProgress = [...(db.trainingProgress || []), {
-      id: Date.now() + 1,
-      employee_id: newEmp.id,
-      track_id: 1,
-      completed_modules: 0,
-      quiz_score: 0,
-      passed: false
-    }];
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const response = await fetch('/api/hr-portal/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newName,
+          email: newEmail,
+          department: newDept,
+          designation: newRole,
+          status: newStatus,
+          join_date: newJoinDate,
+          photo: newPhoto
+        })
+      });
 
-    const newLogs = [...db.auditLogs, {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      initiator_id: 'Sarah Jenkins',
-      module: 'Employees',
-      record_id: newEmp.id,
-      action_type: 'create',
-      change_diff: { created_employee: newEmp.name, assigned_role: newEmp.designation },
-      ip_address: '192.168.1.104',
-      client_agent: 'Chrome / Windows'
-    }];
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to add employee on the server.');
+      }
 
-    // Also auto initialize onboarding tasks for them
-    const newOnboardingTasks = [
-      { id: Date.now() + 10, instance_id: newEmp.id, task_name: 'Workstation Setup & Laptop Provisioning', assigned_to: 'IT', due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
-      { id: Date.now() + 11, instance_id: newEmp.id, task_name: 'Provision System Logins & Email', assigned_to: 'IT', due_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
-      { id: Date.now() + 12, instance_id: newEmp.id, task_name: 'Mandatory NDA Policy E-Sign', assigned_to: 'Employee', due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: true, completed_at: null, status: 'pending' },
-      { id: Date.now() + 13, instance_id: newEmp.id, task_name: 'Complete Compliance Induction Quiz', assigned_to: 'Employee', due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
-      { id: Date.now() + 14, instance_id: newEmp.id, task_name: 'Welcome Kit & Access Badge Handover', assigned_to: 'HR', due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: false, requires_esign: false, completed_at: null, status: 'pending' }
-    ];
+      const result = await response.json();
+      const createdEmp = result.employee;
+      const tempPassword = result.temporary_password;
 
-    onUpdateDb({
-      ...db,
-      employees: [...db.employees, newEmp],
-      trainingProgress: newProgress,
-      onboardingTasks: [...(db.onboardingTasks || []), ...newOnboardingTasks],
-      auditLogs: newLogs
-    });
+      const newEmp = {
+        ...createdEmp,
+        phone: '+91 99887 76655',
+        bank_name: createdEmp.bank_name || 'HDFC Bank',
+        account_number: createdEmp.account_number || ('50100' + Math.floor(100000000 + Math.random() * 900000000)),
+        ifsc_code: createdEmp.ifsc_code || 'HDFC0000012',
+        grade: createdEmp.grade || 3,
+        manager: createdEmp.manager || 'John Doe',
+        documents: createdEmp.documents ? JSON.parse(createdEmp.documents) : [
+          { type: 'Aadhaar Card', name: 'aadhaar_verify.pdf', status: 'verified', date: new Date().toISOString().split('T')[0] },
+          { type: 'Degree Certificate', name: 'bachelors_degree.pdf', status: 'pending', date: new Date().toISOString().split('T')[0] }
+        ]
+      };
+      
+      // Add default training progress for the employee
+      const newProgress = [...(db.trainingProgress || []), {
+        id: Date.now() + 1,
+        employee_id: newEmp.id,
+        track_id: 1,
+        completed_modules: 0,
+        quiz_score: 0,
+        passed: false
+      }];
 
-    setNewName('');
-    setNewEmail('');
-    setNewPhoto('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80');
-    setNewJoinDate(new Date().toISOString().split('T')[0]);
-    setNewStatus('probation');
-    setShowAddWizard(false);
-    alert(`Employee ${newEmp.name} successfully added! Onboarding checklists & mandatory compliance tracks initialized.`);
+      const newLogs = [...db.auditLogs, {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        initiator_id: 'Sarah Jenkins',
+        module: 'Employees',
+        record_id: newEmp.id,
+        action_type: 'create',
+        change_diff: { created_employee: newEmp.name, assigned_role: newEmp.designation },
+        ip_address: '192.168.1.104',
+        client_agent: 'Chrome / Windows'
+      }];
+
+      // Also auto initialize onboarding tasks for them
+      const newOnboardingTasks = [
+        { id: Date.now() + 10, instance_id: newEmp.id, task_name: 'Workstation Setup & Laptop Provisioning', assigned_to: 'IT', due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
+        { id: Date.now() + 11, instance_id: newEmp.id, task_name: 'Provision System Logins & Email', assigned_to: 'IT', due_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
+        { id: Date.now() + 12, instance_id: newEmp.id, task_name: 'Mandatory NDA Policy E-Sign', assigned_to: 'Employee', due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: true, completed_at: null, status: 'pending' },
+        { id: Date.now() + 13, instance_id: newEmp.id, task_name: 'Complete Compliance Induction Quiz', assigned_to: 'Employee', due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
+        { id: Date.now() + 14, instance_id: newEmp.id, task_name: 'Welcome Kit & Access Badge Handover', assigned_to: 'HR', due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: false, requires_esign: false, completed_at: null, status: 'pending' }
+      ];
+
+      onUpdateDb({
+        ...db,
+        employees: [...db.employees, newEmp],
+        trainingProgress: newProgress,
+        onboardingTasks: [...(db.onboardingTasks || []), ...newOnboardingTasks],
+        auditLogs: newLogs
+      });
+
+      setNewName('');
+      setNewEmail('');
+      setNewPhoto('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80');
+      setNewJoinDate(new Date().toISOString().split('T')[0]);
+      setNewStatus('probation');
+      setShowAddWizard(false);
+      await fetchEmployees();
+      notify(`Employee ${newEmp.name} successfully added!\n\nTemporary Login Credentials:\nUsername (Email): ${newEmp.email}\nPassword: ${tempPassword}\n\nPlease share these credentials with the employee so they can log in.`);
+    } catch (err) {
+      notify(`Failed to add employee: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmProbation = (id) => {
-    // Prerequisite checks: Learning and L&D compliance
-    const progress = db.trainingProgress?.find(p => p.employee_id === id) || { passed: false };
-    if (!progress.passed) {
-      alert('WARNING: Lock Prerequisite Engaged! Employee has not finished/passed mandatory L&D Inductions. Probation confirmation blocked.');
+  const handleConfirmProbation = async (id) => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch(`/api/hr-portal/employees/${id}/confirm-probation`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to confirm probation.');
+      }
+      await fetchEmployees();
+      notify('Employee probation confirmed! Status set to Fully Active.');
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  const handleExtendProbation = async (id) => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch(`/api/hr-portal/employees/${id}/extend-probation`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to extend probation.');
+      }
+      const updated = await res.json();
+      await fetchEmployees();
+      notify(`Probation successfully extended by 90 days. New end date: ${updated.probation_end_date}`);
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  const handleTerminateProbation = async (id) => {
+    if (!confirm('Are you sure you want to terminate this employee during probation? This will update their status to inactive immediately.')) return;
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch(`/api/hr-portal/employees/${id}/terminate`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to terminate employee.');
+      }
+      await fetchEmployees();
+      notify('Employment terminated. Employee status marked as Inactive.');
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  // ─── Edit Employee (PUT) ────────────────────────────────────────────────────
+  const handleEditEmployee = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch(`/api/hr-portal/employees/${editEmp.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editName,
+          email: editEmail,
+          department: editDept,
+          designation: editRole,
+          phone: editPhone,
+          grade: editGrade,
+          manager: editManager,
+          photo: editPhoto
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to update employee.');
+      }
+      setShowEditModal(false);
+      setEditEmp(null);
+      await fetchEmployees();
+      notify('Employee profile updated successfully!');
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  // ─── Delete Employee (DELETE) ───────────────────────────────────────────────
+  const handleDeleteEmployee = async (id) => {
+    if (!confirm('Are you sure you want to permanently delete this employee record? This action cannot be undone.')) return;
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch(`/api/hr-portal/employees/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to delete employee.');
+      }
+      setSelectedEmp(null);
+      await fetchEmployees();
+      notify('Employee record permanently deleted.');
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword.trim()) {
+      notify('Please enter a valid password.', 'warning');
       return;
     }
-
-    const updated = db.employees.map(e => {
-      if (e.id === id) {
-        return { ...e, status: 'active' };
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch(`/api/hr-portal/employees/${resetEmp.id}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ new_password: newPassword })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to reset employee password.');
       }
-      return e;
-    });
-
-    const newLogs = [...db.auditLogs, {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      initiator_id: 'Sarah Jenkins',
-      module: 'Employees',
-      record_id: id,
-      action_type: 'verify_doc',
-      change_diff: { probation_status: 'confirmed_active', verified_prerequisite: 'L&D Quiz passed' },
-      ip_address: '192.168.1.104',
-      client_agent: 'Chrome / Windows'
-    }];
-
-    onUpdateDb({
-      ...db,
-      employees: updated,
-      auditLogs: newLogs
-    });
-
-    if (selectedEmp) {
-      setSelectedEmp({ ...selectedEmp, status: 'active' });
+      setShowResetModal(false);
+      setResetEmp(null);
+      setNewPassword('');
+      notify('Employee password successfully updated / reset!');
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
     }
-    alert('Employee probation confirmed! Status set to Fully Active.');
   };
 
-  const handleExtendProbation = (id) => {
-    const updated = db.employees.map(e => {
-      if (e.id === id) {
-        const currentEnd = new Date(e.probation_end_date);
-        const extendedEnd = new Date(currentEnd.getTime() + 90 * 24 * 60 * 60 * 1000);
-        return {
-          ...e,
-          probation_end_date: extendedEnd.toISOString().split('T')[0]
-        };
-      }
-      return e;
-    });
-
-    const target = db.employees.find(e => e.id === id);
-    const newLogs = [...db.auditLogs, {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      initiator_id: 'Sarah Jenkins',
-      module: 'Employees',
-      record_id: id,
-      action_type: 'verify_doc',
-      change_diff: { probation_status: 'extended_90_days', new_probation_end: new Date(new Date(target.probation_end_date).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
-      ip_address: '192.168.1.104',
-      client_agent: 'Chrome / Windows'
-    }];
-
-    onUpdateDb({
-      ...db,
-      employees: updated,
-      auditLogs: newLogs
-    });
-
-    const updatedEmp = updated.find(e => e.id === id);
-    setSelectedEmp(updatedEmp);
-    alert(`Prabation successfully extended by 90 days. New end date: ${updatedEmp.probation_end_date}`);
+  const openResetModal = (emp) => {
+    setResetEmp(emp);
+    setNewPassword('');
+    setShowResetModal(true);
   };
 
-  const handleTerminateProbation = (id) => {
-    if (!confirm('Are you sure you want to terminate this employee during probation? This will update their status to inactive immediately.')) return;
-
-    const updated = db.employees.map(e => {
-      if (e.id === id) {
-        return { ...e, status: 'inactive' };
-      }
-      return e;
-    });
-
-    const newLogs = [...db.auditLogs, {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      initiator_id: 'Sarah Jenkins',
-      module: 'Employees',
-      record_id: id,
-      action_type: 'verify_doc',
-      change_diff: { employment_status: 'terminated_in_probation' },
-      ip_address: '192.168.1.104',
-      client_agent: 'Chrome / Windows'
-    }];
-
-    onUpdateDb({
-      ...db,
-      employees: updated,
-      auditLogs: newLogs
-    });
-
-    const updatedEmp = updated.find(e => e.id === id);
-    setSelectedEmp(updatedEmp);
-    alert('Employment terminated. Employee status marked as Inactive.');
+  const openEditModal = (emp) => {
+    setEditEmp(emp);
+    setEditName(emp.name);
+    setEditEmail(emp.email);
+    setEditDept(emp.department || 'Engineering');
+    setEditRole(emp.designation || 'Developer');
+    setEditPhone(emp.phone || '');
+    setEditGrade(emp.grade || 3);
+    setEditManager(emp.manager || '');
+    setEditPhoto(emp.photo || '');
+    setShowEditModal(true);
   };
 
   const handleRevealBankDetails = (emp) => {
@@ -308,7 +452,7 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
       });
 
       setScanningDoc(null);
-      alert(`Malware Scan Clean! Document ${docType} successfully uploaded & enqueued for verification.`);
+      notify(`Malware Scan Clean! Document ${docType} successfully uploaded & enqueued for verification.`);
     }, 1500);
   };
 
@@ -351,7 +495,7 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
       documents: updatedDocs
     });
 
-    alert(`Document ${docType} successfully verified and stamped ✓`);
+    notify(`Document ${docType} successfully verified and stamped ✓`);
   };
 
   return (
@@ -403,6 +547,7 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
                 <th>Designation</th>
                 <th>Status</th>
                 <th>Join Date</th>
+                <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -422,6 +567,19 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
                     </span>
                   </td>
                   <td>{emp.join_date}</td>
+                  <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', gap: '6px' }}>
+                      <button title="Edit Employee" onClick={() => openEditModal(emp)} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#60a5fa', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px' }}>
+                        <Edit3 size={11} /> Edit
+                      </button>
+                      <button title="Reset Password" onClick={() => openResetModal(emp)} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#f59e0b', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px' }}>
+                        <Lock size={11} /> Reset
+                      </button>
+                      <button title="Delete Employee" onClick={() => handleDeleteEmployee(emp.id)} style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px' }}>
+                        <Trash2 size={11} /> Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -449,7 +607,18 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
                     <span className="code-span">{selectedEmp.emp_id}</span>
                   </div>
                 </div>
-                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px' }} onClick={() => setSelectedEmp(null)}>✕</button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button title="Edit Employee" onClick={() => openEditModal(selectedEmp)} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#60a5fa', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                    <Edit3 size={14} /> Edit
+                  </button>
+                  <button title="Delete Employee" onClick={() => handleDeleteEmployee(selectedEmp.id)} style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                    <Trash2 size={14} /> Delete
+                  </button>
+                  <button title="Reset Password" onClick={() => openResetModal(selectedEmp)} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#f59e0b', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                    <Lock size={12} /> Reset
+                  </button>
+                  <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px' }} onClick={() => setSelectedEmp(null)}>✕</button>
+                </div>
               </div>
 
               {/* Tab Selector Inside Drawer */}
@@ -776,6 +945,79 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button type="button" style={{ background: 'none', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }} onClick={() => setShowAddWizard(false)}>Cancel</button>
               <button type="submit" style={{ backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Create Profile</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
+      {showEditModal && editEmp && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <form onSubmit={handleEditEmployee} className="card" style={{ width: '450px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '12px' }}>
+            <h3>✏️ Edit Employee Profile</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', margin: '16px 0' }}>
+              <label style={{ fontSize: '12px' }}>Employee Full Name</label>
+              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+
+              <label style={{ fontSize: '12px' }}>Email Address</label>
+              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+
+              <label style={{ fontSize: '12px' }}>Department</label>
+              <select value={editDept} onChange={(e) => setEditDept(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
+                <option value="Executive">Executive</option>
+                <option value="Engineering">Engineering</option>
+                <option value="IT">IT</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Sales">Sales</option>
+                <option value="Human Resources">Human Resources</option>
+                <option value="Finance">Finance</option>
+              </select>
+
+              <label style={{ fontSize: '12px' }}>Designation / Title</label>
+              <input type="text" value={editRole} onChange={(e) => setEditRole(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+
+              <label style={{ fontSize: '12px' }}>Phone Number</label>
+              <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+91 99000 11000" style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+
+              <label style={{ fontSize: '12px' }}>Structural Grade</label>
+              <input type="number" value={editGrade} onChange={(e) => setEditGrade(Number(e.target.value))} min={1} max={10} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+
+              <label style={{ fontSize: '12px' }}>Reporting Manager</label>
+              <input type="text" value={editManager} onChange={(e) => setEditManager(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+
+              <label style={{ fontSize: '12px' }}>Profile Photo URL</label>
+              <input type="text" value={editPhoto} onChange={(e) => setEditPhoto(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setShowEditModal(false); setEditEmp(null); }} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#fff', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button type="submit" style={{ backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Save Changes</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {showResetModal && resetEmp && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <form onSubmit={handleResetPassword} className="card" style={{ width: '400px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '12px' }}>
+            <h3>🔒 Reset Employee Password</h3>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '8px 0 16px 0' }}>
+              Resetting password for <strong>{resetEmp.name}</strong> ({resetEmp.email}).
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '16px 0' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold' }}>New Password</label>
+              <input 
+                type="text" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                required 
+                placeholder="e.g. NewSecretPassword@123"
+                style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} 
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setShowResetModal(false); setResetEmp(null); }} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#fff', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button type="submit" style={{ backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Update Password</button>
             </div>
           </form>
         </div>

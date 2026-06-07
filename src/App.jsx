@@ -7,6 +7,7 @@ import Tl from './components/tl/Tl';
 import Employee from './components/employee/Employee';
 import Login from './components/auth/Login';
 import './index.css';
+import { ToastProvider } from './components/common/ToastProvider.jsx';
 
 // Seed defaults from HR package to establish unified global DB state
 import {
@@ -336,6 +337,28 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(!!token);
 
+  // Helper to forward toast messages to the global provider (if available)
+  const showToast = (msg, type = 'success') => {
+    if (window.showToast) {
+      window.showToast(msg, type);
+    }
+  };
+
+  useEffect(() => {
+    // Preserve existing unhandled rejection handling using the helper
+    const handleUnhandledRejection = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      const msg = event.reason?.detail || event.reason?.message || String(event.reason) || 'An unexpected database or API error occurred';
+      if (msg && !msg.includes('ResizeObserver') && !msg.includes('ResizeObserver loop limit exceeded')) {
+        showToast(msg, 'error');
+      }
+    };
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   const updateDb = (newDb) => {
     localStorage.setItem('nsg_hr_db', JSON.stringify(newDb));
     setDb(newDb);
@@ -505,30 +528,38 @@ export default function App() {
   if (!isAuthorized) return null;
 
   return (
-    <div className="app-container">
-      {/* Sidebar Panel */}
-      <Sidebar 
-        activeRole={route.role} 
-        activeTab={route.tab} 
-        setActiveTab={(tab) => navigateTo(route.role, tab)} 
-      />
-
-      {/* Main Panel Viewport */}
-      <main className="main-content">
-        {/* Header Navigation */}
-        <Navbar 
+    <ToastProvider>
+      <div className="app-container">
+        {/* Sidebar Panel */}
+        <Sidebar 
           activeRole={route.role} 
-          setActiveRole={(role) => navigateTo(role, 'dashboard')} 
-          navigateTo={navigateTo}
-          hrDb={db}
-          currentUser={user}
-          onLogout={handleLogout}
+          activeTab={route.tab} 
+          setActiveTab={(tab) => navigateTo(route.role, tab)} 
         />
 
-        {/* Dynamic Inner Layout Body */}
-        {renderActiveComponent()}
-      </main>
-    </div>
+        {/* Main Panel Viewport */}
+        <main className="main-content">
+          {/* Header Navigation */}
+          <Navbar 
+            activeRole={route.role} 
+            setActiveRole={(role) => navigateTo(role, 'dashboard')} 
+            navigateTo={navigateTo}
+            hrDb={db}
+            currentUser={user}
+            onLogout={handleLogout}
+          />
+
+          {/* Dynamic Inner Layout Body */}
+          {renderActiveComponent()}
+        </main>
+      </div>
+      <style>{`
+        @keyframes toastSlideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+    </ToastProvider>
   );
 }
 

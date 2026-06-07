@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Megaphone, Send, Users, CheckCircle, 
   BarChart3, Eye, Clock, X, ArrowLeft,
@@ -21,8 +21,35 @@ const mockAnnouncements = [
   }
 ];
 
+const formatAnnDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    
+    const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    if (isToday) {
+      return `Today, ${timeStr}`;
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    if (isYesterday) {
+      return `Yesterday, ${timeStr}`;
+    }
+    
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + `, ${timeStr}`;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 export default function Announcements({ db, onUpdateDb }) {
-  const announcements = db?.announcements && db.announcements.length > 0 ? db.announcements : mockAnnouncements;
+  const [announcements, setAnnouncements] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -31,33 +58,83 @@ export default function Announcements({ db, onUpdateDb }) {
   const [scheduleTime, setScheduleTime] = useState('');
   const [readDrawerId, setReadDrawerId] = useState(null);
 
-  const handlePost = (e) => {
+  const fetchAnnouncements = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/ceo-portal/announcements', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(data);
+        if (onUpdateDb) {
+          onUpdateDb({
+            ...db,
+            announcements: data
+          });
+        }
+      } else {
+        const local = db?.announcements && db.announcements.length > 0 ? db.announcements : mockAnnouncements;
+        setAnnouncements(local);
+      }
+    } catch (err) {
+      console.error("Failed to fetch announcements", err);
+      const local = db?.announcements && db.announcements.length > 0 ? db.announcements : mockAnnouncements;
+      setAnnouncements(local);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const handlePost = async (e) => {
     e.preventDefault();
     if (!title || !body) return;
     setIsSending(true);
-    setTimeout(() => {
-      const newAnn = {
-        id: Date.now(), title, body, audience: audience || 'All Employees', priority,
-        date: scheduleTime ? `Scheduled for ${new Date(scheduleTime).toLocaleString()}` : 'Just now', 
-        author: 'CEO Office', readPct: 0, readCount: 0
-      };
-      
-      const currentAnns = db?.announcements && db.announcements.length > 0 ? db.announcements : mockAnnouncements;
-      const updated = [newAnn, ...currentAnns];
-      
-      if (onUpdateDb) {
-        onUpdateDb({
-          ...db,
-          announcements: updated
-        });
-      }
-      
+
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) {
       setIsSending(false);
-      setTitle(''); setBody(''); setPriority('Normal'); setAudience('All Employees'); setScheduleTime('');
-    }, 1000);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/ceo-portal/announcements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title,
+          body,
+          priority,
+          audience: audience || 'All Employees'
+        })
+      });
+
+      if (res.ok) {
+        await fetchAnnouncements();
+        setTitle(''); 
+        setBody(''); 
+        setPriority('Normal'); 
+        setAudience('All Employees'); 
+        setScheduleTime('');
+      } else {
+        alert('Failed to post announcement. Please try again.');
+      }
+    } catch (err) {
+      console.error("Error posting announcement", err);
+      alert('Error connecting to backend server.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const activeDrawerAnn = announcements.find(a => a.id === readDrawerId);
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '32px' }}>
@@ -92,53 +169,58 @@ export default function Announcements({ db, onUpdateDb }) {
             )}
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#F1F5F9' }}>
-            {announcements.map(ann => (
-              <div key={ann.id} style={{ 
-                background: '#FFF',
-                border: '1px solid var(--ceo-border)',
-                borderLeft: ann.priority === 'Urgent' ? '4px solid var(--ceo-danger)' : '4px solid var(--ceo-primary)',
-                borderRadius: '8px',
-                padding: '20px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '16px', background: 'var(--ceo-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px' }}>
-                      {ann.author.charAt(0)}
+            {announcements.map(ann => {
+              const displayDate = ann.created_at ? formatAnnDate(ann.created_at) : ann.date;
+              const displayReadPct = ann.read_pct !== undefined ? ann.read_pct : (ann.readPct || 0);
+              
+              return (
+                <div key={ann.id} style={{ 
+                  background: '#FFF',
+                  border: '1px solid var(--ceo-border)',
+                  borderLeft: ann.priority === 'Urgent' ? '4px solid var(--ceo-danger)' : '4px solid var(--ceo-primary)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '16px', background: 'var(--ceo-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px' }}>
+                        {ann.author ? ann.author.charAt(0) : 'C'}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ceo-text-primary)' }}>{ann.author || 'CEO Office'}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', marginTop: '2px' }}>{displayDate}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ceo-text-primary)' }}>{ann.author}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', marginTop: '2px' }}>{ann.date}</div>
+                    {ann.priority === 'Urgent' && <span style={{ background: '#FEF2F2', color: 'var(--ceo-danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800, border: '1px solid #FCA5A5' }}>URGENT</span>}
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: 'var(--ceo-text-primary)' }}>{ann.title}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--ceo-text-secondary)', marginBottom: '16px', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ann.body}</div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ceo-divider)', paddingTop: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 600 }}>
+                      <Users size={14}/> {ann.audience}
                     </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setReadDrawerId(ann.id); }}
+                      style={{ 
+                        padding: '6px 12px', fontSize: '12px', background: readDrawerId === ann.id ? 'var(--ceo-primary)' : '#F8FAFC', 
+                        color: readDrawerId === ann.id ? '#FFF' : 'var(--ceo-text-primary)',
+                        border: '1px solid', borderColor: readDrawerId === ann.id ? 'var(--ceo-primary)' : 'var(--ceo-border)',
+                        borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
+                        fontWeight: 600, transition: 'all 0.2s'
+                      }}>
+                      <BarChart3 size={14}/> {displayReadPct}% Read
+                    </button>
                   </div>
-                  {ann.priority === 'Urgent' && <span style={{ background: '#FEF2F2', color: 'var(--ceo-danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800, border: '1px solid #FCA5A5' }}>URGENT</span>}
                 </div>
-                <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: 'var(--ceo-text-primary)' }}>{ann.title}</div>
-                <div style={{ fontSize: '13px', color: 'var(--ceo-text-secondary)', marginBottom: '16px', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ann.body}</div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ceo-divider)', paddingTop: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 600 }}>
-                    <Users size={14}/> {ann.audience}
-                  </div>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setReadDrawerId(ann.id); }}
-                    style={{ 
-                      padding: '6px 12px', fontSize: '12px', background: readDrawerId === ann.id ? 'var(--ceo-primary)' : '#F8FAFC', 
-                      color: readDrawerId === ann.id ? '#FFF' : 'var(--ceo-text-primary)',
-                      border: '1px solid', borderColor: readDrawerId === ann.id ? 'var(--ceo-primary)' : 'var(--ceo-border)',
-                      borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
-                      fontWeight: 600, transition: 'all 0.2s'
-                    }}>
-                    <BarChart3 size={14}/> {ann.readPct}% Read
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -216,11 +298,15 @@ export default function Announcements({ db, onUpdateDb }) {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ padding: '32px', background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)', borderRadius: '12px', border: '1px solid var(--ceo-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--ceo-primary)', lineHeight: 1 }}>{activeDrawerAnn?.readPct}%</div>
+                    <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--ceo-primary)', lineHeight: 1 }}>
+                      {activeDrawerAnn?.read_pct !== undefined ? activeDrawerAnn.read_pct : (activeDrawerAnn?.readPct || 0)}%
+                    </div>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginTop: '12px', letterSpacing: '1px' }}>GLOBAL READ RATE</div>
                   </div>
                   <div style={{ padding: '32px', background: '#FFF', borderRadius: '12px', border: '1px solid var(--ceo-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--ceo-text-primary)', lineHeight: 1 }}>{activeDrawerAnn?.readCount}</div>
+                    <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--ceo-text-primary)', lineHeight: 1 }}>
+                      {activeDrawerAnn?.read_count !== undefined ? activeDrawerAnn.read_count : (activeDrawerAnn?.readCount || 0)}
+                    </div>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginTop: '12px', letterSpacing: '1px' }}>UNIQUE VIEWS</div>
                   </div>
                 </div>

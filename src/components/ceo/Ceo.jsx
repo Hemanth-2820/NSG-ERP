@@ -12,9 +12,9 @@ import StrategyOKRs from './pages/StrategyOKRs';
 import Messaging from './pages/Messaging';
 import './CEO.css';
 
-export default function Ceo({ activeTab, db, onUpdateDb, queryParams, setQueryParams }) {
+export default function Ceo({ activeTab, db, onUpdateDb, queryParams, setQueryParams, currentUser }) {
   const renderContent = () => {
-    const props = { db, onUpdateDb, queryParams, setQueryParams };
+    const props = { db, onUpdateDb, queryParams, setQueryParams, currentUser };
     switch (activeTab) {
       case 'dashboard': return <Dashboard {...props} />;
       case 'companySetup': return <CompanySetup {...props} />;

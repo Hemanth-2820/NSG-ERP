@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, FileText, ArrowRight, Video } from 'lucide-react';
 
 export function RecruitmentView({ db, onUpdateDb, queryParams, setQueryParams }) {
@@ -59,91 +59,79 @@ export function RecruitmentView({ db, onUpdateDb, queryParams, setQueryParams })
     { id: 'joined', label: 'Joined' }
   ];
 
-  const handleMoveStage = (id, newStage) => {
-    const updated = db.candidates.map(c => {
-      if (c.id === id) {
-        return { ...c, stage: newStage };
-      }
-      return c;
-    });
-    
-    // Auto convert to employee if marked joined
-    if (newStage === 'joined') {
-      const cand = db.candidates.find(c => c.id === id);
-      const exists = db.employees.some(e => e.email === cand.email);
-      if (!exists) {
-        const newEmp = {
-          id: Date.now(),
-          emp_id: `NSG-0${db.employees.length + 101}`,
-          name: cand.name,
-          email: cand.email,
-          phone: cand.phone,
-          department: 'Engineering',
-          designation: cand.role,
-          status: 'probation',
-          join_date: new Date().toISOString().split('T')[0],
-          probation_end_date: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          bank_name: 'HDFC Bank',
-          account_number: '50100' + Math.floor(100000000 + Math.random() * 900000000),
-          ifsc_code: 'HDFC0000012',
-          grade: 3,
-          manager: 'John Doe',
-          photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&fit=crop&q=80'
-        };
-
-        const newLogs = [...db.auditLogs, {
-          id: Date.now(),
-          timestamp: new Date().toISOString(),
-          initiator_id: 'Sarah Jenkins',
-          module: 'Recruitment',
-          record_id: newEmp.id,
-          action_type: 'create',
-          change_diff: { converted_employee: newEmp.name },
-          ip_address: '192.168.1.104',
-          client_agent: 'Chrome / Windows'
-        }];
-
-        const newOnboardingTasks = [
-          { id: Date.now() + 10, instance_id: newEmp.id, task_name: 'Workstation Setup & Laptop Provisioning', assigned_to: 'IT', due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
-          { id: Date.now() + 11, instance_id: newEmp.id, task_name: 'Provision System Logins & Email', assigned_to: 'IT', due_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
-          { id: Date.now() + 12, instance_id: newEmp.id, task_name: 'Mandatory NDA Policy E-Sign', assigned_to: 'Employee', due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: true, completed_at: null, status: 'pending' },
-          { id: Date.now() + 13, instance_id: newEmp.id, task_name: 'Complete Compliance Induction Quiz', assigned_to: 'Employee', due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: true, requires_esign: false, completed_at: null, status: 'pending' },
-          { id: Date.now() + 14, instance_id: newEmp.id, task_name: 'Welcome Kit & Access Badge Handover', assigned_to: 'HR', due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], is_mandatory: false, requires_esign: false, completed_at: null, status: 'pending' }
-        ];
-
-        const newProgress = [...(db.trainingProgress || []), {
-          id: Date.now() + 1,
-          employee_id: newEmp.id,
-          track_id: 1,
-          completed_modules: 0,
-          quiz_score: 0,
-          passed: false
-        }];
-
-        const newEsigns = [...(db.esignRequests || []), {
-          id: Date.now() + 20,
-          employee_id: newEmp.id,
-          document_name: 'Mandatory NDA Policy Handbook',
-          status: 'pending',
-          sent_at: new Date().toISOString(),
-          signed_at: null
-        }];
-
+  // Fetch candidates and sync to parent state
+  const fetchCandidates = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch('/api/hr-portal/candidates', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Also fetch employees to keep complete sync
+        const empRes = await fetch('/api/hr-portal/employees', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const empData = empRes.ok ? await empRes.json() : db.employees;
+        
         onUpdateDb({
           ...db,
-          candidates: updated,
-          employees: [...db.employees, newEmp],
-          onboardingTasks: [...(db.onboardingTasks || []), ...newOnboardingTasks],
-          trainingProgress: newProgress,
-          esignRequests: newEsigns,
-          auditLogs: newLogs
+          candidates: data,
+          employees: empData
         });
-        alert(`Candidate ${cand.name} converted to Employee! An onboarding checklist has been automatically assigned.`);
-        return;
       }
+    } catch (err) {
+      console.error('Failed to fetch candidates/employees:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
+
+  const handleMoveStage = async (id, newStage) => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    
+    if (newStage === 'joined') {
+      try {
+        const res = await fetch(`/api/hr-portal/candidates/${id}/join`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Failed to convert candidate to employee.');
+        }
+        const result = await res.json();
+        const createdEmp = result.employee;
+        const tempPassword = result.temporary_password;
+
+        alert(`Candidate ${createdEmp.name} successfully converted to Employee! An onboarding checklist has been automatically assigned.\n\nTemporary Login Credentials:\nUsername (Email): ${createdEmp.email}\nPassword: ${tempPassword}\n\nPlease share these credentials with the employee so they can log in.`);
+        await fetchCandidates();
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+      return;
     }
 
-    onUpdateDb({ ...db, candidates: updated });
+    // Otherwise, move stage
+    try {
+      const res = await fetch(`/api/hr-portal/candidates/${id}/stage`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ stage: newStage })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to update candidate stage.');
+      }
+      await fetchCandidates();
+    } catch (err) {
+      alert(`Error updating stage: ${err.message}`);
+    }
   };
 
   const handleScheduleInterview = (e) => {
@@ -301,36 +289,46 @@ export function RecruitmentView({ db, onUpdateDb, queryParams, setQueryParams })
     }
   };
 
-  const handleImportCandidate = () => {
+  const handleImportCandidate = async () => {
     if (!uploadedCandidateName) return;
     
-    const newCand = {
-      id: Date.now(),
-      name: uploadedCandidateName,
-      email: (uploadedCandidateName.toLowerCase().replace(/\s+/g, '.')) + '@nsgapplicant.com',
-      phone: '+91 ' + Math.floor(7000000000 + Math.random() * 2999999999),
-      role: uploadedCandidateRole === 'Other' ? customRole : uploadedCandidateRole,
-      source: 'AI Resume Parser',
-      stage: 'applied',
-      resume_url: '#',
-      created_at: new Date().toISOString(),
-      parsedResult: parsedResult
-    };
-
-    onUpdateDb({
-      ...db,
-      candidates: [...db.candidates, newCand]
-    });
-
-    alert(`Candidate ${uploadedCandidateName} successfully parsed and imported into Applied board!`);
-    
-    // Reset states
-    setShowAnalyzer(false);
-    setUploadedCandidateName('');
-    setUploadedFileName('');
-    setParsedResult(null);
-    setSelectedFile(null);
-    setCustomRole('');
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch('/api/hr-portal/candidates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: uploadedCandidateName,
+          email: (uploadedCandidateName.toLowerCase().replace(/\s+/g, '.')) + '@nsgapplicant.com',
+          phone: '+91 ' + String(Math.floor(7000000000 + Math.random() * 2999999999)),
+          role: uploadedCandidateRole === 'Other' ? customRole : uploadedCandidateRole,
+          source: 'AI Resume Parser',
+          stage: 'applied',
+          resume_url: '#'
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to import candidate.');
+      }
+      
+      alert(`Candidate ${uploadedCandidateName} successfully parsed and imported into Applied board!`);
+      
+      // Reset states
+      setShowAnalyzer(false);
+      setUploadedCandidateName('');
+      setUploadedFileName('');
+      setParsedResult(null);
+      setSelectedFile(null);
+      setCustomRole('');
+      
+      await fetchCandidates();
+    } catch (err) {
+      alert(`Error importing candidate: ${err.message}`);
+    }
   };
 
   return (

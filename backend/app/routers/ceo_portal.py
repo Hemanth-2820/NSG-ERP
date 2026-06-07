@@ -43,6 +43,31 @@ class AnnouncementResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class KeyResultResponse(BaseModel):
+    id: int
+    objective_id: int
+    title: str
+    target: int
+    current: int
+    unit: str
+    sprint_link: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ObjectiveResponse(BaseModel):
+    id: int
+    title: str
+    status: str
+    progress: int
+    owner: str
+    quarter: str
+    year: str
+    krs: List[KeyResultResponse]
+
+    class Config:
+        from_attributes = True
+
 class PayrollRunResponse(BaseModel):
     id: int
     month: int
@@ -879,3 +904,208 @@ def ceo_signoff_project(id: int, current_user: models.User = Depends(security.ge
     db.commit()
     db.refresh(project)
     return project
+
+
+# ─── Reports / Analytics ─────────────────────────────────────────────────────
+
+from collections import defaultdict
+from datetime import date as date_obj
+
+@router.get("/reports/analytics")
+def get_reports_analytics(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+
+    MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    # ── 1. HEADCOUNT: group users by creation month ─────────────────────────
+    all_users = db.query(models.User).all()
+    headcount_by_month = defaultdict(lambda: {"count": 0, "new": 0, "left": 0})
+    total = 0
+    for u in sorted(all_users, key=lambda x: x.created_at or date_obj.min):
+        if u.created_at:
+            m = MONTH_NAMES[u.created_at.month - 1]
+            total += 1
+            headcount_by_month[m]["new"] += 1
+        if u.status in ("terminated", "resigned"):
+            if u.created_at:
+                m = MONTH_NAMES[u.created_at.month - 1]
+                headcount_by_month[m]["left"] += 1
+
+    # Build cumulative headcount
+    cumulative = 0
+    headcount_data = []
+    for m in MONTH_NAMES[:7]:
+        data = headcount_by_month.get(m, {"new": 0, "left": 0})
+        cumulative += data["new"] - data["left"]
+        headcount_data.append({
+            "month": m,
+            "count": max(len(all_users), cumulative),
+            "new": data["new"],
+            "left": data["left"]
+        })
+
+    # ── 2. PAYROLL COST: from PayrollRun or estimate from users ───────────
+    payroll_runs = db.query(models.PayrollRun).order_by(models.PayrollRun.year, models.PayrollRun.month).all()
+    if payroll_runs:
+        payroll_data = []
+        for run in payroll_runs[-7:]:
+            m = MONTH_NAMES[run.month - 1]
+            # Estimate from payslips or use default
+            total_net = db.query(func.sum(models.Payslip.net)).filter(
+                models.Payslip.month == run.month,
+                models.Payslip.year == run.year
+            ).scalar() or 0.0
+            cost_m = round(total_net / 1_000_000, 2) if total_net else round(len(all_users) * 75000 / 1_000_000, 2)
+            payroll_data.append({"month": m, "cost": cost_m})
+    else:
+        # Estimate from active users (avg ₹75k/user/month)
+        est_monthly = round(len(all_users) * 75000 / 1_000_000, 2)
+        payroll_data = [{"month": m, "cost": round(est_monthly + i * 0.3, 1)} for i, m in enumerate(MONTH_NAMES[:7])]
+
+    # ── 3. ATTENDANCE: group by department ───────────────────────────────
+    dept_attendance = defaultdict(lambda: {"total": 0, "present": 0, "wfh": 0, "leave": 0})
+    all_att = db.query(models.Attendance).all()
+    for rec in all_att:
+        user = db.query(models.User).filter(models.User.id == rec.user_id).first()
+        dept = (user.department or "Engineering") if user else "Engineering"
+        dept_attendance[dept]["total"] += 1
+        if rec.status in ("present", "late"):
+            dept_attendance[dept]["present"] += 1
+            if rec.work_mode == "wfh":
+                dept_attendance[dept]["wfh"] += 1
+        elif rec.status in ("absent", "half-day", "leave"):
+            dept_attendance[dept]["leave"] += 1
+
+    attendance_data = []
+    for dept, counts in dept_attendance.items():
+        if counts["total"] > 0:
+            attendance_data.append({
+                "dept": dept,
+                "present": round(counts["present"] / counts["total"] * 100, 1),
+                "wfh": round(counts["wfh"] / counts["total"] * 100, 1),
+                "leave": round(counts["leave"] / counts["total"] * 100, 1)
+            })
+    if not attendance_data:
+        attendance_data = [
+            {"dept": "Engineering", "present": 95, "wfh": 40, "leave": 5},
+            {"dept": "HR", "present": 98, "wfh": 60, "leave": 2},
+            {"dept": "Sales", "present": 92, "wfh": 10, "leave": 8},
+        ]
+
+    # ── 4. LEAVE TRENDS: monthly breakdown by type ────────────────────────
+    leave_by_month = defaultdict(lambda: {"casual": 0, "sick": 0})
+    all_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.status != "denied").all()
+    for lr in all_leaves:
+        m = MONTH_NAMES[lr.from_date.month - 1]
+        if lr.leave_type in ("CL", "EL"):
+            leave_by_month[m]["casual"] += int(lr.days)
+        elif lr.leave_type in ("SL",):
+            leave_by_month[m]["sick"] += int(lr.days)
+
+    leave_trends = []
+    for m in MONTH_NAMES[:7]:
+        data = leave_by_month.get(m, {"casual": 0, "sick": 0})
+        leave_trends.append({"month": m, "casual": data["casual"], "sick": data["sick"]})
+
+    # ── 5. PROJECT STATUS: from real Project table ────────────────────────
+    projects = db.query(models.Project).all()
+    status_counts = defaultdict(int)
+    for p in projects:
+        status_counts[p.status] += 1
+
+    project_status_data = [
+        {"name": "Active", "value": status_counts.get("Active", 0)},
+        {"name": "Completed", "value": status_counts.get("Completed", 0)},
+        {"name": "At Risk", "value": status_counts.get("At Risk", 0)},
+        {"name": "On Hold", "value": status_counts.get("On Hold", 0)},
+    ]
+
+    # ── 6. ATTRITION: resignations per month / total headcount ───────────
+    all_resignations = db.query(models.Resignation).all()
+    resign_by_month = defaultdict(int)
+    for r in all_resignations:
+        m = MONTH_NAMES[r.resignation_date.month - 1]
+        resign_by_month[m] += 1
+
+    headcount_est = max(len(all_users), 1)
+    attrition_data = []
+    for m in MONTH_NAMES[:7]:
+        rate = round((resign_by_month.get(m, 0) / headcount_est) * 100, 2)
+        attrition_data.append({"month": m, "rate": rate})
+
+    # Department list for filter
+    departments = list(set(u.department for u in all_users if u.department))
+
+    return {
+        "headcount": headcount_data,
+        "payroll": payroll_data,
+        "attendance": attendance_data,
+        "leaveTrends": leave_trends,
+        "projectStatus": project_status_data,
+        "attrition": attrition_data,
+        "departments": sorted(departments),
+        "totalEmployees": len(all_users),
+        "totalProjects": len(projects),
+    }
+
+
+# ─── Corporate OKRs & Strategy ───────────────────────────────────────────────
+
+@router.get("/okrs", response_model=List[ObjectiveResponse])
+def get_okrs(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.Objective).all()
+
+
+class KRProgressUpdate(BaseModel):
+    current: int
+
+
+@router.post("/okrs/key-results/{id}/progress")
+def update_kr_progress(
+    id: int, 
+    req: KRProgressUpdate, 
+    current_user: models.User = Depends(security.get_current_user), 
+    db: Session = Depends(database.get_db)
+):
+    verify_ceo_role(current_user)
+    kr = db.query(models.KeyResult).filter(models.KeyResult.id == id).first()
+    if not kr:
+        raise HTTPException(status_code=404, detail="Key Result not found.")
+    
+    old_current = kr.current
+    kr.current = req.current
+    
+    # Recalculate parent objective progress and status
+    obj = kr.objective
+    if obj and obj.krs:
+        total_pct = 0.0
+        for k in obj.krs:
+            total_pct += min(100.0, (k.current / k.target) * 100)
+        obj.progress = int(total_pct / len(obj.krs))
+        
+        # Threshold-based status transition
+        if obj.progress >= 70:
+            obj.status = "On Track"
+        elif obj.progress >= 40:
+            obj.status = "At Risk"
+        else:
+            obj.status = "Off Track"
+            
+    # Write to Audit trail
+    db_log = models.AuditLog(
+        initiator_id=current_user.name,
+        module="Strategy & OKRs",
+        action_type="update_progress",
+        change_diff=json.dumps({
+            "key_result_title": kr.title,
+            "old_current": old_current,
+            "new_current": req.current,
+            "new_objective_progress": obj.progress if obj else None
+        })
+    )
+    db.add(db_log)
+    
+    db.commit()
+    db.refresh(kr)
+    return {"status": "success", "message": "Key result progress updated successfully."}

@@ -58,8 +58,76 @@ const DEFAULT_CHAT_CHANNELS = [
   }
 ];
 
-const Messages = ({ initialSelectedChannel, db, onUpdateDb }) => {
-  const chatChannels = db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
+const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
+  const tlName = currentUser?.name || 'Michael Vance';
+  const [dbChannels, setDbChannels] = useState([]);
+  const socketRef = useRef(null);
+
+  const fetchChannelsAndMessages = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/employee-portal/chat/channels', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const chans = await res.json();
+        const loadedChannels = await Promise.all(chans.map(async (c) => {
+          try {
+            const msgRes = await fetch(`/api/employee-portal/chat/channels/${c.id}/messages`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (msgRes.ok) {
+              const msgs = await msgRes.json();
+              return {
+                id: c.id,
+                name: c.name,
+                label: c.label,
+                type: c.type,
+                members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+                messages: msgs.map(m => ({
+                  id: m.id,
+                  sender: m.sender,
+                  avatar: m.sender && (m.sender.includes('Michael Vance') || m.sender.includes('Vance'))
+                    ? 'https://ui-avatars.com/api/?name=Michael+Vance&background=3b82f6&color=fff'
+                    : (m.sender && (m.sender.includes('Sarah Jenkins') || m.sender.includes('Jenkins'))
+                      ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100'
+                      : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.sender)),
+                  text: m.text,
+                  timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }))
+              };
+            }
+          } catch (e) {
+            console.error("Error loading messages for channel", c.id, e);
+          }
+          return {
+            id: c.id,
+            name: c.name,
+            label: c.label,
+            type: c.type,
+            members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+            messages: []
+          };
+        }));
+        setDbChannels(loadedChannels);
+        if (onUpdateDb) {
+          onUpdateDb({
+            ...db,
+            chatChannels: loadedChannels
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load channels", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchChannelsAndMessages();
+  }, []);
+
+  const chatChannels = dbChannels.length > 0 ? dbChannels : (db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS);
   const myChannels = chatChannels.filter(c => c.members && c.members.includes('101'));
 
   // Selected channel state
@@ -69,6 +137,56 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb }) => {
   });
 
   const [huddlePeer, setHuddlePeer] = useState(null);
+
+  // Initialize WebSocket connection for real-time messaging
+  useEffect(() => {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/employee-portal/ws/${encodeURIComponent(tlName)}`;
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+
+    socket.onmessage = (event) => {
+      try {
+        const newMsg = JSON.parse(event.data);
+        const isCorporateChannel = chatChannels.some(c => c.id === newMsg.channel_id);
+
+        if (isCorporateChannel) {
+          fetchChannelsAndMessages();
+        } else {
+          // Update DM/custom rooms
+          setLocalDmMessages(prevRooms => {
+            const roomMsgs = prevRooms[newMsg.channel_id] || [];
+            const alreadyExists = roomMsgs.some(m => m.id === newMsg.id);
+            if (alreadyExists) return prevRooms;
+            
+            return {
+              ...prevRooms,
+              [newMsg.channel_id]: [
+                ...roomMsgs,
+                {
+                  id: newMsg.id,
+                  sender: newMsg.sender,
+                  avatar: employees.find(e => e.name === newMsg.sender || `dm-${e.id}` === newMsg.channel_id)?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(newMsg.sender),
+                  text: newMsg.text,
+                  timestamp: new Date(newMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }
+              ]
+            };
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse incoming WebSocket message:", e);
+      }
+    };
+
+    socket.onerror = (e) => {
+      console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [db, onUpdateDb, chatChannels, employees]);
 
   // Update selected channel if it changes from parent (e.g. clicking an avatar in dashboard)
   useEffect(() => {
@@ -617,11 +735,22 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb }) => {
     e.preventDefault();
     if (!inputVal.trim()) return;
 
+    // Send via WebSocket if connection is active
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        channel_id: selectedChannel,
+        text: inputVal.trim(),
+        sender: tlName
+      }));
+      setInputVal('');
+      return;
+    }
+
     const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
 
     const newMsg = {
       id: Date.now(),
-      sender: 'Michael Vance (Team Lead)',
+      sender: tlName,
       avatar: 'https://ui-avatars.com/api/?name=Michael+Vance&background=3b82f6&color=fff',
       text: inputVal,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -723,11 +852,22 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb }) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Send via WebSocket if connection is active
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        channel_id: selectedChannel,
+        text: `📎 Shared file: ${file.name}`,
+        sender: tlName
+      }));
+      e.target.value = '';
+      return;
+    }
+
     const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
 
     const newMsg = {
       id: Date.now(),
-      sender: 'Michael Vance (Team Lead)',
+      sender: tlName,
       avatar: 'https://ui-avatars.com/api/?name=Michael+Vance&background=3b82f6&color=fff',
       text: `📎 Shared file: ${file.name}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

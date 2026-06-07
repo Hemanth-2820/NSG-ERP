@@ -46,7 +46,7 @@ const INITIAL_RESIGNATIONS = [
   }
 ];
 
-export default function Hr({ activeTab, queryParams, setQueryParams, db: passedDb, onUpdateDb: passedOnUpdateDb }) {
+export default function Hr({ activeTab, queryParams, setQueryParams, db: passedDb, onUpdateDb: passedOnUpdateDb, currentUser }) {
   const [localDb, setLocalDb] = useState(null);
 
   const isGlobal = !!passedDb;
@@ -116,7 +116,7 @@ export default function Hr({ activeTab, queryParams, setQueryParams, db: passedD
 
   // Router for rendering the 17 custom-stylized HR modules
   const renderTabContent = () => {
-    const props = { db, onUpdateDb: updateDb, queryParams, setQueryParams };
+    const props = { db, onUpdateDb: updateDb, queryParams, setQueryParams, currentUser };
     switch (activeTab) {
       case 'dashboard':
         return <HrDashboardView {...props} />;

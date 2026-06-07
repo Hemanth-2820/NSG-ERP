@@ -63,16 +63,79 @@ const DEFAULT_CHAT_CHANNELS = [
   }
 ];
 
-export default function Messaging({ initialSelectedChannel, db, onUpdateDb }) {
+export default function Messaging({ initialSelectedChannel, db, onUpdateDb, currentUser }) {
+  const ceoName = currentUser?.name || 'John Doe';
   const [huddlePeer, setHuddlePeer] = useState(null);
+  const [dbChannels, setDbChannels] = useState([]);
+  const socketRef = useRef(null);
+
+  const fetchChannelsAndMessages = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/employee-portal/chat/channels', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const chans = await res.json();
+        const loadedChannels = await Promise.all(chans.map(async (c) => {
+          try {
+            const msgRes = await fetch(`/api/employee-portal/chat/channels/${c.id}/messages`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (msgRes.ok) {
+              const msgs = await msgRes.json();
+              return {
+                id: c.id,
+                name: c.name,
+                label: c.label,
+                type: c.type,
+                members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+                messages: msgs.map(m => ({
+                  id: m.id,
+                  sender: m.sender,
+                  text: m.text,
+                  timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isMe: m.sender === ceoName || m.sender === ceoName + ' (CEO)' || m.sender === 'John Doe (CEO)' || m.sender === 'John Doe'
+                }))
+              };
+            }
+          } catch (e) {
+            console.error("Error loading messages for channel", c.id, e);
+          }
+          return {
+            id: c.id,
+            name: c.name,
+            label: c.label,
+            type: c.type,
+            members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+            messages: []
+          };
+        }));
+        setDbChannels(loadedChannels);
+        if (onUpdateDb) {
+          onUpdateDb({
+            ...db,
+            chatChannels: loadedChannels
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load channels", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchChannelsAndMessages();
+  }, []);
   
   // === MOCK DATA ===
-  const chatChannels = db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
+  const chatChannels = dbChannels.length > 0 ? dbChannels : (db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS);
   const myChannels = chatChannels.filter(c => c.members && c.members.includes('ceo'));
 
   const [selectedChannel, setSelectedChannel] = useState(() => {
     if (initialSelectedChannel) return initialSelectedChannel;
-    return myChannels.length > 0 ? myChannels[0].id : 'general';
+    return myChannels.length > 0 ? myChannels[0].id : 'general-channel';
   });
 
   const [employees, setEmployees] = useState([
@@ -143,6 +206,57 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb }) {
   const callCameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
 
+  // Initialize WebSocket connection for real-time messaging
+  useEffect(() => {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/employee-portal/ws/${encodeURIComponent(ceoName)}`;
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+
+    socket.onmessage = (event) => {
+      try {
+        const newMsg = JSON.parse(event.data);
+        const isCorporateChannel = chatChannels.some(c => c.id === newMsg.channel_id);
+
+        if (isCorporateChannel) {
+          fetchChannelsAndMessages();
+        } else {
+          // Update DM/custom rooms
+          setLocalDmMessages(prevRooms => {
+            const roomMsgs = prevRooms[newMsg.channel_id] || [];
+            const alreadyExists = roomMsgs.some(m => m.id === newMsg.id);
+            if (alreadyExists) return prevRooms;
+            
+            return {
+              ...prevRooms,
+              [newMsg.channel_id]: [
+                ...roomMsgs,
+                {
+                  id: newMsg.id,
+                  sender: newMsg.sender,
+                  avatar: employees.find(e => e.name === newMsg.sender || `dm-${e.id}` === newMsg.channel_id)?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(newMsg.sender),
+                  text: newMsg.text,
+                  timestamp: new Date(newMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isMe: newMsg.sender === ceoName || newMsg.sender === ceoName + ' (CEO)' || newMsg.sender === 'John Doe (CEO)' || newMsg.sender === 'John Doe'
+                }
+              ]
+            };
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse incoming WebSocket message:", e);
+      }
+    };
+
+    socket.onerror = (e) => {
+      console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [db, onUpdateDb, chatChannels, employees]);
+
   // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -170,11 +284,22 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb }) {
     e.preventDefault();
     if (!inputVal.trim()) return;
 
+    // Send via WebSocket if connection is active
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        channel_id: selectedChannel,
+        text: inputVal.trim(),
+        sender: ceoName
+      }));
+      setInputVal('');
+      return;
+    }
+
     const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
 
     const newMsg = {
       id: Date.now(),
-      sender: 'John Doe (CEO)',
+      sender: ceoName,
       avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=1e293b&color=fff',
       text: inputVal,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -227,11 +352,21 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb }) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Send via WebSocket if connection is active
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        channel_id: selectedChannel,
+        text: `📎 Shared file: ${file.name}`,
+        sender: ceoName
+      }));
+      return;
+    }
+
     const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
 
     const newMsg = {
       id: Date.now(),
-      sender: 'John Doe (CEO)',
+      sender: ceoName,
       avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=1e293b&color=fff',
       text: `📎 Shared file: ${file.name}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

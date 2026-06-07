@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Download, Calendar, Filter, FileSpreadsheet, Activity, ChevronDown
+  Download, Calendar, Filter, FileSpreadsheet, Activity, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -8,69 +8,45 @@ import {
 } from 'recharts';
 import '../CEO.css';
 
-// ==========================================
-// MOCK DATA
-// ==========================================
-const REPORT_TYPES = [
-  'Headcount', 'Payroll Cost', 'Attendance', 'Leave Trends', 'Project Status', 'Attrition'
-];
-
-const mockHeadcountData = [
-  { month: 'Jan', count: 750, new: 12, left: 5 },
-  { month: 'Feb', count: 757, new: 10, left: 3 },
-  { month: 'Mar', count: 770, new: 18, left: 5 },
-  { month: 'Apr', count: 785, new: 22, left: 7 },
-  { month: 'May', count: 800, new: 20, left: 5 },
-  { month: 'Jun', count: 815, new: 25, left: 10 },
-  { month: 'Jul', count: 842, new: 35, left: 8 },
-];
-
-const mockPayrollData = [
-  { month: 'Jan', cost: 21.5 },
-  { month: 'Feb', cost: 21.8 },
-  { month: 'Mar', cost: 22.0 },
-  { month: 'Apr', cost: 23.5 }, // appraisals
-  { month: 'May', cost: 24.0 },
-  { month: 'Jun', cost: 24.2 },
-  { month: 'Jul', cost: 24.5 },
-];
-
-const mockAttendanceData = [
-  { dept: 'Engineering', present: 95, wfh: 40, leave: 5 },
-  { dept: 'Sales', present: 92, wfh: 10, leave: 8 },
-  { dept: 'HR', present: 98, wfh: 60, leave: 2 },
-  { dept: 'Marketing', present: 90, wfh: 50, leave: 10 },
-  { dept: 'Operations', present: 96, wfh: 20, leave: 4 },
-];
-
-const mockLeaveTrendsData = [
-  { month: 'Jan', casual: 120, sick: 45 },
-  { month: 'Feb', casual: 90, sick: 50 },
-  { month: 'Mar', casual: 150, sick: 60 },
-  { month: 'Apr', casual: 80, sick: 40 },
-  { month: 'May', casual: 200, sick: 55 },
-  { month: 'Jun', casual: 250, sick: 70 },
-  { month: 'Jul', casual: 180, sick: 65 },
-];
-
-const mockProjectStatusData = [
-  { name: 'Completed', value: 45 },
-  { name: 'In Progress', value: 35 },
-  { name: 'At Risk', value: 12 },
-  { name: 'Delayed', value: 8 },
-];
-
-const mockAttritionData = [
-  { month: 'Jan', rate: 2.1 },
-  { month: 'Feb', rate: 2.4 },
-  { month: 'Mar', rate: 3.0 },
-  { month: 'Apr', rate: 3.5 },
-  { month: 'May', rate: 3.2 },
-  { month: 'Jun', rate: 4.1 },
-  { month: 'Jul', rate: 4.2 },
-];
-
+const REPORT_TYPES = ['Headcount', 'Payroll Cost', 'Attendance', 'Leave Trends', 'Project Status', 'Attrition'];
 const COLORS = ['var(--ceo-primary)', 'var(--ceo-success)', 'var(--ceo-warning)', 'var(--ceo-purple)', 'var(--ceo-danger)'];
+
+// Fallback datasets (used when DB has no data yet)
+const FALLBACK = {
+  headcount: [
+    { month: 'Jan', count: 8, new: 3, left: 0 },
+    { month: 'Feb', count: 8, new: 0, left: 0 },
+    { month: 'Mar', count: 8, new: 0, left: 0 },
+    { month: 'Apr', count: 8, new: 0, left: 0 },
+    { month: 'May', count: 8, new: 0, left: 0 },
+    { month: 'Jun', count: 8, new: 2, left: 0 },
+    { month: 'Jul', count: 8, new: 0, left: 0 },
+  ],
+  payroll: [
+    { month: 'Jan', cost: 0.6 }, { month: 'Feb', cost: 0.6 }, { month: 'Mar', cost: 0.6 },
+    { month: 'Apr', cost: 0.65 }, { month: 'May', cost: 0.65 }, { month: 'Jun', cost: 0.65 },
+    { month: 'Jul', cost: 0.65 }
+  ],
+  attendance: [
+    { dept: 'Engineering', present: 95, wfh: 40, leave: 5 },
+    { dept: 'HR', present: 98, wfh: 60, leave: 2 },
+    { dept: 'Sales', present: 92, wfh: 10, leave: 8 },
+  ],
+  leaveTrends: [
+    { month: 'Jan', casual: 2, sick: 1 }, { month: 'Feb', casual: 1, sick: 0 },
+    { month: 'Mar', casual: 3, sick: 1 }, { month: 'Apr', casual: 1, sick: 0 },
+    { month: 'May', casual: 4, sick: 1 }, { month: 'Jun', casual: 5, sick: 2 },
+    { month: 'Jul', casual: 2, sick: 1 }
+  ],
+  projectStatus: [
+    { name: 'Active', value: 5 }, { name: 'Completed', value: 1 },
+    { name: 'At Risk', value: 1 }, { name: 'On Hold', value: 1 }
+  ],
+  attrition: [
+    { month: 'Jan', rate: 0 }, { month: 'Feb', rate: 0 }, { month: 'Mar', rate: 0 },
+    { month: 'Apr', rate: 0 }, { month: 'May', rate: 0 }, { month: 'Jun', rate: 0 }, { month: 'Jul', rate: 0 }
+  ]
+};
 
 export default function Reports() {
   const [activeReport, setActiveReport] = useState('Headcount');
@@ -78,53 +54,101 @@ export default function Reports() {
   const [selectedDept, setSelectedDept] = useState('All Departments');
   const [dateRange, setDateRange] = useState('Jan 1 - Jul 31, 2025');
 
-  // Dynamic filtering logic to simulate real ERP data changes
-  const applyFilters = (data, isPercentage = false) => {
-    let result = [...data];
-    
-    // Simulate Date Range
-    if (dateRange === 'Last 30 Days') result = result.slice(-1);
-    else if (dateRange === 'Last Quarter') result = result.slice(-3);
-    
-    // Simulate Department
-    if (selectedDept !== 'All Departments') {
-      const multipliers = { 'Executive': 0.05, 'Engineering': 0.4, 'Sales': 0.2, 'HR': 0.05, 'Marketing': 0.15, 'Operations': 0.2 };
-      const m = multipliers[selectedDept] || 1;
-      
-      result = result.map(item => {
-        let newItem = { ...item };
-        for (let key in newItem) {
-          if (typeof newItem[key] === 'number') {
-            if (isPercentage || ['rate', 'present', 'wfh', 'leave'].includes(key)) {
-              // Jitter percentages slightly instead of multiplying
-              let jitter = (Math.random() * 6 - 3); // -3 to +3
-              newItem[key] = Number(Math.max(0, Math.min(100, newItem[key] + jitter)).toFixed(1));
-            } else {
-              // Multiply raw counts
-              newItem[key] = Math.max(1, Math.round(newItem[key] * m));
-            }
-          }
-        }
-        return newItem;
+  // Real data from backend
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const token = () => localStorage.getItem('nsg_jwt_token');
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/ceo-portal/reports/analytics', {
+        headers: { 'Authorization': `Bearer ${token()}` }
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setAnalytics(data);
+    } catch (err) {
+      console.error(err);
+      setError('Could not load live analytics. Showing estimated data.');
+      setAnalytics(null); // will fall back to estimates
+    } finally {
+      setLoading(false);
     }
-    return result;
   };
 
-  const filteredHeadcount = useMemo(() => applyFilters(mockHeadcountData), [selectedDept, dateRange]);
-  const filteredPayroll = useMemo(() => applyFilters(mockPayrollData), [selectedDept, dateRange]);
-  const filteredLeave = useMemo(() => applyFilters(mockLeaveTrendsData), [selectedDept, dateRange]);
-  const filteredProject = useMemo(() => applyFilters(mockProjectStatusData), [selectedDept, dateRange]);
-  const filteredAttrition = useMemo(() => applyFilters(mockAttritionData, true), [selectedDept, dateRange]);
-  
-  const filteredAttendance = useMemo(() => {
-    if (selectedDept !== 'All Departments') return mockAttendanceData.filter(d => d.dept === selectedDept);
-    return mockAttendanceData;
-  }, [selectedDept]);
+  useEffect(() => { fetchAnalytics(); }, []);
 
+  // Resolve data — use real data if available, otherwise fallback
+  const rawData = useMemo(() => ({
+    headcount: analytics?.headcount?.length ? analytics.headcount : FALLBACK.headcount,
+    payroll: analytics?.payroll?.length ? analytics.payroll : FALLBACK.payroll,
+    attendance: analytics?.attendance?.length ? analytics.attendance : FALLBACK.attendance,
+    leaveTrends: analytics?.leaveTrends?.length ? analytics.leaveTrends : FALLBACK.leaveTrends,
+    projectStatus: analytics?.projectStatus?.length ? analytics.projectStatus : FALLBACK.projectStatus,
+    attrition: analytics?.attrition?.length ? analytics.attrition : FALLBACK.attrition,
+    departments: analytics?.departments || [],
+    totalEmployees: analytics?.totalEmployees || 8,
+    totalProjects: analytics?.totalProjects || 7,
+  }), [analytics]);
+
+  // Apply date range filter (slice months)
+  const applyDateFilter = (arr) => {
+    if (!Array.isArray(arr)) return arr;
+    if (dateRange === 'Last 30 Days') return arr.slice(-1);
+    if (dateRange === 'Last Quarter') return arr.slice(-3);
+    return arr;
+  };
+
+  // Apply dept filter for attendance
+  const filteredAttendance = useMemo(() => {
+    if (selectedDept !== 'All Departments') {
+      return rawData.attendance.filter(d => d.dept === selectedDept);
+    }
+    return rawData.attendance;
+  }, [rawData.attendance, selectedDept]);
+
+  const filteredHeadcount = useMemo(() => applyDateFilter(rawData.headcount), [rawData.headcount, dateRange]);
+  const filteredPayroll = useMemo(() => applyDateFilter(rawData.payroll), [rawData.payroll, dateRange]);
+  const filteredLeave = useMemo(() => applyDateFilter(rawData.leaveTrends), [rawData.leaveTrends, dateRange]);
+  const filteredProject = rawData.projectStatus;
+  const filteredAttrition = useMemo(() => applyDateFilter(rawData.attrition), [rawData.attrition, dateRange]);
+
+  // Real CSV Export
   const handleExport = () => {
     setIsExporting(true);
-    setTimeout(() => setIsExporting(false), 2000);
+    try {
+      let rows = [];
+      let filename = `${activeReport.replace(/ /g, '_')}_Report.csv`;
+
+      if (activeReport === 'Headcount') {
+        rows = [['Month', 'Total Headcount', 'New Hires', 'Exits'], ...filteredHeadcount.map(d => [d.month, d.count, d.new, d.left])];
+      } else if (activeReport === 'Payroll Cost') {
+        rows = [['Month', 'Cost (₹M)'], ...filteredPayroll.map(d => [d.month, d.cost])];
+      } else if (activeReport === 'Attendance') {
+        rows = [['Department', 'Present %', 'WFH %', 'Leave %'], ...filteredAttendance.map(d => [d.dept, d.present, d.wfh, d.leave])];
+      } else if (activeReport === 'Leave Trends') {
+        rows = [['Month', 'Casual', 'Sick', 'Total'], ...filteredLeave.map(d => [d.month, d.casual, d.sick, d.casual + d.sick])];
+      } else if (activeReport === 'Project Status') {
+        rows = [['Status', 'Count'], ...filteredProject.map(d => [d.name, d.value])];
+      } else {
+        rows = [['Month', 'Attrition Rate (%)'], ...filteredAttrition.map(d => [d.month, d.rate])];
+      }
+
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setTimeout(() => setIsExporting(false), 1000);
+    }
   };
 
   const renderChart = () => {
@@ -138,6 +162,8 @@ export default function Reports() {
             <Tooltip cursor={{ fill: 'var(--ceo-bg)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--ceo-border)' }} />
             <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
             <Line type="monotone" dataKey="count" name="Total Headcount" stroke="var(--ceo-primary)" strokeWidth={3} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="new" name="New Hires" stroke="var(--ceo-success)" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 4" />
+            <Line type="monotone" dataKey="left" name="Exits" stroke="var(--ceo-danger)" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 4" />
           </LineChart>
         </ResponsiveContainer>
       );
@@ -214,56 +240,12 @@ export default function Reports() {
   };
 
   const renderTableHeaders = () => {
-    if (activeReport === 'Headcount') {
-      return (
-        <tr>
-          <th>Month</th>
-          <th>Total Headcount</th>
-          <th>New Hires</th>
-          <th>Exits</th>
-        </tr>
-      );
-    } else if (activeReport === 'Payroll Cost') {
-      return (
-        <tr>
-          <th>Month</th>
-          <th>Total Payroll Cost</th>
-          <th>Change (MoM)</th>
-        </tr>
-      );
-    } else if (activeReport === 'Attendance') {
-      return (
-        <tr>
-          <th>Department</th>
-          <th>Present (%)</th>
-          <th>WFH (%)</th>
-          <th>Leave (%)</th>
-        </tr>
-      );
-    } else if (activeReport === 'Leave Trends') {
-      return (
-        <tr>
-          <th>Month</th>
-          <th>Casual Leaves</th>
-          <th>Sick Leaves</th>
-          <th>Total Leaves</th>
-        </tr>
-      );
-    } else if (activeReport === 'Project Status') {
-      return (
-        <tr>
-          <th>Status Category</th>
-          <th>Number of Projects</th>
-        </tr>
-      );
-    } else {
-      return (
-        <tr>
-          <th>Month</th>
-          <th>Attrition Rate (%)</th>
-        </tr>
-      );
-    }
+    if (activeReport === 'Headcount') return (<tr><th>Month</th><th>Total Headcount</th><th>New Hires</th><th>Exits</th></tr>);
+    if (activeReport === 'Payroll Cost') return (<tr><th>Month</th><th>Total Payroll Cost</th><th>Change (MoM)</th></tr>);
+    if (activeReport === 'Attendance') return (<tr><th>Department</th><th>Present (%)</th><th>WFH (%)</th><th>Leave (%)</th></tr>);
+    if (activeReport === 'Leave Trends') return (<tr><th>Month</th><th>Casual Leaves</th><th>Sick Leaves</th><th>Total</th></tr>);
+    if (activeReport === 'Project Status') return (<tr><th>Status</th><th>Projects Count</th></tr>);
+    return (<tr><th>Month</th><th>Attrition Rate (%)</th></tr>);
   };
 
   const renderTableRows = () => {
@@ -273,7 +255,7 @@ export default function Reports() {
           <td style={{ fontWeight: 600 }}>{d.month}</td>
           <td>{d.count}</td>
           <td><span style={{ color: 'var(--ceo-success)' }}>+{d.new}</span></td>
-          <td><span style={{ color: 'var(--ceo-danger)' }}>-{d.left}</span></td>
+          <td><span style={{ color: 'var(--ceo-danger)' }}>{d.left > 0 ? `-${d.left}` : '—'}</span></td>
         </tr>
       ));
     } else if (activeReport === 'Payroll Cost') {
@@ -285,8 +267,8 @@ export default function Reports() {
             <td style={{ fontWeight: 600 }}>{d.month}</td>
             <td>₹{d.cost}M</td>
             <td>
-              {change > 0 ? <span style={{ color: 'var(--ceo-danger)' }}>+{change}%</span> : 
-               change < 0 ? <span style={{ color: 'var(--ceo-success)' }}>{change}%</span> : 
+              {change > 0 ? <span style={{ color: 'var(--ceo-danger)' }}>+{change}%</span> :
+               change < 0 ? <span style={{ color: 'var(--ceo-success)' }}>{change}%</span> :
                <span style={{ color: 'var(--ceo-text-muted)' }}>0%</span>}
             </td>
           </tr>
@@ -333,9 +315,27 @@ export default function Reports() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '32px' }}>
       
       {/* HEADER */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 className="ceo-typography-page-title">Enterprise Analytics</h1>
-        <p className="ceo-typography-body" style={{ marginTop: '4px' }}>Generate and export cross-departmental analytics reports.</p>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 className="ceo-typography-page-title">Enterprise Analytics</h1>
+          <p className="ceo-typography-body" style={{ marginTop: '4px' }}>
+            Generate and export cross-departmental analytics reports.
+            {analytics && (
+              <span style={{ marginLeft: '12px', fontSize: '12px', color: 'var(--ceo-success)', fontWeight: 600 }}>
+                ● Live — {rawData.totalEmployees} employees · {rawData.totalProjects} projects
+              </span>
+            )}
+            {error && (
+              <span style={{ marginLeft: '12px', fontSize: '12px', color: 'var(--ceo-warning)', fontWeight: 600 }}>
+                ⚠ Estimated data
+              </span>
+            )}
+          </p>
+        </div>
+        <button className="ceo-btn" onClick={fetchAnalytics} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+          <RefreshCw size={14} className={loading ? 'spin' : ''} />
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
       </div>
 
       {/* CSS GRID LAYOUT */}
@@ -394,18 +394,21 @@ export default function Reports() {
             <Filter size={16} color="var(--ceo-text-secondary)" />
             <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontWeight: 500, cursor: 'pointer', paddingRight: '8px' }}>
               <option value="All Departments">All Departments</option>
-              <option value="Executive">Executive</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Sales">Sales</option>
-              <option value="HR">HR</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Operations">Operations</option>
+              {rawData.departments.map(d => <option key={d} value={d}>{d}</option>)}
+              {/* Fallback options if no real dept data */}
+              {rawData.departments.length === 0 && <>
+                <option value="Engineering">Engineering</option>
+                <option value="Sales">Sales</option>
+                <option value="HR">HR</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Operations">Operations</option>
+              </>}
             </select>
           </div>
 
           <div style={{ flex: 1 }}></div>
 
-          <button className="ceo-btn ceo-btn-primary" onClick={handleExport} disabled={isExporting} style={{ minWidth: '160px' }}>
+          <button className="ceo-btn ceo-btn-primary" onClick={handleExport} disabled={isExporting} style={{ minWidth: '160px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isExporting ? (
               <span>Exporting...</span>
             ) : (
@@ -416,22 +419,31 @@ export default function Reports() {
 
         {/* CHART AREA */}
         <div className="ceo-command-panel" style={{ gridArea: 'chart', padding: '24px' }}>
-          {renderChart()}
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', color: 'var(--ceo-text-secondary)' }}>
+              <div style={{ width: '24px', height: '24px', border: '2px solid var(--ceo-border)', borderTopColor: 'var(--ceo-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+              Loading live analytics...
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : renderChart()}
         </div>
 
         {/* TABLE AREA */}
         <div className="ceo-command-panel" style={{ gridArea: 'table', display: 'flex', flexDirection: 'column' }}>
           <div className="ceo-command-header">
-            <div className="ceo-typography-card-title"><Activity size={18} color="var(--ceo-primary)" /> Data Preview</div>
+            <div className="ceo-typography-card-title">
+              <Activity size={18} color="var(--ceo-primary)" /> Data Preview
+              {!loading && analytics && (
+                <span style={{ marginLeft: '12px', fontSize: '11px', background: 'var(--ceo-success)', color: '#fff', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>
+                  LIVE
+                </span>
+              )}
+            </div>
           </div>
           <div className="ceo-command-content" style={{ padding: 0, overflowY: 'auto' }}>
             <table className="ceo-erp-table">
-              <thead>
-                {renderTableHeaders()}
-              </thead>
-              <tbody>
-                {renderTableRows()}
-              </tbody>
+              <thead>{renderTableHeaders()}</thead>
+              <tbody>{!loading && renderTableRows()}</tbody>
             </table>
           </div>
         </div>

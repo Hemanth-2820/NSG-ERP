@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Target, Users, TrendingUp, TrendingDown, CheckCircle2, Link as LinkIcon, Edit2, X, Filter, BarChart2, AlertCircle } from 'lucide-react';
 import '../CEO.css';
 
@@ -55,9 +55,35 @@ const ProgressRing = ({ progress, color, size = 48, strokeWidth = 4 }) => {
 };
 
 export default function StrategyOKRs() {
-  const [okrs, setOkrs] = useState(MOCK_DATA);
+  const [okrs, setOkrs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [quarter, setQuarter] = useState('Q2');
   const [year, setYear] = useState('2026');
+
+  const fetchOkrs = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/ceo-portal/okrs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOkrs(data);
+      } else {
+        setOkrs(MOCK_DATA);
+      }
+    } catch (e) {
+      console.error("Failed to fetch OKRs", e);
+      setOkrs(MOCK_DATA);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOkrs();
+  }, []);
   
   // Filtering logic
   const filteredOkrs = useMemo(() => {
@@ -68,7 +94,7 @@ export default function StrategyOKRs() {
   const [selectedOkrId, setSelectedOkrId] = useState(null);
   
   // Auto-select first item when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     if (filteredOkrs.length > 0 && !filteredOkrs.find(o => o.id === selectedOkrId)) {
       setSelectedOkrId(filteredOkrs[0].id);
     } else if (filteredOkrs.length === 0) {
@@ -101,17 +127,42 @@ export default function StrategyOKRs() {
     return 'var(--ceo-danger)';
   };
 
-  const saveKrProgress = (krId) => {
-    setOkrs(prev => prev.map(okr => {
-      if (okr.id !== selectedOkrId) return okr;
-      const newKrs = okr.krs.map(kr => 
-        kr.id === krId ? { ...kr, current: Number(editValue) } : kr
-      );
-      // Recalculate OKR progress (simple average for mockup)
-      const newProgress = Math.round(newKrs.reduce((acc, curr) => acc + Math.min(100, (curr.current/curr.target)*100), 0) / newKrs.length);
-      return { ...okr, krs: newKrs, progress: newProgress };
-    }));
-    setEditingKrId(null);
+  const saveKrProgress = async (krId) => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/ceo-portal/okrs/key-results/${krId}/progress`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ current: Number(editValue) })
+      });
+      if (res.ok) {
+        await fetchOkrs();
+        if (window.toast) {
+          window.toast.success('Key Result progress successfully updated!');
+        } else {
+          alert('Key Result progress successfully updated!');
+        }
+      } else {
+        if (window.toast) {
+          window.toast.error('Failed to update Key Result progress.');
+        } else {
+          alert('Failed to update Key Result progress.');
+        }
+      }
+    } catch (e) {
+      console.error("Error updating progress", e);
+      if (window.toast) {
+        window.toast.error('Network error updating progress.');
+      } else {
+        alert('Network error updating progress.');
+      }
+    } finally {
+      setEditingKrId(null);
+    }
   };
 
   return (

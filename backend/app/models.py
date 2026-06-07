@@ -592,5 +592,34 @@ class Promotion(Base):
     status = Column(String, default="approved_by_ceo")
 
 
+class Objective(Base):
+    __tablename__ = "objectives"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    status = Column(String, default="On Track")  # On Track, At Risk, Off Track
+    progress = Column(Integer, default=0)
+    owner = Column(String, nullable=False)
+    quarter = Column(String, default="Q2")
+    year = Column(String, default="2026")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    krs = relationship("KeyResult", back_populates="objective", cascade="all, delete-orphan")
+
+
+class KeyResult(Base):
+    __tablename__ = "key_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    objective_id = Column(Integer, ForeignKey("objectives.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=False)
+    target = Column(Integer, nullable=False)
+    current = Column(Integer, default=0)
+    unit = Column(String, nullable=False)
+    sprint_link = Column(String, nullable=True)
+
+    objective = relationship("Objective", back_populates="krs")
+
+
 
 

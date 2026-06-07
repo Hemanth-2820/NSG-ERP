@@ -57,7 +57,8 @@ const DEFAULT_CHAT_CHANNELS = [
   }
 ];
 
-export function HrMessagingView({ db, onUpdateDb }) {
+export function HrMessagingView({ db, onUpdateDb, currentUser }) {
+  const hrName = currentUser?.name || 'Sarah Jenkins';
   const [selectedChannel, setSelectedChannel]     = useState('general-channel');
   const [newMsg, setNewMsg]                       = useState('');
   const [isPrivate, setIsPrivate]                 = useState(false);
@@ -81,12 +82,108 @@ export function HrMessagingView({ db, onUpdateDb }) {
   const [selectedRosterMembers, setSelectedRosterMembers] = useState(['hr']);
   const [huddlePeer, setHuddlePeer] = useState(null);
 
+  const [dbChannels, setDbChannels] = useState([]);
+  const socketRef = useRef(null);
+
   const inputRef   = useRef(null);
   const menuRef    = useRef(null);
   const messagesEndRef = useRef(null);
 
+  const fetchChannelsAndMessages = async () => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/employee-portal/chat/channels', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const chans = await res.json();
+        const loadedChannels = await Promise.all(chans.map(async (c) => {
+          try {
+            const msgRes = await fetch(`/api/employee-portal/chat/channels/${c.id}/messages`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (msgRes.ok) {
+              const msgs = await msgRes.json();
+              return {
+                id: c.id,
+                name: c.name,
+                label: c.label,
+                type: c.type,
+                members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+                messages: msgs.map(m => ({
+                  id: m.id,
+                  sender: (m.sender === hrName || m.sender === hrName + ' (HR)' || m.sender === 'Sarah Jenkins' || m.sender === 'Sarah Jenkins (HR)' || m.sender === 'Sophia Reed' || m.sender === 'Sophia Reed (HR)') ? 'You' : m.sender,
+                  text: m.text,
+                  time: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isPrivate: false,
+                  mention: null,
+                  replyTo: null,
+                  saved: false,
+                  edited: false
+                }))
+              };
+            }
+          } catch (e) {
+            console.error("Error loading messages for channel", c.id, e);
+          }
+          return {
+            id: c.id,
+            name: c.name,
+            label: c.label,
+            type: c.type,
+            members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+            messages: []
+          };
+        }));
+        setDbChannels(loadedChannels);
+        if (onUpdateDb) {
+          onUpdateDb({
+            ...db,
+            chatChannels: loadedChannels
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load channels", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchChannelsAndMessages();
+  }, []);
+
+  // Initialize WebSocket connection for real-time messaging
+  useEffect(() => {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/employee-portal/ws/${encodeURIComponent(hrName)}`;
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+
+    socket.onmessage = (event) => {
+      try {
+        const newMsg = JSON.parse(event.data);
+        const isCorporateChannel = chatChannels.some(c => c.id === newMsg.channel_id);
+
+        if (isCorporateChannel) {
+          fetchChannelsAndMessages();
+        }
+      } catch (e) {
+        console.error("Failed to parse incoming WebSocket message:", e);
+      }
+    };
+
+    socket.onerror = (e) => {
+      console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [db, onUpdateDb, chatChannels]);
+
   // ── Channel Configuration (Derived dynamically from DB) ──────────────────────
-  const chatChannels = db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
+  const chatChannels = dbChannels.length > 0 ? dbChannels : (db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS);
 
   const derivedChannels = {
     management: chatChannels.filter(c => c.type === 'management'),
@@ -169,6 +266,23 @@ export function HrMessagingView({ db, onUpdateDb }) {
   const handleSend = (e) => {
     e.preventDefault();
     if (!newMsg.trim() || !currentChannel) return;
+
+    // Send via WebSocket if connection is active
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        channel_id: selectedChannel,
+        text: newMsg.trim(),
+        sender: hrName
+      }));
+      setNewMsg('');
+      setMentionedMember(null);
+      setIsPrivate(false);
+      setShowMentionDropdown(false);
+      setReplyTo(null);
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
+      return;
+    }
+
     const msg = {
       id: Date.now(),
       sender: 'You',

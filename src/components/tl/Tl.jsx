@@ -25,7 +25,7 @@ export default function Tl({ activeTab, setActiveTab, db, onUpdateDb, currentUse
       {activeTab === 'approvals' && <Approvals db={db} onUpdateDb={onUpdateDb} />}
       {activeTab === 'reports' && <Reports />}
       {activeTab === 'escalations' && <Escalations />}
-      {activeTab === 'messaging' && <MessagingAndMeet initialSelectedChannel={selectedChatUser} db={db} onUpdateDb={onUpdateDb} />}
+      {activeTab === 'messaging' && <MessagingAndMeet initialSelectedChannel={selectedChatUser} db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />}
       {activeTab === 'performance' && <Performance db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />}
       
       {activeTab !== 'dashboard' && activeTab !== 'team' && activeTab !== 'projects' && activeTab !== 'tasks' && activeTab !== 'attendance' && activeTab !== 'timesheets' && activeTab !== 'approvals' && activeTab !== 'reports' && activeTab !== 'escalations' && activeTab !== 'messaging' && activeTab !== 'performance' && (

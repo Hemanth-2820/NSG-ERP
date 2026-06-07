@@ -84,6 +84,20 @@ class EmployeeCreateResponse(BaseModel):
     employee: EmployeeResponse
     temporary_password: str
 
+class EmployeeUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+    grade: Optional[int] = None
+    manager: Optional[str] = None
+    photo: Optional[str] = None
+    status: Optional[str] = None
+
+class PasswordResetRequest(BaseModel):
+    new_password: str
+
 class DocumentUploadRequest(BaseModel):
     doc_type: str
 
@@ -510,9 +524,16 @@ def transition_candidate_to_employee(id: int, current_user: models.User = Depend
     cand.stage = "joined"
     
     # Calculate employee serial number
-    total_emp = db.query(models.User).filter(models.User.role == "employee").count()
-    emp_serial = total_emp + 101
-    emp_id = f"NSG-0{emp_serial}"
+    max_serial = 100
+    for u in db.query(models.User).all():
+        if u.emp_id and u.emp_id.startswith("NSG-0"):
+            try:
+                num = int(u.emp_id.split("-0")[-1])
+                if num > max_serial:
+                    max_serial = num
+            except ValueError:
+                pass
+    emp_id = f"NSG-0{max_serial + 1}"
     
     # Auto setup dates
     today = date.today()
@@ -629,8 +650,16 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
     if exists:
         raise HTTPException(status_code=400, detail="Employee already exists.")
         
-    total_emp = db.query(models.User).filter(models.User.role == "employee").count()
-    emp_id = f"NSG-0{total_emp + 101}"
+    max_serial = 100
+    for u in db.query(models.User).all():
+        if u.emp_id and u.emp_id.startswith("NSG-0"):
+            try:
+                num = int(u.emp_id.split("-0")[-1])
+                if num > max_serial:
+                    max_serial = num
+            except ValueError:
+                pass
+    emp_id = f"NSG-0{max_serial + 1}"
     probation_end = date.fromordinal(req.join_date.toordinal() + 180)
     
     initial_docs = [
@@ -793,6 +822,89 @@ def reveal_bank_details(id: int, current_user: models.User = Depends(security.ge
     db.add(db_log)
     db.commit()
     return {"status": "success", "message": "Sensitive access logged to audit record."}
+
+@router.delete("/employees/{id}", status_code=status.HTTP_200_OK)
+def delete_employee(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_hr_role(current_user)
+    emp = db.query(models.User).filter(models.User.id == id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+        
+    db_log = models.AuditLog(
+        initiator_id=current_user.name,
+        module="Employees",
+        record_id=id,
+        action_type="delete",
+        change_diff=json.dumps({"deleted_employee": emp.name, "email": emp.email})
+    )
+    db.add(db_log)
+    db.delete(emp)
+    db.commit()
+    return {"status": "success", "message": "Employee successfully deleted."}
+
+@router.put("/employees/{id}", response_model=EmployeeResponse)
+def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_hr_role(current_user)
+    emp = db.query(models.User).filter(models.User.id == id, models.User.role == "employee").first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+
+    if req.name is not None:
+        emp.name = req.name
+    if req.email is not None:
+        # Check uniqueness only if email actually changed
+        if req.email != emp.email:
+            exists = db.query(models.User).filter(models.User.email == req.email, models.User.id != id).first()
+            if exists:
+                raise HTTPException(status_code=400, detail="Another employee already uses this email.")
+        emp.email = req.email
+    if req.department is not None:
+        emp.department = req.department
+    if req.designation is not None:
+        emp.designation = req.designation
+    if req.phone is not None:
+        emp.phone = req.phone
+    if req.grade is not None:
+        emp.grade = req.grade
+    if req.manager is not None:
+        emp.manager = req.manager
+    if req.photo is not None:
+        emp.photo = req.photo
+    if req.status is not None:
+        emp.status = req.status
+
+    db_log = models.AuditLog(
+        initiator_id=current_user.name,
+        module="Employees",
+        record_id=id,
+        action_type="update",
+        change_diff=json.dumps({"updated_fields": req.model_dump(exclude_none=True)})
+    )
+    db.add(db_log)
+    db.commit()
+    db.refresh(emp)
+    return emp
+
+@router.post("/employees/{id}/reset-password", status_code=status.HTTP_200_OK)
+def reset_employee_password(id: int, req: PasswordResetRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_hr_role(current_user)
+    emp = db.query(models.User).filter(models.User.id == id, models.User.role == "employee").first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+    
+    hashed = security.hash_password(req.new_password)
+    emp.hashed_password = hashed
+    
+    db_log = models.AuditLog(
+        initiator_id=current_user.name,
+        module="Employees",
+        record_id=id,
+        action_type="password_reset",
+        change_diff=json.dumps({"info": "HR reset employee password"})
+    )
+    db.add(db_log)
+    db.commit()
+    return {"status": "success", "message": "Password successfully reset."}
 
 @router.post("/employees/{id}/documents/upload", response_model=EmployeeResponse)
 def upload_employee_document(id: int, req: DocumentUploadRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
