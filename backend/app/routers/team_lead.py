@@ -672,3 +672,34 @@ def get_team_reports(current_user: models.User = Depends(security.get_current_us
         'leaveCalendar': leaveCalendar,
         'leavesDetailData': leavesDetailData
     }
+
+@router.get("/attendance")
+def get_team_attendance(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    verify_manager_role(current_user)
+    
+    # Get all employees reporting to this TL (manager field stores manager name as string)
+    team_members = db.query(models.User).filter(models.User.manager == current_user.name).all()
+    member_ids = [m.id for m in team_members]
+    
+    if not member_ids:
+        return []
+        
+    logs = db.query(models.Attendance).filter(models.Attendance.user_id.in_(member_ids)).all()
+    
+    result = []
+    for log in logs:
+        result.append({
+            "id": log.id,
+            "employee_id": log.user_id,
+            "date": log.date.strftime("%Y-%m-%d") if log.date else None,
+            "clock_in": log.clock_in.isoformat() if log.clock_in else None,
+            "clock_out": log.clock_out.isoformat() if log.clock_out else None,
+            "status": log.status,
+            "work_mode": log.work_mode if hasattr(log, 'work_mode') else "office",
+            "exception_flag": log.exception_flag if hasattr(log, 'exception_flag') else None,
+            "is_late": log.is_late if hasattr(log, 'is_late') else False
+        })
+    return result

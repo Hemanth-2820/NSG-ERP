@@ -23,6 +23,32 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
   const [clockInTime, setClockInTime] = useState(null);
   const [elapsed, setElapsed] = useState('');
   const [clockBusy, setClockBusy] = useState(false);
+  const token = localStorage.getItem('nsg_jwt_token');
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch('/api/attendance/my-logs', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const logs = await res.json();
+          // Check if there is an active log for today
+          const today = new Date().toISOString().split('T')[0];
+          const activeLog = logs.find(l => l.date === today);
+          if (activeLog && activeLog.clock_in && !activeLog.clock_out) {
+            setClockedIn(true);
+            setClockInTime(new Date(activeLog.clock_in).getTime());
+          } else {
+            setClockedIn(false);
+            setClockInTime(null);
+          }
+        }
+      } catch (e) { console.error(e); }
+    };
+    fetchLogs();
+  }, [token]);
 
   // Live elapsed timer
   useEffect(() => {
@@ -39,23 +65,50 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
     return () => clearInterval(id);
   }, [clockedIn, clockInTime]);
 
-  const handleClockIn = () => {
+  const handleClockIn = async () => {
     setClockBusy(true);
-    setTimeout(() => {
-      setClockedIn(true);
-      setClockInTime(Date.now());
-      setClockBusy(false);
-    }, 600);
+    try {
+      const res = await fetch('/api/attendance/clock-in', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ work_mode: "office", latitude: 12.9716, longitude: 77.5946 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setClockedIn(true);
+        setClockInTime(new Date(data.clock_in).getTime());
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Failed to clock in');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error during clock-in');
+    }
+    setClockBusy(false);
   };
 
-  const handleClockOut = () => {
+  const handleClockOut = async () => {
     setClockBusy(true);
-    setTimeout(() => {
-      setClockedIn(false);
-      setClockInTime(null);
-      setElapsed('');
-      setClockBusy(false);
-    }, 600);
+    try {
+      const res = await fetch('/api/attendance/clock-out', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setClockedIn(false);
+        setClockInTime(null);
+        setElapsed('');
+        alert('Clocked out successfully!');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Failed to clock out');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error during clock-out');
+    }
+    setClockBusy(false);
   };
 
   // ── Greeting ─────────────────────────────────────────────────────
@@ -63,23 +116,66 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const isLate = hour >= 10 && !clockedIn;
 
+  // ── Dashboard Data Fetch ──────────────────────────────────────────
+  const [dbData, setDbData] = useState({
+    tasks: [],
+    leaveBalances: null,
+    payslips: [],
+    assets: [],
+    announcements: [],
+    notifications: [],
+    channels: []
+  });
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchAll = async () => {
+      try {
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const [
+          tasksRes, leaveRes, payslipRes, assetsRes, 
+          annRes, notifRes, chanRes
+        ] = await Promise.all([
+          fetch('/api/employee-portal/tasks/my-tasks', { headers }),
+          fetch('/api/employee-portal/leave/my-balances', { headers }),
+          fetch('/api/employee-portal/payroll/my-payslips', { headers }),
+          fetch('/api/employee-portal/resignation/my-assets', { headers }),
+          fetch('/api/employee-portal/announcements', { headers }),
+          fetch('/api/attendance/my-notifications', { headers }),
+          fetch('/api/employee-portal/chat/my-channels', { headers })
+        ]);
+
+        const tasks = tasksRes.ok ? await tasksRes.json() : [];
+        const leaveBalances = leaveRes.ok ? await leaveRes.json() : null;
+        const payslips = payslipRes.ok ? await payslipRes.json() : [];
+        const assets = assetsRes.ok ? await assetsRes.json() : [];
+        const announcements = annRes.ok ? await annRes.json() : [];
+        const notifications = notifRes.ok ? await notifRes.json() : [];
+        const channels = chanRes.ok ? await chanRes.json() : [];
+
+        setDbData({ tasks, leaveBalances, payslips, assets, announcements, notifications, channels });
+      } catch (e) { console.error('Dashboard fetch error', e); }
+    };
+    fetchAll();
+  }, [token]);
+
   // ── Tasks for this employee ───────────────────────────────────────
-  const myTasks = (db?.tasks || []).filter(t => t.assignee === employee.name);
+  const myTasks = dbData.tasks;
   const openTasks = myTasks.filter(t => t.status !== 'done');
   const doneTasks = myTasks.filter(t => t.status === 'done');
 
   // ── Leave balance ─────────────────────────────────────────────────
-  const myLeave = (db?.leaveBalances || []).find(b => b.employee_id === employeeId);
+  const myLeave = dbData.leaveBalances;
 
   // ── Payslip ───────────────────────────────────────────────────────
-  const myPayslips = (db?.payslips || []).filter(p => p.employee_id === employeeId);
+  const myPayslips = dbData.payslips;
   const latestPayslip = myPayslips.sort((a, b) => (b.period || '').localeCompare(a.period || ''))[0];
 
   // ── Assets ───────────────────────────────────────────────────────
-  const myAssets = (db?.assets || []).filter(a => a.employee_id === employeeId);
+  const myAssets = dbData.assets;
 
   // ── Channels (unread badge) ───────────────────────────────────────
-  const myChannels = (db?.chatChannels || []).filter(c => c.members && c.members.includes(String(employeeId)));
+  const myChannels = dbData.channels;
 
   // ── Derived leave statistics ──────────────────────────────────────
   const clLeft = myLeave?.CL ?? 12;
@@ -99,13 +195,14 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
 
   // ── Notifications ─────────────────────────────────────────────────
   const [notifRead, setNotifRead] = useState({});
-  const notifications = [
-    { id: 'n1', icon: '📋', msg: 'Your timesheet for Sprint 14 is pending HR review.', time: '10 min ago', unread: true },
-    { id: 'n2', icon: '💬', msg: 'Sarah Jenkins (HR) sent a message in #grievance-room.', time: '35 min ago', unread: true },
-    { id: 'n3', icon: '✅', msg: 'Your leave request for June 10 was approved.', time: '2 hrs ago', unread: false },
-    { id: 'n4', icon: '💰', msg: `Payslip for ${latestPayslip?.period || 'May 2026'} is now available.`, time: 'Yesterday', unread: false },
-    { id: 'n5', icon: '📦', msg: 'Asset NOC for Corporate MacBook Pro Silicon is pending.', time: '2 days ago', unread: false },
-  ];
+  const notifications = dbData.notifications.map(n => ({
+    id: n.id,
+    icon: n.type === 'warning' ? '⚠️' : n.type === 'success' ? '✅' : '🔔',
+    msg: n.message,
+    time: n.timestamp ? new Date(n.timestamp).toLocaleTimeString() : 'Just now',
+    unread: !n.read
+  }));
+
 
   // Priority color util
   const priorityClass = p => ({ high: 'emp-priority--high', medium: 'emp-priority--medium', low: 'emp-priority--low' }[p] || 'emp-priority--low');
@@ -287,17 +384,17 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
                 <span style={{ fontSize: 16 }}>📢</span>
                 <span className="emp-section-header__title">CEO Announcements</span>
                 <span className="emp-badge-count" style={{ background: 'rgba(245,158,11,0.1)', color: '#fbbf24' }}>
-                  {(db?.announcements || []).length}
+                  {dbData.announcements.length}
                 </span>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {(db?.announcements || []).length === 0 ? (
+              {dbData.announcements.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
                   No announcements yet.
                 </div>
               ) : (
-                (db?.announcements || []).slice(0, 3).map(ann => (
+                dbData.announcements.slice(0, 3).map(ann => (
                   <div key={ann.id} style={{
                     padding: '14px',
                     background: 'var(--bg-primary)',

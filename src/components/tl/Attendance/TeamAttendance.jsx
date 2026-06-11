@@ -39,6 +39,32 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
     message: ''
   });
 
+  const [employees, setEmployees] = useState([]);
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+  const [attendanceCorrections, setAttendanceCorrections] = useState([]);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        
+        const [empRes, attRes, corrRes] = await Promise.all([
+          fetch('/api/team-lead/team-members', { headers }),
+          fetch('/api/team-lead/attendance', { headers }),
+          fetch('/api/attendance/corrections', { headers })
+        ]);
+        
+        if (empRes.ok) setEmployees(await empRes.json());
+        if (attRes.ok) setAttendanceLogs(await attRes.json());
+        if (corrRes.ok) setAttendanceCorrections(await corrRes.json());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, []);
+
   const availableMonths = useMemo(() => {
     const today = new Date();
     const curYear = today.getFullYear();
@@ -64,7 +90,7 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
   }, [selectedMonth, selectedYear]);
 
   const teamGridData = useMemo(() => {
-    const emps = db?.employees || [];
+    const emps = employees || [];
     return emps.map(emp => {
       const rec = { id: emp.emp_id || `NSG-${emp.id}`, dbId: emp.id, name: emp.name };
       let presentCount = 0, absentCount = 0, leaveCount = 0, offCount = 0, lateCount = 0, wfhCount = 0;
@@ -78,7 +104,7 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
         const lookupDate = `${year}-${monthStr}-${dateStr}`;
         
         // Find log
-        const log = (db?.attendanceLogs || []).find(l => l.employee_id === emp.id && l.date === lookupDate);
+        const log = (attendanceLogs || []).find(l => l.employee_id === emp.id && l.date === lookupDate);
         
         let status = isWeekend ? 'Off' : 'Present';
         let timeIn = '09:00';
@@ -131,11 +157,11 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
       rec.totals = { present: presentCount, absent: absentCount, leave: leaveCount, off: offCount, late: lateCount, wfh: wfhCount };
       return rec;
     });
-  }, [db, daysInMonth, selectedMonth, selectedYear]);
+  }, [employees, attendanceLogs, daysInMonth, selectedMonth, selectedYear]);
 
   const lateArrivalsData = useMemo(() => {
     const lates = [];
-    const logs = db?.attendanceLogs || [];
+    const logs = attendanceLogs || [];
     
     // Calculate monthly cumulative lates
     const monthLatesMap = {};
@@ -150,7 +176,7 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
 
     logs.forEach(l => {
       if (l.is_late) {
-        const emp = (db?.employees || []).find(e => e.id === l.employee_id);
+        const emp = (employees || []).find(e => e.id === l.employee_id);
         if (emp) {
           const logDate = new Date(l.date);
           const monthName = logDate.toLocaleDateString('en-US', { month: 'short' });
@@ -196,16 +222,16 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
     // Sort by date descending
     lates.sort((a, b) => new Date(b.date) - new Date(a.date));
     return lates;
-  }, [db]);
+  }, [employees, attendanceLogs]);
 
   const missedPunchesData = useMemo(() => {
     const alerts = [];
     
     // 1. Scan attendance logs for missed punches
-    const logs = db?.attendanceLogs || [];
+    const logs = attendanceLogs || [];
     logs.forEach(l => {
       if (l.clock_in && !l.clock_out) {
-        const emp = (db?.employees || []).find(e => e.id === l.employee_id);
+        const emp = (employees || []).find(e => e.id === l.employee_id);
         if (emp) {
           const logDate = new Date(l.date);
           const monthName = logDate.toLocaleDateString('en-US', { month: 'short' });
@@ -223,9 +249,9 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
     });
     
     // 2. Scan pending corrections
-    const corrections = db?.attendanceCorrections || [];
+    const corrections = attendanceCorrections || [];
     corrections.forEach(c => {
-      const emp = (db?.employees || []).find(e => e.id === c.employee_id);
+      const emp = (employees || []).find(e => e.id === c.user_id || e.id === c.employee_id);
       if (emp) {
         const logDate = new Date(c.correction_date);
         const monthName = logDate.toLocaleDateString('en-US', { month: 'short' });
@@ -242,7 +268,7 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
     });
     
     return alerts;
-  }, [db]);
+  }, [employees, attendanceLogs, attendanceCorrections]);
 
   const openNotifyModal = (alert) => {
     setNotifyModal({

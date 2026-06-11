@@ -18,7 +18,7 @@ const Escalations = () => {
     if (!token) return;
     try {
       // Fetch escalations
-      const escRes = await fetch('http://localhost:8000/team-lead/escalations', {
+      const escRes = await fetch('/api/team-lead/escalations', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (escRes.ok) {
@@ -27,7 +27,7 @@ const Escalations = () => {
       }
 
       // Fetch pending PRs from tasks
-      const tasksRes = await fetch('http://localhost:8000/team-lead/tasks', {
+      const tasksRes = await fetch('/api/team-lead/tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (tasksRes.ok) {
@@ -73,7 +73,7 @@ const Escalations = () => {
 
     if (!token) return;
     try {
-      const res = await fetch('http://localhost:8000/team-lead/escalations', {
+      const res = await fetch('/api/team-lead/escalations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ const Escalations = () => {
   const handleResolve = async (id) => {
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:8000/team-lead/escalations/${id}/resolve`, {
+      const res = await fetch(`/api/team-lead/escalations/${id}/resolve`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

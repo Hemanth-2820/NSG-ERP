@@ -1255,7 +1255,7 @@ def approve_leave_hr(id: int, current_user: models.User = Depends(security.get_c
     db.refresh(req)
     return req
 
-@router.post("/leaves/requests/{id}/reject", response_model=LeaveRequestResponse)
+@router.post("/leaves/requests/{id}/deny", response_model=LeaveRequestResponse)
 def reject_leave_hr(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
     req = db.query(models.LeaveRequest).filter(models.LeaveRequest.id == id).first()
@@ -1607,8 +1607,8 @@ def apply_leave_on_behalf(req: LeaveRequestOnBehalf, current_user: models.User =
         days=req.days,
         reason=req.reason,
         status="hr_approved",
-        tl_approved_at=func.now(),
-        hr_approved_at=func.now()
+        tl_approved_at=datetime.now(),
+        hr_approved_at=datetime.now()
     )
     db.add(new_req)
     
@@ -1721,7 +1721,7 @@ def approve_leave_request(id: int, current_user: models.User = Depends(security.
         return leave_req
         
     leave_req.status = "hr_approved"
-    leave_req.hr_approved_at = func.now()
+    leave_req.hr_approved_at = datetime.now()
     
     bal = db.query(models.LeaveBalance).filter(models.LeaveBalance.user_id == leave_req.user_id).first()
     if bal:
@@ -2014,3 +2014,776 @@ def update_schema(dept: str, req: DepartmentSchemaRequest, current_user: models.
         
     db.commit()
     return {"status": "success"}
+
+
+# ─── PAYROLL RUNS MODULE ─────────────────────────────────────────────────────
+# These endpoints are consumed by both the HR portal (to generate payroll)
+# and the CEO portal (Approvals page reads payroll run status).
+
+@router.get("/payroll/runs", response_model=List[PayrollRunResponse])
+def list_payroll_runs(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return all payroll runs ordered by most recent month/year."""
+    verify_hr_role(current_user)
+    return db.query(models.PayrollRun).order_by(
+        models.PayrollRun.year.desc(),
+        models.PayrollRun.month.desc()
+    ).all()
+
+
+@router.post("/payroll/runs", response_model=PayrollRunResponse, status_code=status.HTTP_201_CREATED)
+def create_payroll_run(
+    req: PayrollRunCreate,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    HR initiates a new payroll run for a given month/year.
+    Auto-generates individual Payslip records for every active employee.
+    """
+    verify_hr_role(current_user)
+
+    # Prevent duplicate runs for the same period
+    existing = db.query(models.PayrollRun).filter(
+        models.PayrollRun.month == req.month,
+        models.PayrollRun.year == req.year
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"A payroll run for {req.month}/{req.year} already exists.")
+
+    # Create the parent PayrollRun record
+    run = models.PayrollRun(
+        month=req.month,
+        year=req.year,
+        status="draft",
+        maker_id=current_user.name
+    )
+    db.add(run)
+    db.flush()  # Flush to get run.id before creating payslips
+
+    # Auto-generate payslips for all active employees
+    employees = db.query(models.User).filter(
+        models.User.role == "employee",
+        models.User.status.in_(["active", "probation"])
+    ).all()
+
+    for emp in employees:
+        # Use grade to determine salary band (Grade * 10,000 base salary)
+        grade = emp.grade or 3
+        basic = grade * 10000.0
+        hra = basic * 0.4         # HRA = 40% of basic
+        da = basic * 0.1          # DA = 10% of basic
+        allowances = 5000.0       # Fixed special allowance
+        epf = basic * 0.12        # EPF = 12% of basic
+        tds = (basic + hra + da + allowances) * 0.05  # Simplified 5% TDS
+        net = basic + hra + da + allowances - epf - tds
+
+        payslip = models.Payslip(
+            user_id=emp.id,
+            payroll_run_id=run.id,
+            basic=round(basic, 2),
+            hra=round(hra, 2),
+            da=round(da, 2),
+            allowances=round(allowances, 2),
+            epf=round(epf, 2),
+            tds=round(tds, 2),
+            net=round(net, 2),
+            month=req.month,
+            year=req.year
+        )
+        db.add(payslip)
+
+        # Notify each employee that their payslip is ready
+        notif = models.Notification(
+            user_id=emp.id,
+            message=f"Your payslip for {req.month}/{req.year} has been generated. Net Pay: ₹{round(net, 2):,.2f}",
+            type="info",
+            read=False
+        )
+        db.add(notif)
+
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+@router.post("/payroll/runs/{id}/maker-sign", response_model=PayrollRunResponse)
+def maker_sign_payroll(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """HR Maker signs off on a payroll run, moving it to maker_signed status."""
+    verify_hr_role(current_user)
+    run = db.query(models.PayrollRun).filter(models.PayrollRun.id == id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Payroll run not found.")
+    if run.status != "draft":
+        raise HTTPException(status_code=400, detail=f"Cannot maker-sign. Current status: {run.status}")
+
+    run.status = "maker_signed"
+    run.maker_id = current_user.name
+    run.maker_signed_at = datetime.now()
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+@router.post("/payroll/runs/{id}/checker-sign", response_model=PayrollRunResponse)
+def checker_sign_payroll(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    HR Checker (or CEO) verifies and approves the payroll run.
+    CEO Approvals page calls this endpoint when approving a payroll.
+    """
+    # CEO can also approve payroll runs, so allow ceo role here
+    if current_user.role not in ["hr", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden.")
+    run = db.query(models.PayrollRun).filter(models.PayrollRun.id == id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Payroll run not found.")
+    if run.status != "maker_signed":
+        raise HTTPException(status_code=400, detail=f"Cannot checker-sign. Current status: {run.status}")
+
+    run.status = "checker_signed"
+    run.checker_id = current_user.name
+    run.checker_signed_at = datetime.now()
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+@router.post("/payroll/runs/{id}/bank-transfer", response_model=PayrollRunResponse)
+def bank_transfer_payroll(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Mark payroll run as bank-transferred (final step after CEO approval)."""
+    verify_hr_role(current_user)
+    run = db.query(models.PayrollRun).filter(models.PayrollRun.id == id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Payroll run not found.")
+    if run.status != "checker_signed":
+        raise HTTPException(status_code=400, detail=f"Cannot transfer. Current status: {run.status}")
+
+    run.status = "bank_transferred"
+    run.bank_transfer_at = datetime.now()
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+# ─── PROMOTIONS MODULE ────────────────────────────────────────────────────────
+# Promotions flow: HR proposes → CEO approves/rejects (via CEO Approvals page)
+
+@router.get("/promotions", response_model=List[PromotionResponse])
+def list_promotions(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Fetch all promotion proposals. Used by CEO portal Approvals page."""
+    if current_user.role not in ["hr", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden.")
+    return db.query(models.Promotion).order_by(models.Promotion.id.desc()).all()
+
+
+@router.post("/promotions", response_model=PromotionResponse, status_code=status.HTTP_201_CREATED)
+def create_promotion(
+    req: PromotionCreate,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """HR proposes a promotion for an employee."""
+    verify_hr_role(current_user)
+    promo = models.Promotion(
+        name=req.name,
+        current=req.current,
+        proposed=req.proposed,
+        status="pending_ceo"  # Awaiting CEO approval
+    )
+    db.add(promo)
+    db.commit()
+    db.refresh(promo)
+    return promo
+
+
+@router.post("/promotions/{id}/decide", response_model=PromotionResponse)
+def decide_promotion(
+    id: int,
+    req: PromotionDecide,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    CEO approves or rejects a promotion.
+    CEO Approvals page POSTs to this endpoint when clicking Approve/Reject.
+    """
+    if current_user.role not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only CEO can approve promotions.")
+    promo = db.query(models.Promotion).filter(models.Promotion.id == id).first()
+    if not promo:
+        raise HTTPException(status_code=404, detail="Promotion proposal not found.")
+
+    if req.decision not in ["approved_by_ceo", "rejected_by_ceo"]:
+        raise HTTPException(status_code=400, detail="Decision must be 'approved_by_ceo' or 'rejected_by_ceo'.")
+
+    promo.status = req.decision
+
+    # If approved, update the employee's designation in the User table
+    if req.decision == "approved_by_ceo":
+        emp = db.query(models.User).filter(models.User.name == promo.name).first()
+        if emp:
+            emp.designation = promo.proposed
+            # Add a job history record
+            job_hist = models.JobHistory(
+                employee_id=emp.id,
+                event_type="promotion",
+                old_role=promo.current,
+                new_role=promo.proposed,
+                effective_date=date.today(),
+                approved_by=current_user.name
+            )
+            db.add(job_hist)
+            # Notify the employee
+            notif = models.Notification(
+                user_id=emp.id,
+                message=f"Congratulations! Your promotion from {promo.current} to {promo.proposed} has been approved by the CEO.",
+                type="success",
+                read=False
+            )
+            db.add(notif)
+
+    db.commit()
+    db.refresh(promo)
+    return promo
+
+
+# ─── EXITS & RESIGNATIONS MODULE ─────────────────────────────────────────────
+# Resignations flow: Employee submits → HR reviews → CEO approves (via Approvals page)
+
+@router.get("/exits/resignations", response_model=List[ResignationResponse])
+def list_resignations(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Fetch all employee resignation records. Used by CEO Approvals page."""
+    if current_user.role not in ["hr", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden.")
+    return db.query(models.Resignation).order_by(models.Resignation.resignation_date.desc()).all()
+
+
+@router.post("/exits/resignations/{id}/approve")
+def approve_resignation(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    HR or CEO approves a resignation.
+    Updates resignation status and marks the employee as 'inactive' post-LWD.
+    """
+    if current_user.role not in ["hr", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden.")
+    res = db.query(models.Resignation).filter(models.Resignation.id == id).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="Resignation record not found.")
+    if res.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Resignation is already {res.status}.")
+
+    res.status = "approved"
+
+    # Notify the employee of the approval
+    notif = models.Notification(
+        user_id=res.user_id,
+        message=f"Your resignation has been approved. Your Last Working Day is {res.LWD}. We wish you all the best!",
+        type="info",
+        read=False
+    )
+    db.add(notif)
+    db.commit()
+    return {"status": "success", "message": "Resignation approved successfully."}
+
+
+@router.post("/exits/resignations/{id}/reject")
+def reject_resignation(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """HR or CEO rejects a resignation (e.g., during a counter-offer process)."""
+    if current_user.role not in ["hr", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden.")
+    res = db.query(models.Resignation).filter(models.Resignation.id == id).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="Resignation record not found.")
+    if res.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Resignation is already {res.status}.")
+
+    res.status = "rejected"
+
+    # Notify the employee
+    notif = models.Notification(
+        user_id=res.user_id,
+        message="Your resignation request has been reviewed and rejected. Please reach out to HR for next steps.",
+        type="warning",
+        read=False
+    )
+    db.add(notif)
+    db.commit()
+    return {"status": "success", "message": "Resignation rejected successfully."}
+
+
+# ─── PAYROLL / TDS DECLARATIONS MODULE ───────────────────────────────────────
+# These endpoints are called by PayrollBuilderView.jsx to verify TDS declarations
+# before running payroll.
+
+@router.get("/payroll/tds-declarations", response_model=List[TDSDeclarationResponse])
+def list_tds_declarations(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return all employee TDS investment declarations. Shown to HR on Payroll Builder page."""
+    verify_hr_role(current_user)
+    return db.query(models.TDSDeclaration).order_by(models.TDSDeclaration.id.desc()).all()
+
+
+@router.post("/payroll/tds-declarations/{id}/verify")
+def verify_tds_declaration(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """HR verifies and signs off a pending TDS declaration before locking payroll."""
+    verify_hr_role(current_user)
+    decl = db.query(models.TDSDeclaration).filter(models.TDSDeclaration.id == id).first()
+    if not decl:
+        raise HTTPException(status_code=404, detail="TDS declaration not found.")
+    decl.status = "verified"
+    decl.verified_by = current_user.name
+    db.commit()
+    return {"status": "success", "message": "TDS declaration verified successfully."}
+
+
+# ─── PAYROLL / EXPENSE CLAIMS MODULE ─────────────────────────────────────────
+# PayrollBuilderView.jsx fetches expense claims and lets HR approve/reject them
+# as part of the payroll reimbursement process.
+
+@router.get("/payroll/claims", response_model=List[ExpenseClaimResponse])
+def list_expense_claims_for_payroll(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Return all expense claims. The frontend filters to show only tl_approved ones
+    that are pending HR verification.
+    """
+    verify_hr_role(current_user)
+    return db.query(models.ExpenseClaim).order_by(models.ExpenseClaim.claim_date.desc()).all()
+
+
+@router.post("/payroll/claims/{id}/approve")
+def approve_expense_claim(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """HR approves and reimburses an expense claim, marking it as hr_approved."""
+    verify_hr_role(current_user)
+    claim = db.query(models.ExpenseClaim).filter(models.ExpenseClaim.id == id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Expense claim not found.")
+    claim.hr_approval = "approved"
+    claim.status = "approved"
+    # Notify the employee
+    notif = models.Notification(
+        user_id=claim.user_id,
+        message=f"Your expense claim of ₹{claim.amount:,.2f} ({claim.category}) has been approved and will be reimbursed in the next payroll.",
+        type="success",
+        read=False
+    )
+    db.add(notif)
+    db.commit()
+    return {"status": "success", "message": "Expense claim approved."}
+
+
+@router.post("/payroll/claims/{id}/reject")
+def reject_expense_claim(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """HR rejects an expense claim."""
+    verify_hr_role(current_user)
+    claim = db.query(models.ExpenseClaim).filter(models.ExpenseClaim.id == id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Expense claim not found.")
+    claim.hr_approval = "rejected"
+    claim.status = "rejected"
+    # Notify the employee
+    notif = models.Notification(
+        user_id=claim.user_id,
+        message=f"Your expense claim of ₹{claim.amount:,.2f} ({claim.category}) has been rejected by HR. Please contact HR for more details.",
+        type="warning",
+        read=False
+    )
+    db.add(notif)
+    db.commit()
+    return {"status": "success", "message": "Expense claim rejected."}
+
+
+# ─── MAKER-SIGN ALIAS ─────────────────────────────────────────────────────────
+# PayrollBuilderView.jsx calls /payroll/runs/{id}/sign-maker (different URL name).
+# This alias endpoint ensures the frontend call works without changing the frontend.
+
+@router.post("/payroll/runs/{id}/sign-maker", response_model=PayrollRunResponse)
+def maker_sign_alias(
+    id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Alias for /payroll/runs/{id}/maker-sign — called by the frontend PayrollBuilderView."""
+    verify_hr_role(current_user)
+    run = db.query(models.PayrollRun).filter(models.PayrollRun.id == id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Payroll run not found.")
+    if run.status != "draft":
+        raise HTTPException(status_code=400, detail=f"Cannot maker-sign. Current status: {run.status}")
+    run.status = "maker_signed"
+    run.maker_id = current_user.name
+    run.maker_signed_at = datetime.now()
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+# ─── L&D TRAINING MODULE ─────────────────────────────────────────────────────
+# LearningLndView.jsx fetches /lnd/tracks and /lnd/progress to display
+# training course progress for all employees.
+
+@router.get("/lnd/tracks", response_model=List[TrainingTrackResponse])
+def list_lnd_tracks(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return all L&D training tracks. HR creates and manages these."""
+    verify_hr_role(current_user)
+    tracks = db.query(models.TrainingTrack).all()
+    if not tracks:
+        # Auto-seed default tracks if none exist so the page doesn't show blank
+        defaults = [
+            models.TrainingTrack(name="Compliance & Code of Conduct", department="All", is_mandatory=True,
+                modules='[{"title":"Company Policies","duration":30},{"title":"Anti-Harassment Policy","duration":20},{"title":"Compliance Quiz","duration":15}]'),
+            models.TrainingTrack(name="Engineering Onboarding", department="Engineering", is_mandatory=False,
+                modules='[{"title":"Dev Environment Setup","duration":60},{"title":"Code Review Standards","duration":45},{"title":"CI/CD Pipeline","duration":30}]'),
+            models.TrainingTrack(name="Leadership Foundations", department="All", is_mandatory=False,
+                modules='[{"title":"Effective Communication","duration":40},{"title":"Team Management","duration":50},{"title":"Performance Feedback","duration":35}]'),
+        ]
+        for d in defaults:
+            db.add(d)
+        db.commit()
+        tracks = db.query(models.TrainingTrack).all()
+    return tracks
+
+
+@router.post("/lnd/tracks", response_model=TrainingTrackResponse, status_code=status.HTTP_201_CREATED)
+def create_lnd_track(
+    req: TrainingTrackCreate,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """HR creates a new training track."""
+    verify_hr_role(current_user)
+    track = models.TrainingTrack(
+        name=req.name,
+        department=req.department,
+        is_mandatory=req.is_mandatory,
+        modules=json.dumps(req.modules)
+    )
+    db.add(track)
+    db.commit()
+    db.refresh(track)
+    return track
+
+
+@router.get("/lnd/progress", response_model=List[TrainingProgressResponse])
+def list_lnd_progress(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return training progress records for all employees."""
+    verify_hr_role(current_user)
+    return db.query(models.TrainingProgress).all()
+
+
+# ─── GRIEVANCE TICKETS (HR MESSAGING) ────────────────────────────────────────
+# HrMessagingView.jsx calls /hr-portal/tickets to load support/grievance tickets
+# raised by employees. This maps to the SupportTicket model.
+
+class TicketResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    description: str
+    category: str
+    priority: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/tickets", response_model=List[TicketResponse])
+def list_support_tickets(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return all employee-raised support/grievance tickets for the HR messaging view."""
+    verify_hr_role(current_user)
+    return db.query(models.SupportTicket).order_by(models.SupportTicket.created_at.desc()).all()
+
+# ─── MOCKED ENDPOINTS FOR CEO APPROVALS ──────────────────────────────────────
+
+@router.get("/payroll/runs")
+def get_payroll_runs(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    verify_hr_role(current_user)
+    runs = db.query(models.PayrollRun).all()
+    res = []
+    for r in runs:
+        res.append({
+            "id": r.id,
+            "month": r.month,
+            "year": r.year,
+            "status": r.status,
+            "maker_signed_at": r.maker_signed_at.isoformat() if r.maker_signed_at else None,
+            "checker_signed_at": r.checker_signed_at.isoformat() if r.checker_signed_at else None,
+            "bank_transfer_at": r.bank_transfer_at.isoformat() if r.bank_transfer_at else None
+        })
+    return res
+
+class PayrollRunCreate(BaseModel):
+    month: int
+    year: int
+
+@router.post("/payroll/runs")
+def create_payroll_run(req: PayrollRunCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    verify_hr_role(current_user)
+    new_run = models.PayrollRun(
+        month=req.month,
+        year=req.year,
+        status="maker_signed",
+        maker_signed_at=datetime.utcnow()
+    )
+    db.add(new_run)
+    db.commit()
+    db.refresh(new_run)
+    return {"status": "success", "run_id": new_run.id}
+
+@router.get("/promotions")
+def get_promotions(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    verify_hr_role(current_user)
+    promotions = db.query(models.Promotion).all()
+    res = []
+    for p in promotions:
+        res.append({
+            "id": p.id,
+            "employeeId": f"EMP-{p.id:03d}",
+            "name": p.name,
+            "currentRole": p.current,
+            "proposedRole": p.proposed,
+            "currentCTC": 0,
+            "proposedCTC": 0,
+            "managerId": "SYSTEM",
+            "justification": "Performance Review",
+            "status": p.status
+        })
+    return res
+
+@router.patch("/promotions/{id}/decide")
+def decide_promotion(id: int, request: dict, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    verify_hr_role(current_user)
+    promo = db.query(models.Promotion).filter(models.Promotion.id == id).first()
+    if not promo:
+        raise HTTPException(status_code=404, detail="Promotion not found")
+    
+    decision = request.get("decision")
+    if decision == "approve":
+        promo.status = "approved"
+    elif decision == "reject":
+        promo.status = "rejected"
+        
+    db.commit()
+    return {"status": "success", "decision": decision}
+
+@router.get("/exits/resignations")
+def get_resignations(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    verify_hr_role(current_user)
+    resigs = db.query(models.Resignation).all()
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "resignation_date": r.resignation_date.isoformat() if r.resignation_date else None,
+            "status": r.status
+        } for r in resigs
+    ]
+
+
+# ─── HOLIDAYS ────────────────────────────────────────────────────────────────
+
+class HolidayCreate(BaseModel):
+    name: str
+    date: str
+    type: Optional[str] = "national"
+
+class HolidayResponse(BaseModel):
+    id: int
+    name: str
+    date: str
+    type: str
+
+    class Config:
+        from_attributes = True
+
+@router.get("/holidays", response_model=List[HolidayResponse])
+def list_holidays(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return all configured holidays. Seeds defaults on first call."""
+    holidays = db.query(models.Holiday).order_by(models.Holiday.date).all()
+    if not holidays:
+        # Seed national holidays on first call
+        seeds = [
+            models.Holiday(name="Republic Day",     date="2026-01-26", type="national"),
+            models.Holiday(name="Independence Day", date="2026-08-15", type="national"),
+            models.Holiday(name="Gandhi Jayanti",   date="2026-10-02", type="national"),
+            models.Holiday(name="Christmas Day",    date="2026-12-25", type="national"),
+        ]
+        db.add_all(seeds)
+        db.commit()
+        db.refresh(seeds[0])
+        holidays = db.query(models.Holiday).order_by(models.Holiday.date).all()
+    return holidays
+
+@router.post("/holidays", response_model=HolidayResponse)
+def add_holiday(
+    payload: HolidayCreate,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    verify_hr_role(current_user)
+    h = models.Holiday(name=payload.name, date=payload.date, type=payload.type)
+    db.add(h)
+    db.commit()
+    db.refresh(h)
+    return h
+
+@router.delete("/holidays/{holiday_id}")
+def delete_holiday(
+    holiday_id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    verify_hr_role(current_user)
+    h = db.query(models.Holiday).filter(models.Holiday.id == holiday_id).first()
+    if not h:
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    db.delete(h)
+    db.commit()
+    return {"detail": "Deleted"}
+
+
+# ─── LEAVE POLICIES ──────────────────────────────────────────────────────────
+
+class LeavePolicyResponse(BaseModel):
+    id: int
+    type: str
+    accrual_rule: str
+    max_balance: int
+    carryover_days: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+class LeavePolicyUpdate(BaseModel):
+    max_balance: Optional[int] = None
+    carryover_days: Optional[int] = None
+    is_active: Optional[bool] = None
+
+@router.get("/leave/policies", response_model=List[LeavePolicyResponse])
+def list_leave_policies(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return all leave policies. Seeds defaults on first call."""
+    policies = db.query(models.LeavePolicy).all()
+    if not policies:
+        seeds = [
+            models.LeavePolicy(type="CL",        accrual_rule="monthly",  max_balance=12,  carryover_days=2,  is_active=True),
+            models.LeavePolicy(type="SL",        accrual_rule="monthly",  max_balance=15,  carryover_days=5,  is_active=True),
+            models.LeavePolicy(type="EL",        accrual_rule="monthly",  max_balance=30,  carryover_days=15, is_active=True),
+            models.LeavePolicy(type="Maternity", accrual_rule="onetime",  max_balance=180, carryover_days=0,  is_active=True),
+            models.LeavePolicy(type="Paternity", accrual_rule="onetime",  max_balance=15,  carryover_days=0,  is_active=True),
+        ]
+        db.add_all(seeds)
+        db.commit()
+        policies = db.query(models.LeavePolicy).all()
+    return policies
+
+@router.patch("/leave/policies/{policy_id}", response_model=LeavePolicyResponse)
+def update_leave_policy(
+    policy_id: int,
+    payload: LeavePolicyUpdate,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    verify_hr_role(current_user)
+    policy = db.query(models.LeavePolicy).filter(models.LeavePolicy.id == policy_id).first()
+    if not policy:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    if payload.max_balance is not None:
+        policy.max_balance = payload.max_balance
+    if payload.carryover_days is not None:
+        policy.carryover_days = payload.carryover_days
+    if payload.is_active is not None:
+        policy.is_active = payload.is_active
+    db.commit()
+    db.refresh(policy)
+    return policy
+
+
+# ─── CUSTOM SCHEMAS (Task Form Builder) ──────────────────────────────────────
+
+@router.get("/schemas")
+def get_all_schemas(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Return all department schemas as a dict { dept: [fields] }."""
+    schemas = db.query(models.CustomSchema).all()
+    return {s.department: json.loads(s.schema_fields) for s in schemas}
+
+@router.post("/schemas/{department}")
+def save_schema(
+    department: str,
+    payload: dict,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    verify_hr_role(current_user)
+    schema_fields = payload.get("schema_fields", [])
+    existing = db.query(models.CustomSchema).filter(models.CustomSchema.department == department).first()
+    if existing:
+        existing.schema_fields = json.dumps(schema_fields)
+    else:
+        db.add(models.CustomSchema(department=department, schema_fields=json.dumps(schema_fields)))
+    db.commit()
+    return {"detail": f"Schema for {department} saved successfully"}

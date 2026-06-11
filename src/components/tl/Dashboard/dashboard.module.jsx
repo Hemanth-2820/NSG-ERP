@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './dashboard.module.css';
 import { 
   Users, 
@@ -19,21 +19,75 @@ const Dashboard = ({ setActiveTab, setSelectedChatUser }) => {
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, listKey: '', id: null, action: '' });
   const [showAllTeam, setShowAllTeam] = useState(false);
   const [showAllWorkload, setShowAllWorkload] = useState(false);
-  // 1. Team Presence Data
-  const teamMembers = [
-    { id: 1, name: 'Alice Chen', initials: 'AC', status: 'online' },
-    { id: 2, name: 'Bob Smith', initials: 'BS', status: 'wfh' },
-    { id: 3, name: 'Charlie Davis', initials: 'CD', status: 'offline' },
-    { id: 4, name: 'Diana Prince', initials: 'DP', status: 'on_leave' },
-    { id: 5, name: 'Evan Wright', initials: 'EW', status: 'absent' },
-    { id: 6, name: 'Fiona Gallagher', initials: 'FG', status: 'online' },
-    { id: 7, name: 'George Hale', initials: 'GH', status: 'wfh' },
-    { id: 8, name: 'Hannah Lee', initials: 'HL', status: 'online' },
-    { id: 9, name: 'Ivy Green', initials: 'IG', status: 'absent' },
-    { id: 10, name: 'Jack White', initials: 'JW', status: 'absent' },
-    { id: 11, name: 'Kevin Taylor', initials: 'KT', status: 'online' },
-    { id: 12, name: 'Michael Chang', initials: 'MC', status: 'online' }
-  ];
+
+  // ── Real API Data ──────────────────────────────────────────────────────────
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [myTasks, setMyTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    const fetchDashboard = async () => {
+      try {
+        // Fetch team members and all tasks in parallel
+        const [membersRes, tasksRes] = await Promise.all([
+          fetch('/api/team-lead/team-members', { headers }),
+          fetch('/api/team-lead/tasks', { headers })
+        ]);
+
+        if (membersRes.ok) {
+          const members = await membersRes.json();
+          // Map backend data to the format the UI expects
+          setTeamMembers(members.map(m => ({
+            id: m.id,
+            name: m.name,
+            initials: m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+            // Derive status from attendance or default to online
+            status: m.status === 'active' ? 'online' : m.status === 'on_leave' ? 'on_leave' : 'offline',
+            role: m.designation || 'Team Member'
+          })));
+        }
+
+        if (tasksRes.ok) {
+          setMyTasks(await tasksRes.json());
+        }
+      } catch (e) {
+        console.error('TL Dashboard fetch error:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboard();
+  }, []);
+
+  // ── Derive sprint stats from real tasks ──────────────────────────────────
+  const sprintData = {
+    name: 'Current Sprint',
+    pointsCompleted: myTasks.filter(t => t.status === 'done').reduce((s, t) => s + (t.sp || 1), 0),
+    pointsTotal: myTasks.reduce((s, t) => s + (t.sp || 1), 0) || 1,
+    tasks: {
+      todo: myTasks.filter(t => t.status === 'pending').length,
+      inProgress: myTasks.filter(t => t.status === 'in-progress').length,
+      blocked: myTasks.filter(t => t.status === 'blocked').length,
+      done: myTasks.filter(t => t.status === 'done').length,
+    },
+    velocityTrend: `${myTasks.filter(t => t.status === 'done').length} tasks done`
+  };
+
+  const progressPercentage = Math.min(100, (sprintData.pointsCompleted / sprintData.pointsTotal) * 100);
+  const radius = 60;
+
+  // ── Derive workload from team members + tasks ─────────────────────────────
+  const teamWorkload = teamMembers.map(m => {
+    const memberTasks = myTasks.filter(t => t.assignee === m.name || t.user_id === m.id);
+    const activeTasks = memberTasks.filter(t => t.status !== 'done').length;
+    const load = Math.min(100, activeTasks * 20); // 5 tasks = 100% load
+    return { id: m.id, name: m.name, role: m.role, load };
+  });
 
   const statusPriority = {
     'online': 1,
@@ -43,41 +97,11 @@ const Dashboard = ({ setActiveTab, setSelectedChatUser }) => {
     'absent': 5
   };
 
-  const sortedTeamMembers = [...teamMembers].sort((a, b) => statusPriority[a.status] - statusPriority[b.status]);
-
-  // 2. Sprint Status Data
-  const sprintData = {
-    name: 'Sprint 42: Alpha Release',
-    pointsCompleted: 68,
-    pointsTotal: 120,
-    tasks: {
-      todo: 12,
-      inProgress: 8,
-      blocked: 3,
-      done: 24
-    },
-    velocityTrend: '+15% from last sprint'
-  };
-
-  const progressPercentage = (sprintData.pointsCompleted / sprintData.pointsTotal) * 100;
-  const radius = 60;
-  const teamWorkload = [
-    { id: 1, name: 'Alice Chen', role: 'Frontend Dev', load: 85 },
-    { id: 12, name: 'Michael Chang', role: 'Backend Dev', load: 45 },
-    { id: 8, name: 'Hannah Lee', role: 'UI/UX Designer', load: 95 },
-    { id: 11, name: 'Kevin Taylor', role: 'QA Engineer', load: 60 },
-    { id: 2, name: 'Bob Smith', role: 'Frontend Dev', load: 35 },
-    { id: 6, name: 'Fiona Gallagher', role: 'Backend Dev', load: 75 },
-    { id: 4, name: 'Diana Prince', role: 'Product Manager', load: 88 },
-    { id: 3, name: 'Charlie Davis', role: 'Full Stack Dev', load: 65 },
-    { id: 7, name: 'George Hale', role: 'Security Analyst', load: 40 },
-    { id: 5, name: 'Evan Wright', role: 'DevOps Engineer', load: 0 },
-    { id: 9, name: 'Ivy Green', role: 'Data Analyst', load: 0 },
-    { id: 10, name: 'Jack White', role: 'System Admin', load: 0 }
-  ];
+  const sortedTeamMembers = [...teamMembers].sort((a, b) => (statusPriority[a.status] || 3) - (statusPriority[b.status] || 3));
 
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progressPercentage / 100) * circumference;
+
 
   const [pendingDetails, setPendingDetails] = useState({
     leaveRequests: [

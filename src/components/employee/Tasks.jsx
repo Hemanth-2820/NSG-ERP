@@ -1,73 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Tasks.css';
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_TASKS = [
-  {
-    id: 1, sprint: 'Sprint 14', title: 'Finalize Q3 sprint report',
-    description: 'Compile all sprint metrics, velocity charts, and retrospective notes into the final Q3 report document for stakeholder review.',
-    priority: 'high', status: 'in-progress', sp: 5,
-    subtasks: [
-      { id: 11, title: 'Collect velocity data from Jira', done: true },
-      { id: 12, title: 'Write retrospective summary',    done: true },
-      { id: 13, title: 'Export charts to PDF',           done: false },
-    ],
-    acceptance: [
-      'Report covers all 3 sprints of Q3',
-      'Charts exported as high-res PNG',
-      'Approved by Product Owner before submission',
-    ],
-    prStatus: null, prUrl: '', rejectedReason: '',
-  },
-  {
-    id: 2, sprint: 'Sprint 14', title: 'Code review – auth module',
-    description: 'Review pull request #204 for the authentication module refactor. Ensure JWT refresh logic, error handling, and test coverage are complete.',
-    priority: 'medium', status: 'pending', sp: 3,
-    subtasks: [
-      { id: 21, title: 'Review JWT refresh logic', done: false },
-      { id: 22, title: 'Check error boundary coverage', done: false },
-    ],
-    acceptance: [
-      'All unit tests pass with >80% coverage',
-      'No critical security findings',
-    ],
-    prStatus: null, prUrl: '', rejectedReason: '',
-  },
-  {
-    id: 3, sprint: 'Sprint 14', title: 'Update Jira board tickets',
-    description: 'Update all open Jira tickets with latest status, estimates, and sprint assignment before the end-of-sprint sync.',
-    priority: 'low', status: 'pending', sp: 1,
-    subtasks: [
-      { id: 31, title: 'Update story points', done: false },
-      { id: 32, title: 'Reassign stale tickets', done: false },
-    ],
-    acceptance: ['All tickets have assignee and SP', 'No tickets in backlog without sprint'],
-    prStatus: null, prUrl: '', rejectedReason: '',
-  },
-  {
-    id: 4, sprint: 'Sprint 13', title: 'Team sync meeting notes',
-    description: 'Document and distribute the weekly team sync notes including decisions made, blockers identified, and action items assigned.',
-    priority: 'medium', status: 'done', sp: 2,
-    subtasks: [
-      { id: 41, title: 'Write meeting summary', done: true },
-      { id: 42, title: 'Share via Slack', done: true },
-    ],
-    acceptance: ['Notes shared within 2 hours of meeting', 'Action items have owners'],
-    prStatus: 'submitted', prUrl: 'https://github.com/org/repo/pull/198', rejectedReason: '',
-  },
-  {
-    id: 5, sprint: 'Sprint 13', title: 'Deploy staging build v2.4',
-    description: 'Deploy the latest build to the staging environment, run smoke tests, and notify QA team for sign-off.',
-    priority: 'high', status: 'blocked', sp: 8,
-    subtasks: [
-      { id: 51, title: 'Build Docker image', done: true },
-      { id: 52, title: 'Run smoke tests', done: false },
-      { id: 53, title: 'Notify QA team', done: false },
-    ],
-    acceptance: ['Smoke tests pass 100%', 'QA sign-off received', 'Deployment log archived'],
-    prStatus: 'rejected', prUrl: '', rejectedReason: 'Missing smoke test results in PR description.',
-  },
-];
+
 
 const SPRINTS = ['All Sprints', 'Sprint 14', 'Sprint 13'];
 const STATUS_FILTERS = ['All', 'Todo', 'In-Progress', 'Done'];
@@ -450,7 +384,7 @@ export default function Tasks({ db, onUpdateDb }) {
       }
     } catch (e) {
       console.error(e);
-      setTasks(MOCK_TASKS); // Fallback to mock for UI if API fails initially
+      setTasks([]);
     }
   };
 

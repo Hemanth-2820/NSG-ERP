@@ -37,7 +37,7 @@ export default function Tasks({ currentUser }) {
   const fetchTeamMembers = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/team-lead/team-members', {
+      const res = await fetch('/api/team-lead/team-members', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setTeamMembers(await res.json());
@@ -47,7 +47,7 @@ export default function Tasks({ currentUser }) {
   const fetchTasks = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/team-lead/tasks', {
+      const res = await fetch('/api/team-lead/tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setTasks(await res.json());
@@ -90,7 +90,7 @@ export default function Tasks({ currentUser }) {
     }
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch(`http://localhost:8000/team-lead/tasks/${reassignTaskId}/reassign`, {
+      const res = await fetch(`/api/team-lead/tasks/${reassignTaskId}/reassign`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,10 +160,10 @@ export default function Tasks({ currentUser }) {
     };
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      let url = 'http://localhost:8000/team-lead/tasks';
+      let url = '/api/team-lead/tasks';
       let method = 'POST';
       if (editingTaskId) {
-        url = `http://localhost:8000/team-lead/tasks/${editingTaskId}`;
+        url = `/api/team-lead/tasks/${editingTaskId}`;
         method = 'PATCH';
       }
       const res = await fetch(url, {
@@ -194,7 +194,7 @@ export default function Tasks({ currentUser }) {
   const handleApprovePr = async (taskId) => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch(`http://localhost:8000/team-lead/tasks/${taskId}/approve-pr`, {
+      const res = await fetch(`/api/team-lead/tasks/${taskId}/approve-pr`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -215,7 +215,7 @@ export default function Tasks({ currentUser }) {
     }
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch(`http://localhost:8000/team-lead/tasks/${rejectTaskId}/reject-pr`, {
+      const res = await fetch(`/api/team-lead/tasks/${rejectTaskId}/reject-pr`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ reason: rejectReason })

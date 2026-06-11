@@ -9,7 +9,7 @@ const TeamTimesheets = ({ db, onUpdateDb }) => {
   const fetchPending = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/timesheets/pending', {
+      const res = await fetch('/api/timesheets/pending', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -73,7 +73,7 @@ const TeamTimesheets = ({ db, onUpdateDb }) => {
     
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch(`http://localhost:8000/timesheets/${activeSelected.id}/approve`, {
+      const res = await fetch(`/api/timesheets/${activeSelected.id}/approve`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -97,7 +97,7 @@ const TeamTimesheets = ({ db, onUpdateDb }) => {
 
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch(`http://localhost:8000/timesheets/${activeSelected.id}/reject`, {
+      const res = await fetch(`/api/timesheets/${activeSelected.id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ comment })

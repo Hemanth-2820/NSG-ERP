@@ -4,13 +4,7 @@ import './Payroll.css';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const PAYSLIPS = [
-  { id: 1, month: 'May 2025',   gross: 85250,  deductions: 12380, net: 72870 },
-  { id: 2, month: 'April 2025', gross: 85250,  deductions: 12380, net: 72870 },
-  { id: 3, month: 'March 2025', gross: 85250,  deductions: 11200, net: 74050 },
-  { id: 4, month: 'Feb 2025',   gross: 82000,  deductions: 11200, net: 70800 },
-  { id: 5, month: 'Jan 2025',   gross: 82000,  deductions: 11200, net: 70800 },
-];
+
 
 const CTC_EARNINGS = [
   { label: 'Basic Salary',        amount: 42000 },
@@ -92,11 +86,11 @@ function PayslipsTab({ employeeId }) {
           const data = await res.json();
           setPayslipsList(data);
         } else {
-          setPayslipsList(PAYSLIPS); // Fallback to mock if API fails
+          setPayslipsList([]);
         }
       } catch (e) {
         console.error(e);
-        setPayslipsList(PAYSLIPS); // Fallback
+        setPayslipsList([]);
       }
     };
     fetchPayslips();
@@ -190,16 +184,33 @@ function PayslipsTab({ employeeId }) {
 // ─── CTC Breakdown Tab ────────────────────────────────────────────────────────
 
 function CtcBreakdownTab() {
-  const totalEarnings   = CTC_EARNINGS.reduce((s, r) => s + r.amount, 0);
-  const totalDeductions = CTC_DEDUCTIONS.reduce((s, r) => s + r.amount, 0);
-  const netTakeHome     = totalEarnings - totalDeductions;
+  const [ctcData, setCtcData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCtc = async () => {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const res = await fetch('/api/employee-portal/payroll/ctc', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setCtcData(await res.json());
+        }
+      } catch(e) { console.error(e); } finally { setLoading(false); }
+    };
+    fetchCtc();
+  }, []);
+
+  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
+  if (!ctcData) return <div style={{ padding: 20 }}>Failed to load CTC data.</div>;
 
   return (
     <div className="pay-ctc-grid">
       {/* Earnings */}
       <div className="pay-ctc-table-wrap">
         <div className="pay-ctc-table-head pay-ctc-table-head--earn">💰 Earnings</div>
-        {CTC_EARNINGS.map(r => (
+        {ctcData.earnings.map(r => (
           <div key={r.label} className="pay-ctc-row">
             <span className="pay-ctc-row__name">{r.label}</span>
             <span className="pay-ctc-row__value pay-ctc-row__value--earn">{INR(r.amount)}</span>
@@ -207,7 +218,7 @@ function CtcBreakdownTab() {
         ))}
         <div className="pay-ctc-row" style={{ borderTop: '2px solid var(--pay-border)', background: 'var(--pay-bg-inner)' }}>
           <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--pay-text)' }}>Total Earnings</span>
-          <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--pay-emerald)', fontVariantNumeric: 'tabular-nums' }}>{INR(totalEarnings)}</span>
+          <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--pay-emerald)', fontVariantNumeric: 'tabular-nums' }}>{INR(ctcData.total_earnings)}</span>
         </div>
       </div>
 
@@ -215,7 +226,7 @@ function CtcBreakdownTab() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="pay-ctc-table-wrap">
           <div className="pay-ctc-table-head pay-ctc-table-head--deduct">📉 Deductions</div>
-          {CTC_DEDUCTIONS.map(r => (
+          {ctcData.deductions.map(r => (
             <div key={r.label} className="pay-ctc-row">
               <span className="pay-ctc-row__name">{r.label}</span>
               <span className="pay-ctc-row__value pay-ctc-row__value--deduct">-{INR(r.amount)}</span>
@@ -223,13 +234,13 @@ function CtcBreakdownTab() {
           ))}
           <div className="pay-ctc-row" style={{ borderTop: '2px solid var(--pay-border)', background: 'var(--pay-bg-inner)' }}>
             <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--pay-text)' }}>Total Deductions</span>
-            <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--pay-red)', fontVariantNumeric: 'tabular-nums' }}>-{INR(totalDeductions)}</span>
+            <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--pay-red)', fontVariantNumeric: 'tabular-nums' }}>-{INR(ctcData.total_deductions)}</span>
           </div>
         </div>
 
         <div className="pay-ctc-net">
           <div className="pay-ctc-net__label">Net Take-Home</div>
-          <div className="pay-ctc-net__amount">{INR(netTakeHome)}</div>
+          <div className="pay-ctc-net__amount">{INR(ctcData.net_take_home)}</div>
           <div className="pay-ctc-net__sub">per month</div>
         </div>
       </div>
@@ -279,7 +290,24 @@ function TdsDeclarationTab({ employeeId }) {
   }
 
   async function handleSubmit() {
-    alert('Investment declaration successfully submitted to HR for verification!');
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/employee-portal/payroll/tds-declarations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          sec80c: parseFloat(form.sec80c) || 0,
+          hra_rent: parseFloat(form.hra_rent) || 0,
+          hra_city: form.hra_city,
+          sec80d: parseFloat(form.sec80d) || 0
+        })
+      });
+      if (res.ok) {
+        setCurrentDeclaration({ status: 'pending', submitted_at: new Date().toISOString() });
+      } else {
+        alert('Failed to submit TDS declaration.');
+      }
+    } catch(e) { console.error(e); }
   }
 
   if (currentDeclaration) {

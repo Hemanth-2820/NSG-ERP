@@ -2,20 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Leave.css';
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
-const LEAVE_BALANCES = [
-  { type: 'CL',      label: 'Casual Leave',       used: 3,  total: 12, color: 'var(--cl-color)'      },
-  { type: 'SL',      label: 'Sick Leave',          used: 1,  total: 8,  color: 'var(--sl-color)'      },
-  { type: 'EL',      label: 'Earned Leave',        used: 5,  total: 15, color: 'var(--el-color)'      },
-  { type: 'CompOff', label: 'Comp Off',            used: 2,  total: 4,  color: 'var(--compoff-color)' },
-];
 
-const LEAVE_HISTORY = [
-  { id: 1, applied: '2026-05-10', type: 'CL',      from: '2026-05-12', to: '2026-05-13', days: 2, status: 'Approved',  approver: 'Rajan K.' },
-  { id: 2, applied: '2026-04-20', type: 'SL',      from: '2026-04-22', to: '2026-04-22', days: 1, status: 'Approved',  approver: 'Rajan K.' },
-  { id: 3, applied: '2026-04-05', type: 'EL',      from: '2026-04-08', to: '2026-04-10', days: 3, status: 'Rejected',  approver: 'Rajan K.' },
-  { id: 4, applied: '2026-03-18', type: 'CompOff', from: '2026-03-20', to: '2026-03-20', days: 1, status: 'Pending',   approver: 'Rajan K.' },
-  { id: 5, applied: '2026-03-01', type: 'CL',      from: '2026-03-05', to: '2026-03-06', days: 2, status: 'Cancelled', approver: 'Rajan K.' },
-];
 
 const TEAM_ON_LEAVE = ['Priya S.', 'Arjun M.'];
 const HOLIDAYS = ['2026-05-01', '2026-05-14', '2026-06-15']; // for day count calc

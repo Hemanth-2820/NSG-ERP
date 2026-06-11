@@ -21,22 +21,6 @@ const THEME = {
   warning: '#F59E0B'       
 };
 
-// ==========================================
-// MOCK DATA
-// ==========================================
-const mockApprovals = [
-  { id: "APP-1001", type: "Payroll", requestedBy: "HR Department", dept: "HR", urgency: "Critical", submittedAt: "10 mins ago", amount: "₹24.5M", status: 'Pending' },
-  { id: "APP-1002", type: "Budget", requestedBy: "David L.", dept: "Marketing", urgency: "High", submittedAt: "2 hours ago", amount: "₹1.5M", status: 'Pending' },
-  { id: "APP-1003", type: "Resignation", requestedBy: "Amit P.", dept: "Sales", urgency: "High", submittedAt: "1 day ago", amount: null, status: 'Pending' },
-  { id: "APP-1004", type: "Policy", requestedBy: "Legal Team", dept: "Legal", urgency: "Normal", submittedAt: "2 days ago", amount: null, status: 'Pending' }
-];
-
-const mockAuditTrail = [
-  { time: "Oct 24, 10:15 AM", user: "Rajiv S.", action: "Request Created" },
-  { time: "Oct 24, 10:20 AM", user: "Priya M. (TL)", action: "Approved at Level 1" },
-  { time: "Oct 24, 11:00 AM", user: "HR System", action: "Flagged for CEO Approval" },
-];
-
 const TABS = ['All', 'Payroll', 'Budget', 'Resignation', 'Policy', 'Promotions'];
 
 // ==========================================
@@ -128,9 +112,9 @@ const ApprovalDetailDrawer = ({ approval, onClose, onAction }) => {
           <div style={{ fontSize: '14px', fontWeight: 600, color: THEME.textMuted, marginBottom: '20px' }}>Audit Trail</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
             <div style={{ position: 'absolute', left: '7px', top: '8px', bottom: '8px', width: '2px', background: THEME.border, zIndex: 0 }}></div>
-            {mockAuditTrail.map((audit, i) => (
+            {(approval.auditTrail || [{ action: "Request Submitted", time: approval.submittedAt, user: approval.requestedBy }]).map((audit, i, arr) => (
               <div key={i} style={{ display: 'flex', gap: '16px', zIndex: 1 }}>
-                <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: i === mockAuditTrail.length-1 ? THEME.primary : THEME.bgSurface, border: `2px solid ${i === mockAuditTrail.length-1 ? THEME.primary : THEME.borderLight}`, marginTop: '2px' }}></div>
+                <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: i === arr.length-1 ? THEME.primary : THEME.bgSurface, border: `2px solid ${i === arr.length-1 ? THEME.primary : THEME.borderLight}`, marginTop: '2px' }}></div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '14px', color: THEME.textMain }}>{audit.action}</div>
                   <div style={{ color: THEME.textMuted, fontSize: '12px', marginTop: '4px' }}>{audit.user} • {audit.time}</div>

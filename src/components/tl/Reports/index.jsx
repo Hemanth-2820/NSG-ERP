@@ -12,7 +12,7 @@ const Reports = () => {
     const fetchReports = async () => {
       try {
         const token = localStorage.getItem('nsg_jwt_token');
-        const res = await fetch('http://localhost:8000/team-lead/reports', {
+        const res = await fetch('/api/team-lead/reports', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

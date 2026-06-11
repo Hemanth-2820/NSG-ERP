@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import styles from './approvals.module.css';
-import { leaveRequests, timesheetReviews, wfhRequests, attendanceCorrections } from './mockData';
 import { AlertTriangle, MapPin, CheckCircle, Clock, FileText, Camera, GitCommit, Calendar, DollarSign } from 'lucide-react';
 
 const Approvals = ({ db, onUpdateDb }) => {
@@ -12,7 +11,7 @@ const Approvals = ({ db, onUpdateDb }) => {
   const fetchLeaves = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('/api/tl-portal/leaves/pending', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('/api/team-lead/leaves/pending', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         // Format to match UI expectations
@@ -64,7 +63,7 @@ const Approvals = ({ db, onUpdateDb }) => {
   const fetchExpenses = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('/api/tl-portal/expenses/pending', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('/api/team-lead/expenses/pending', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         const formatted = data.map(c => ({
@@ -83,8 +82,8 @@ const Approvals = ({ db, onUpdateDb }) => {
     } catch (e) { console.error(e); }
   };
 
-  const [timesheets, setTimesheets] = useState(timesheetReviews);
-  const [wfhs, setWfhs] = useState(wfhRequests);
+  const [timesheets, setTimesheets] = useState([]);
+  const [wfhs, setWfhs] = useState([]);
 
   const [selectedId, setSelectedId] = useState(null);
 
@@ -98,7 +97,7 @@ const Approvals = ({ db, onUpdateDb }) => {
       const token = localStorage.getItem('nsg_jwt_token');
       if (activeTab === 'leave') {
         const action = actionType === 'approve' ? 'approve' : 'reject';
-        await fetch(`/api/tl-portal/leaves/${id}/${action}`, {
+        await fetch(`/api/team-lead/leaves/${id}/${action}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -114,7 +113,7 @@ const Approvals = ({ db, onUpdateDb }) => {
         fetchCorrections();
       } else if (activeTab === 'expense') {
         const action = actionType === 'approve' ? 'approve' : 'reject';
-        await fetch(`/api/tl-portal/expenses/${id}/${action}`, {
+        await fetch(`/api/team-lead/expenses/${id}/${action}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });

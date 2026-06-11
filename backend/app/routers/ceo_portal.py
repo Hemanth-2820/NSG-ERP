@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date, datetime
@@ -167,11 +168,14 @@ def get_dashboard_summary(current_user: models.User = Depends(security.get_curre
     total_headcount = db.query(models.User).filter(models.User.role == "employee", models.User.status == "active").count()
     active_blockers = db.query(models.Escalation).filter(models.Escalation.resolved == False).count()
     
-    # Pendings count
-    pending_payroll = db.query(models.PayrollRun).filter(models.PayrollRun.status == "maker_signed").count()
-    pending_loans = db.query(models.Loan).filter(models.Loan.status == "active", models.Loan.outstanding_balance > 0).count() # Simply active loans
+    # Pendings count (PayrollRun table not yet seeded; graceful fallback)
+    try:
+        pending_payroll = db.query(models.PayrollRun).filter(models.PayrollRun.status == "maker_signed").count()
+    except Exception:
+        pending_payroll = 0
+    pending_loans = db.query(models.Loan).filter(models.Loan.status == "active", models.Loan.outstanding_balance > 0).count()
     pending_claims = db.query(models.ExpenseClaim).filter(models.ExpenseClaim.status == "pending").count()
-    pending_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.status == "tl_approved").count() # ready for final sign-off
+    pending_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.status == "tl_approved").count()
     
     total_approvals = pending_payroll + pending_claims + pending_leaves
     

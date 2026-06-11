@@ -594,38 +594,34 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
     e.preventDefault();
     if (!editChannelName.trim()) return;
     const formattedName = editChannelName.toLowerCase().replace(/\s+/g, '-');
-    if(formattedName !== selectedChannel && channels.includes(formattedName)) {
+    if(formattedName !== selectedChannel && dbChannels.find(c => c.id === formattedName)) {
       alert("Channel name already exists.");
       return;
     }
     
-    setChannels(prev => prev.map(c => c === selectedChannel ? formattedName : c));
-    setChannelMembers(prev => {
-      const next = { ...prev };
-      next[formattedName] = next[selectedChannel];
-      if (formattedName !== selectedChannel) delete next[selectedChannel];
-      return next;
+    const updated = dbChannels.map(c => {
+      if (c.id === selectedChannel) {
+        return { ...c, id: formattedName, name: '#' + formattedName.replace(/^#+/, '') };
+      }
+      return c;
     });
-    setMessages(prev => {
-      const next = { ...prev };
-      next[formattedName] = next[selectedChannel];
-      if (formattedName !== selectedChannel) delete next[selectedChannel];
-      return next;
-    });
+    setDbChannels(updated); 
+    if(onUpdateDb) onUpdateDb({ ...db, chatChannels: updated });
     
     setSelectedChannel(formattedName);
     setIsEditChannelOpen(false);
   };
 
   const handleDeleteChannel = () => {
-    if (channels.length <= 1) {
+    if (dbChannels.length <= 1) {
       alert("You cannot delete the last channel.");
       return;
     }
     if (window.confirm(`Are you sure you want to delete #${selectedChannel}?`)) {
-      const newChannels = channels.filter(c => c !== selectedChannel);
-      setChannels(newChannels);
-      setSelectedChannel(newChannels[0]);
+      const newChannels = dbChannels.filter(c => c.id !== selectedChannel);
+      setDbChannels(newChannels); 
+      if(onUpdateDb) onUpdateDb({ ...db, chatChannels: newChannels });
+      setSelectedChannel(newChannels[0].id);
     }
     setIsChannelMenuOpen(false);
   };
@@ -1219,36 +1215,6 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
           peer={huddlePeer} 
           onClose={() => setHuddlePeer(null)} 
         />
-      )}
-
-      {/* ── View Members Modal ──────────────────────────────────────────────── */}
-      {showMembersModal && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(5px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
-          <div style={{ width: "400px", maxHeight: "70vh", backgroundColor: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderLeft: "4px solid var(--accent-pink)", padding: "24px", borderRadius: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "12px" }}>
-              <h3 style={{ margin: 0, color: "var(--accent-pink)" }}>Channel Members</h3>
-              <button type="button" style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }} onClick={() => setShowMembersModal(false)}>✕</button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
-              {(() => {
-                const membersList = chatChannels.find(c => c.id === activeRoomId)?.members || [];
-                const memberDetails = [];
-                if (membersList.includes("ceo")) memberDetails.push("John Doe (CEO)");
-                if (membersList.includes("hr")) memberDetails.push("Sarah Jenkins (HR)");
-                membersList.forEach(mId => {
-                  if (mId !== "ceo" && mId !== "hr") {
-                    const emp = db.employees?.find(e => String(e.id) === String(mId));
-                    if (emp) memberDetails.push(`${emp.name} (${emp.designation})`);
-                  }
-                });
-                if (memberDetails.length === 0) return <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>No members added yet.</div>;
-                return memberDetails.map((name, i) => (
-                  <div key={i} style={{ padding: "8px 12px", backgroundColor: "var(--bg-primary)", borderRadius: "8px", fontSize: "13px", color: "var(--text-primary)" }}>{name}</div>
-                ));
-              })()}
-            </div>
-          </div>
-        </div>
       )}
 
     </div>

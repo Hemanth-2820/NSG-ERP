@@ -14,6 +14,35 @@ router = APIRouter(
 )
 
 # ─── 1. TASKS SCHEMAS & ROUTES ────────────────────────────────────────────────
+class AnnouncementResponse(BaseModel):
+    id: int
+    title: str
+    body: str
+    priority: str
+    audience: str
+    author: str
+    date: str # derived from created_at
+
+    class Config:
+        from_attributes = True
+
+@router.get("/announcements", response_model=List[AnnouncementResponse])
+def get_announcements(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    anns = db.query(models.Announcement).order_by(models.Announcement.created_at.desc()).all()
+    res = []
+    for a in anns:
+        res.append(AnnouncementResponse(
+            id=a.id,
+            title=a.title,
+            body=a.body,
+            priority=a.priority,
+            audience=a.audience,
+            author=a.author,
+            date=a.created_at.strftime("%Y-%m-%d") if a.created_at else "N/A"
+        ))
+    return res
+
+# ─── 1.5 TASKS SCHEMAS & ROUTES ────────────────────────────────────────────────
 
 class SubtaskResponse(BaseModel):
     id: int
@@ -310,6 +339,74 @@ def get_my_payslips(current_user: models.User = Depends(security.get_current_use
 @router.get("/payroll/my-loans", response_model=List[LoanResponse])
 def get_my_loans(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     return db.query(models.Loan).filter(models.Loan.user_id == current_user.id).all()
+
+class CTCResponse(BaseModel):
+    earnings: List[dict]
+    deductions: List[dict]
+    total_earnings: float
+    total_deductions: float
+    net_take_home: float
+
+@router.get("/payroll/ctc", response_model=CTCResponse)
+def get_my_ctc(current_user: models.User = Depends(security.get_current_user)):
+    base_annual = 500000 + (current_user.grade or 1) * 200000
+    monthly_gross = base_annual / 12
+    basic = monthly_gross * 0.5
+    hra = monthly_gross * 0.2
+    sa = monthly_gross * 0.3
+    pf = basic * 0.12
+    pt = 200
+    tds = monthly_gross * 0.1
+    
+    return {
+        "earnings": [
+            {"label": "Basic Salary", "amount": round(basic)},
+            {"label": "HRA", "amount": round(hra)},
+            {"label": "Special Allowance", "amount": round(sa)},
+        ],
+        "deductions": [
+            {"label": "PF (Employee)", "amount": round(pf)},
+            {"label": "Professional Tax", "amount": round(pt)},
+            {"label": "TDS", "amount": round(tds)},
+        ],
+        "total_earnings": round(monthly_gross),
+        "total_deductions": round(pf + pt + tds),
+        "net_take_home": round(monthly_gross - (pf + pt + tds))
+    }
+
+class TDSSubmission(BaseModel):
+    sec80c: float
+    hra_rent: float
+    hra_city: str
+    sec80d: float
+
+class TDSDeclarationResponse(BaseModel):
+    id: int
+    employee_id: int
+    financial_year: str
+    declaration_type: str
+    declared_amount: float
+    proof_url: Optional[str]
+    status: str
+    verified_by: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+@router.get("/payroll/tds-declarations", response_model=List[TDSDeclarationResponse])
+def get_my_tds_declarations(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    """Return the current employee's TDS declarations."""
+    return db.query(models.TDSDeclaration).filter(models.TDSDeclaration.employee_id == current_user.id).all()
+
+@router.post("/payroll/tds-declarations")
+def submit_tds_declaration(req: TDSSubmission, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    # Simple implementation: log 80C and HRA
+    if req.sec80c > 0:
+        db.add(models.TDSDeclaration(employee_id=current_user.id, financial_year="2026-27", declaration_type="80C", declared_amount=req.sec80c, status="pending"))
+    if req.hra_rent > 0:
+        db.add(models.TDSDeclaration(employee_id=current_user.id, financial_year="2026-27", declaration_type="HRA", declared_amount=req.hra_rent, status="pending"))
+    db.commit()
+    return {"status": "success", "message": "TDS Declaration submitted successfully."}
 
 
 # ─── 5. PROFILE SCHEMAS & ROUTES ──────────────────────────────────────────────

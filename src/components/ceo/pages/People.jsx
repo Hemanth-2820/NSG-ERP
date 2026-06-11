@@ -2,14 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Search, Filter, Download, XCircle, Mail, Phone, Award, UserPlus, FileText, CalendarDays, Users, Building, ShieldCheck, TrendingUp } from 'lucide-react';
 import '../CEO.css';
 
-const MOCK_DATA = [
-  { id: 'EMP-104', name: 'Rajiv Sharma', dept: 'Engineering', role: 'Senior Frontend Dev', joinDate: '12 Jan 2023', status: 'Active', avatar: 'https://ui-avatars.com/api/?name=Rajiv+Sharma&background=2563EB&color=fff', email: 'rajiv.s@nsg.com', phone: '+91 98765 43210', leaves: { casual: 12, sick: 8 } },
-  { id: 'EMP-106', name: 'Amit Singh', dept: 'Sales', role: 'VP Sales', joinDate: '04 Mar 2021', status: 'On Leave', avatar: 'https://ui-avatars.com/api/?name=Amit+Singh&background=F59E0B&color=fff', email: 'amit.s@nsg.com', phone: '+91 98765 43212', leaves: { casual: 4, sick: 2 } },
-  { id: 'EMP-112', name: 'Priya Menon', dept: 'Marketing', role: 'Marketing Manager', joinDate: '15 Aug 2022', status: 'Active', avatar: 'https://ui-avatars.com/api/?name=Priya+Menon&background=10B981&color=fff', email: 'priya.m@nsg.com', phone: '+91 98765 43214', leaves: { casual: 10, sick: 5 } },
-  { id: 'EMP-118', name: 'Rahul Verma', dept: 'Engineering', role: 'Backend Engineer', joinDate: '22 Nov 2023', status: 'Active', avatar: 'https://ui-avatars.com/api/?name=Rahul+Verma&background=8B5CF6&color=fff', email: 'rahul.v@nsg.com', phone: '+91 98765 43215', leaves: { casual: 14, sick: 10 } },
-  { id: 'EMP-124', name: 'Anjali Desai', dept: 'Sales', role: 'Account Executive', joinDate: '10 Feb 2024', status: 'Active', avatar: 'https://ui-avatars.com/api/?name=Anjali+Desai&background=EF4444&color=fff', email: 'anjali.d@nsg.com', phone: '+91 98765 43216', leaves: { casual: 15, sick: 12 } },
-  { id: 'EMP-130', name: 'Vikram Reddy', dept: 'Engineering', role: 'DevOps Engineer', joinDate: '05 May 2022', status: 'Active', avatar: 'https://ui-avatars.com/api/?name=Vikram+Reddy&background=0EA5E9&color=fff', email: 'vikram.r@nsg.com', phone: '+91 98765 43218', leaves: { casual: 8, sick: 4 } },
-];
+
+
 
 export default function People() {
   const [employees, setEmployees] = useState([]);

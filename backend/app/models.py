@@ -631,5 +631,29 @@ class KeyResult(Base):
     objective = relationship("Objective", back_populates="krs")
 
 
+class Holiday(Base):
+    __tablename__ = "holidays"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    date = Column(String, nullable=False)  # ISO date string e.g. "2026-01-26"
+    type = Column(String, default="national")  # national, optional
 
 
+class LeavePolicy(Base):
+    __tablename__ = "leave_policies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String, nullable=False)         # CL, SL, EL, Maternity, Paternity
+    accrual_rule = Column(String, default="monthly")
+    max_balance = Column(Integer, nullable=False)
+    carryover_days = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+
+
+class CustomSchema(Base):
+    __tablename__ = "custom_schemas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    department = Column(String, nullable=False, index=True)
+    schema_fields = Column(Text, nullable=False, default="[]")  # JSON-serialized list

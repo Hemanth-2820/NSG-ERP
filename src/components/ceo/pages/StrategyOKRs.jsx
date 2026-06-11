@@ -2,41 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Target, Users, TrendingUp, TrendingDown, CheckCircle2, Link as LinkIcon, Edit2, X, Filter, BarChart2, AlertCircle } from 'lucide-react';
 import '../CEO.css';
 
-const MOCK_DATA = [
-  { 
-    id: 1, title: 'Achieve Market Leadership in Enterprise Segment', 
-    status: 'On Track', progress: 75, owner: 'Sales & Marketing', quarter: 'Q2', year: '2026',
-    krs: [
-      { id: 11, title: 'Increase Enterprise ARR by 40%', target: 40, current: 32, unit: '%', sprintLink: 'Sprint 24: Enterprise Expansion' },
-      { id: 12, title: 'Onboard 5 Fortune 500 clients', target: 5, current: 4, unit: 'clients' }
-    ]
-  },
-  { 
-    id: 2, title: 'Transform Digital Operational Excellence', 
-    status: 'At Risk', progress: 42, owner: 'IT Dept', quarter: 'Q2', year: '2026',
-    krs: [
-      { id: 21, title: 'Migrate legacy on-prem to Cloud', target: 100, current: 40, unit: '%', sprintLink: 'Sprint 22: AWS Migration' },
-      { id: 22, title: 'Reduce infra costs by 25%', target: 25, current: 10, unit: '%' }
-    ]
-  },
-  { 
-    id: 3, title: 'Global Talent Acquisition Drive', 
-    status: 'Off Track', progress: 20, owner: 'HR Dept', quarter: 'Q3', year: '2026',
-    krs: [
-      { id: 31, title: 'Hire 50 Senior Engineers', target: 50, current: 10, unit: 'hires', sprintLink: 'Sprint 28: EU Hiring' },
-      { id: 32, title: 'Launch Employer Branding Campaign', target: 100, current: 20, unit: '%' }
-    ]
-  },
-  { 
-    id: 4, title: 'Launch AI-Powered Core Product', 
-    status: 'On Track', progress: 60, owner: 'Product', quarter: 'Q2', year: '2026',
-    krs: [
-      { id: 41, title: 'Complete AI Beta Testing', target: 100, current: 80, unit: '%' },
-      { id: 42, title: 'Train 500 users on new features', target: 500, current: 300, unit: 'users' }
-    ]
-  }
-];
-
 const ProgressRing = ({ progress, color, size = 48, strokeWidth = 4 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -71,11 +36,11 @@ export default function StrategyOKRs() {
         const data = await res.json();
         setOkrs(data);
       } else {
-        setOkrs(MOCK_DATA);
+        setOkrs([]);
       }
     } catch (e) {
       console.error("Failed to fetch OKRs", e);
-      setOkrs(MOCK_DATA);
+      setOkrs([]);
     } finally {
       setLoading(false);
     }

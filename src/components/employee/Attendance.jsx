@@ -54,36 +54,7 @@ function getHaversineDistance(lat1, lon1, lat2, lon2) {
 
 // ─── Mock monthly log data ────────────────────────────────────────────────────
 
-function generateMockLog() {
-  const today = new Date();
-  const rows = [];
-  for (let d = 1; d <= today.getDate(); d++) {
-    const date = new Date(today.getFullYear(), today.getMonth(), d);
-    const day = date.getDay();
-    if (day === 0 || day === 6) {
-      rows.push({ date, status: 'holiday', inTime: null, outTime: null, hours: null });
-      continue;
-    }
-    if (d === today.getDate()) {
-      rows.push({ date, status: 'today', inTime: null, outTime: null, hours: null });
-      continue;
-    }
-    const statuses = ['present', 'present', 'present', 'wfh', 'present', 'absent', 'late'];
-    const status = statuses[d % statuses.length];
-    const inH  = status === 'late' ? 10 : 9;
-    const inM  = status === 'late' ? (15 + (d % 30)) : (d % 15);
-    const outH = 18;
-    const outM = d % 30;
-    rows.push({
-      date,
-      status,
-      inTime:  `${String(inH).padStart(2,'0')}:${String(inM).padStart(2,'0')}`,
-      outTime: `${String(outH).padStart(2,'0')}:${String(outM).padStart(2,'0')}`,
-      hours:   `${outH - inH}h ${outM}m`,
-    });
-  }
-  return rows.reverse();
-}
+
 
 const STATUS_CONFIG = {
   present:  { label: 'Present',  cls: 'att-log-pill--present'  },
