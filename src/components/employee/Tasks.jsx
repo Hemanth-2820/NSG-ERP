@@ -1,3 +1,4 @@
+// Crash fix applied
 import React, { useState, useEffect, useRef } from 'react';
 import './Tasks.css';
 
@@ -341,7 +342,7 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
 }
 
 // ─── EmpTasksPage (root) ──────────────────────────────────────────────────────
-export default function Tasks({ db, onUpdateDb }) {
+export default function Tasks() {
   const [selectedId, setSelectedId]   = useState(null);
   const [sprint, setSprint]           = useState('All Sprints');
   const [statusFilter, setStatusFilter] = useState('All');

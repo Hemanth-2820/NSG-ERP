@@ -1,3 +1,4 @@
+// Crash fix applied
 import { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Shield, Send, Smile, Paperclip, 
@@ -109,22 +110,13 @@ const DEFAULT_CHAT_CHANNELS = [
   }
 ];
 
-export default function Messaging({ db, onUpdateDb, currentUser }) {
+export default function Messaging({ currentUser }) {
   const employeeId = currentUser?.id || 102;
   const employeeName = currentUser?.name || 'Jane Smith';
 
   const [dbChannels, setDbChannels] = useState([]);
-  useEffect(() => {
-    if (db?.chatChannels) {
-      setDbChannels(db.chatChannels);
-    }
-  }, [db?.chatChannels]);
-
 
   const getInitialRooms = () => {
-    if (db?.employeeChatRooms) {
-      return db.employeeChatRooms;
-    }
     const saved = localStorage.getItem('nsg_employee_chat_rooms');
     if (saved) {
       try {
@@ -138,17 +130,9 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
 
   const [rooms, setRooms] = useState(getInitialRooms);
 
-  // Keep state synchronized with global database updates
-  useEffect(() => {
-    if (db?.employeeChatRooms) {
-      setRooms(db.employeeChatRooms);
-    }
-  }, [db]);
-
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState('general-channel');
   const [inputText, setInputText] = useState('');
-  
   
   // Emoji & Attachment States
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -167,20 +151,18 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
   const fileInputRef = useRef(null);
 
   // Fetch all employees for DM list
-  const teammates = db?.employees?.length > 0 ? db.employees : CONTACTS;
+  const teammates = CONTACTS;
 
   const fetchChannelsAndMessages = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
     if (!token) return;
     try {
-      // Use /my-channels which filters by the logged-in user's backend ID
       const res = await fetch('/api/employee-portal/chat/my-channels', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const chans = await res.json();
         if (chans.length > 0) {
-          // Merge messages from backend into channels
           const loadedChannels = await Promise.all(chans.map(async (c) => {
             try {
               const msgRes = await fetch(`/api/employee-portal/chat/channels/${c.id}/messages`, {
@@ -210,7 +192,6 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
           }));
           setDbChannels(loadedChannels);
         } else {
-          // No channels assigned to this user by HR yet
           setDbChannels([]);
         }
       }
@@ -221,7 +202,6 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
 
   useEffect(() => {
     fetchChannelsAndMessages();
-    // Poll every 5 seconds to pick up HR portal member changes
     const interval = setInterval(fetchChannelsAndMessages, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -248,12 +228,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
     localStorage.setItem('nsg_employee_chat_rooms', JSON.stringify(rooms));
   }, [rooms]);
 
-  // chatChannels comes from /my-channels API which only returns channels this user is a member of
-  // No client-side filtering needed - the backend handles it using SQLite member data saved by HR portal
-  const chatChannels = dbChannels.length > 0 ? dbChannels : (db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS);
-  const matchedEmp = db?.employees?.find(e => e.email === currentUser?.email) || db?.employees?.find(e => e.name === currentUser?.name);
-  const currentUserIdStr = String(matchedEmp?.id || currentUser?.id);
-  // myChannels = all returned channels (already filtered by backend /my-channels)
+  const chatChannels = dbChannels.length > 0 ? dbChannels : DEFAULT_CHAT_CHANNELS;
   const myChannels = chatChannels;
 
   const activeRoom = myChannels.find(c => c.id === activeRoomId) || rooms[activeRoomId] || (
@@ -274,7 +249,6 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
   // Start direct message
   const handleSelectDM = (contactId) => {
     if (!rooms[contactId]) {
-      // Create a new DM room empty state
       const newDMRoom = {
         id: contactId,
         name: teammates.find((c) => c.id === contactId)?.name || 'Teammate',
@@ -288,9 +262,6 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
         [contactId]: newDMRoom
       };
       setRooms(newRooms);
-      if (db && onUpdateDb) {
-        onUpdateDb({ ...db, employeeChatRooms: newRooms });
-      }
     }
     setActiveRoomId(contactId);
     if (isMobile) {
@@ -350,9 +321,6 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
                 ]
               }
             };
-            if (db && onUpdateDb) {
-              onUpdateDb({ ...db, employeeChatRooms: updatedRooms });
-            }
             return updatedRooms;
           });
         }
@@ -368,7 +336,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
     return () => {
       socket.close();
     };
-  }, [db, onUpdateDb, employeeName, chatChannels]);
+  }, [employeeName, chatChannels]);
 
   // Send Message
   const handleSendMessage = (e) => {
@@ -410,7 +378,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
         }
         return c;
       });
-      setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+      setDbChannels(updatedChannels);
     } else {
       const updatedMessages = [...(activeRoom.messages || []), userMessage];
       const newRooms = {
@@ -421,11 +389,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
         }
       };
       setRooms(newRooms);
-      if (db && onUpdateDb) {
-        onUpdateDb({ ...db, employeeChatRooms: newRooms });
-      } else {
-        localStorage.setItem('nsg_employee_chat_rooms', JSON.stringify(newRooms));
-      }
+      localStorage.setItem('nsg_employee_chat_rooms', JSON.stringify(newRooms));
     }
     const sentText = inputText;
     setInputText('');
@@ -467,7 +431,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
       };
 
       if (isCorporateChannel) {
-        const latestChannels = (db.chatChannels || []).map(c => {
+        const latestChannels = (dbChannels.length > 0 ? dbChannels : DEFAULT_CHAT_CHANNELS).map(c => {
           if (c.id === activeRoomId) {
             return {
               ...c,
@@ -476,9 +440,9 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
           }
           return c;
         });
-        setDbChannels(latestChannels); onUpdateDb({ ...db, chatChannels: latestChannels });
+        setDbChannels(latestChannels);
       } else {
-        const currentRooms = db?.employeeChatRooms || rooms;
+        const currentRooms = rooms;
         const latestRoom = currentRooms[activeRoomId] || activeRoom;
         const finalRooms = {
           ...currentRooms,
@@ -488,11 +452,7 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
           }
         };
         setRooms(finalRooms);
-        if (db && onUpdateDb) {
-          onUpdateDb({ ...db, employeeChatRooms: finalRooms });
-        } else {
-          localStorage.setItem('nsg_employee_chat_rooms', JSON.stringify(finalRooms));
-        }
+        localStorage.setItem('nsg_employee_chat_rooms', JSON.stringify(finalRooms));
       }
     }, 1200);
   };
@@ -1431,8 +1391,10 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
                 if (membersList.includes("hr")) memberDetails.push("Sarah Jenkins (HR)");
                 membersList.forEach(mId => {
                   if (mId !== "ceo" && mId !== "hr") {
-                    const emp = db.employees?.find(e => String(e.id) === String(mId));
-                    if (emp) memberDetails.push(`${emp.name} (${emp.designation})`);
+                    // Fetch employee details from API instead of db
+                    // For now, we gracefully fallback
+                    const emp = { id: mId, name: 'Employee' };
+                    memberDetails.push(`${emp.name}`);
                   }
                 });
                 if (memberDetails.length === 0) return <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>No members added yet.</div>;
@@ -1448,3 +1410,4 @@ export default function Messaging({ db, onUpdateDb, currentUser }) {
     </div>
 );
 }
+

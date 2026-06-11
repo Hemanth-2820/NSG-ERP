@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Lock, Edit } from 'lucide-react';
 
-export function ExitFnFView({ db, onUpdateDb }) {
+export function ExitFnFView() {
+  const [db, setDb] = useState({
+    assets: [],
+    resignations: [],
+    loans: [],
+    leaveBalances: [],
+    auditLogs: [],
+    employees: []
+  });
+  const onUpdateDb = setDb;
   const [exitTab, setExitTab] = useState('resignations'); // resignations | assets | fnf | noc
   const [selectedResignId, setSelectedResignId] = useState(1);
   const [relievingDate, setRelievingDate] = useState('2026-06-20');

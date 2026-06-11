@@ -1,9 +1,10 @@
+// Crash fix applied
 import { useState, useEffect } from 'react';
 import './Employee.css';
 
 const CURRENT_EMPLOYEE_ID = 102; // Jane Smith (logged-in employee)
 
-export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, currentUser }) {
+export default function EmployeeDashboard({ setActiveTab, currentUser }) {
   const employeeId = currentUser?.id || CURRENT_EMPLOYEE_ID;
   const employee = currentUser ? {
     id: currentUser.id,
@@ -11,12 +12,12 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
     designation: currentUser.designation || 'Senior Developer',
     department: currentUser.department || 'Engineering',
     employeeCode: currentUser.emp_id || 'NSG-EMP-102'
-  } : ((db?.employees || []).find(e => e.id === employeeId) || {
+  } : {
     name: 'Jane Smith',
     designation: 'Senior Developer',
     department: 'Engineering',
     employeeCode: 'NSG-EMP-102'
-  });
+  };
 
   // ── Clock-in state ────────────────────────────────────────────────
   const [clockedIn, setClockedIn] = useState(false);
@@ -117,6 +118,9 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
   const isLate = hour >= 10 && !clockedIn;
 
   // ── Dashboard Data Fetch ──────────────────────────────────────────
+  const userRole = (currentUser?.role || '').toLowerCase();
+  const hideTasks = userRole === 'hr' || userRole === 'ceo';
+
   const [dbData, setDbData] = useState({
     tasks: [],
     leaveBalances: null,
@@ -329,53 +333,55 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
         <div className="emp-grid">
 
           {/* ── Tasks ── */}
-          <div className="emp-card emp-grid__tasks">
-            <div className="emp-section-header" style={{ marginBottom: 14 }}>
-              <div className="emp-section-header__left">
-                <span style={{ fontSize: 16 }}>📋</span>
-                <span className="emp-section-header__title">My Active Tasks</span>
-                <span className="emp-badge-count" style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa' }}>{openTasks.length}</span>
+          {!hideTasks && (
+            <div className="emp-card emp-grid__tasks">
+              <div className="emp-section-header" style={{ marginBottom: 14 }}>
+                <div className="emp-section-header__left">
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <span className="emp-section-header__title">My Active Tasks</span>
+                  <span className="emp-badge-count" style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa' }}>{openTasks.length}</span>
+                </div>
+                <button
+                  style={{ fontSize: 12, background: 'none', border: '1px solid var(--border-color)', borderRadius: 8, padding: '5px 12px', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                  onClick={() => setActiveTab('tasks')}
+                >
+                  View All →
+                </button>
               </div>
-              <button
-                style={{ fontSize: 12, background: 'none', border: '1px solid var(--border-color)', borderRadius: 8, padding: '5px 12px', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                onClick={() => setActiveTab('tasks')}
-              >
-                View All →
-              </button>
-            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {openTasks.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
-                  🎉 No open tasks — great job!
-                </div>
-              )}
-              {openTasks.slice(0, 5).map(task => (
-                <div key={task.id} className="emp-task-row">
-                  <span className={`emp-priority ${priorityClass(task.priority)}`}>{task.priority}</span>
-                  <div style={{ flex: 1 }}>
-                    <div className="emp-task-title">{task.title}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                      {task.project} · Sprint: {task.sprint} · Due: {task.due}
-                    </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {openTasks.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
+                    🎉 No open tasks — great job!
                   </div>
-                  <span className="emp-status-chip" style={statusStyle(task.status)}>{task.status.replace('-', ' ')}</span>
-                </div>
-              ))}
-              {doneTasks.length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 700 }}>✅ Completed</div>
-                  {doneTasks.slice(0,2).map(task => (
-                    <div key={task.id} className="emp-task-row" style={{ opacity: 0.5 }}>
-                      <span className={`emp-priority ${priorityClass(task.priority)}`}>{task.priority}</span>
-                      <div className="emp-task-title emp-task-title--done">{task.title}</div>
-                      <span className="emp-status-chip" style={statusStyle(task.status)}>done</span>
+                )}
+                {openTasks.slice(0, 5).map(task => (
+                  <div key={task.id} className="emp-task-row">
+                    <span className={`emp-priority ${priorityClass(task.priority)}`}>{task.priority}</span>
+                    <div style={{ flex: 1 }}>
+                      <div className="emp-task-title">{task.title}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {task.project} · Sprint: {task.sprint} · Due: {task.due}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <span className="emp-status-chip" style={statusStyle(task.status)}>{task.status.replace('-', ' ')}</span>
+                  </div>
+                ))}
+                {doneTasks.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 700 }}>✅ Completed</div>
+                    {doneTasks.slice(0,2).map(task => (
+                      <div key={task.id} className="emp-task-row" style={{ opacity: 0.5 }}>
+                        <span className={`emp-priority ${priorityClass(task.priority)}`}>{task.priority}</span>
+                        <div className="emp-task-title emp-task-title--done">{task.title}</div>
+                        <span className="emp-status-chip" style={statusStyle(task.status)}>done</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── CEO Announcements ── */}
           <div className="emp-card" style={{ marginTop: 16 }}>
@@ -552,3 +558,4 @@ export default function EmployeeDashboard({ db, onUpdateDb, setActiveTab, curren
     </div>
   );
 }
+

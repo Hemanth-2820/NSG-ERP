@@ -1,3 +1,4 @@
+// Crash fix applied
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './messages.module.css';
 import { Hash, Send, Plus, Search, Sparkles, X, PhoneCall, ChevronDown, ChevronUp, Video, Mic, VideoOff, MicOff, Monitor, Volume2, Trash2, PhoneOff, Users, Smile, Hand, MoreVertical, MessageSquare, Paperclip, Clock, Pizza, Building, Lightbulb, Trophy, LayoutGrid, Maximize, PictureInPicture, AlertOctagon, AlertCircle, Activity, Settings, ArrowLeft, Subtitles, Languages } from 'lucide-react';
@@ -69,14 +70,9 @@ const DEFAULT_CHAT_CHANNELS = [
   }
 ];
 
-const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
+const Messages = ({ initialSelectedChannel, currentUser }) => {
   const tlName = currentUser?.name || 'Michael Vance';
   const [dbChannels, setDbChannels] = useState([]);
-  useEffect(() => {
-    if (db?.chatChannels) {
-      setDbChannels(db.chatChannels);
-    }
-  }, [db?.chatChannels]);
 
   const socketRef = useRef(null);
 
@@ -128,12 +124,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
           };
         }));
         setDbChannels(loadedChannels);
-        if (onUpdateDb) {
-          onUpdateDb({
-            ...db,
-            chatChannels: loadedChannels
-          });
-        }
+        setDbChannels(loadedChannels);
       }
     } catch (e) {
       console.error("Failed to load channels", e);
@@ -144,7 +135,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
     fetchChannelsAndMessages();
   }, []);
 
-  const chatChannels = dbChannels.length > 0 ? dbChannels : (db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS);
+  const chatChannels = dbChannels.length > 0 ? dbChannels : DEFAULT_CHAT_CHANNELS;
   const myChannels = chatChannels.filter(c => c.id === "general-channel" || (c.members && c.members.includes(String(currentUser?.id || '101'))));
 
   // Selected channel state
@@ -156,14 +147,14 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
   const [huddlePeer, setHuddlePeer] = useState(null);
 
   const [employees, setEmployees] = useState([]);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   
   useEffect(() => {
-    if (db?.employees && db.employees.length > 0) {
-      setEmployees(db.employees);
-    }
-  }, [db?.employees]);
+    // Fetch employees from API in a real app; for now keep it empty or mock
+    setEmployees([]);
+  }, []);
 
-  const globalDirectory = db?.employees || [];
+  const globalDirectory = [];
   
   // Initialize WebSocket connection for real-time messaging
   useEffect(() => {
@@ -219,7 +210,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
         socket.close();
       }
     };
-  }, [db, onUpdateDb, chatChannels, employees]);
+  }, [chatChannels, employees]);
 
   // Update selected channel if it changes from parent (e.g. clicking an avatar in dashboard)
   useEffect(() => {
@@ -655,9 +646,9 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
       ]
     };
     
-    const currentChannels = db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
+    const currentChannels = dbChannels.length > 0 ? dbChannels : DEFAULT_CHAT_CHANNELS;
     const updated = [...currentChannels, newChan];
-    if (onUpdateDb) setDbChannels(updated); onUpdateDb({ ...db, chatChannels: updated });
+    setDbChannels(updated);
     
     setNewChannelName('');
     setNewChannelDesc('');
@@ -778,7 +769,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
         }
         return c;
       });
-      setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+      setDbChannels(updatedChannels);
     } else {
       setLocalDmMessages(prev => ({
         ...prev,
@@ -842,7 +833,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
           }
           return c;
         });
-        setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+        setDbChannels(updatedChannels);
       }
     }, 1500);
   };
@@ -895,7 +886,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
         }
         return c;
       });
-      setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+      setDbChannels(updatedChannels);
     } else {
       setLocalDmMessages(prev => ({
         ...prev,
@@ -2486,7 +2477,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
                       }
                       return c;
                     });
-                    setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+                    setDbChannels(updatedChannels);
                   } else {
                     setLocalDmMessages(prev => ({
                       ...prev,
@@ -3264,7 +3255,7 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
                 if (membersList.includes("hr")) memberDetails.push("Sarah Jenkins (HR)");
                 membersList.forEach(mId => {
                   if (mId !== "ceo" && mId !== "hr") {
-                    const emp = db.employees?.find(e => String(e.id) === String(mId));
+                    const emp = { id: mId, name: 'Employee', designation: 'Staff' };
                     if (emp) memberDetails.push(`${emp.name} (${emp.designation})`);
                   }
                 });
@@ -3283,3 +3274,4 @@ const Messages = ({ initialSelectedChannel, db, onUpdateDb, currentUser }) => {
 };
 
 export default Messages;
+

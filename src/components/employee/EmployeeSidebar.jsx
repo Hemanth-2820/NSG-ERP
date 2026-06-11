@@ -5,7 +5,7 @@ import {
   Calendar, Clock, CheckSquare, Coins, GraduationCap
 } from 'lucide-react';
 
-export default function EmployeeSidebar({ activeTab, setActiveTab }) {
+export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }) {
   const isDashboardActive = activeTab === 'dashboard';
   const isAttendanceActive = activeTab === 'attendance';
   const isTimesheetActive = activeTab === 'timesheet';
@@ -25,6 +25,9 @@ export default function EmployeeSidebar({ activeTab, setActiveTab }) {
     borderLeftColor: '#10b981',
     backgroundColor: 'rgba(16, 185, 129, 0.05)'
   };
+
+  const userRole = (currentUser?.role || '').toLowerCase();
+  const hideTasks = userRole === 'hr' || userRole === 'ceo';
 
   return (
     <div className="nav-group">
@@ -61,14 +64,16 @@ export default function EmployeeSidebar({ activeTab, setActiveTab }) {
       </button>
 
       {/* Tasks Tab */}
-      <button
-        className={`nav-link ${isTasksActive ? 'active' : ''}`}
-        onClick={() => setActiveTab('tasks')}
-        style={isTasksActive ? activeStyle : {}}
-      >
-        <CheckSquare size={18} />
-        <span>Tasks</span>
-      </button>
+      {!hideTasks && (
+        <button
+          className={`nav-link ${isTasksActive ? 'active' : ''}`}
+          onClick={() => setActiveTab('tasks')}
+          style={isTasksActive ? activeStyle : {}}
+        >
+          <CheckSquare size={18} />
+          <span>Tasks</span>
+        </button>
+      )}
 
       {/* Leave Tab */}
       <button

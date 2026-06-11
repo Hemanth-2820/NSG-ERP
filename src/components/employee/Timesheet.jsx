@@ -48,22 +48,35 @@ function weekTotal(rows) {
 
 function AddTaskModal({ onAdd, onClose, existingIds, availableTasks }) {
   const available = availableTasks.filter(t => !existingIds.includes(t.id));
+  const [customTaskName, setCustomTaskName] = useState('');
+
+  const handleAddCustom = () => {
+    if (!customTaskName.trim()) return;
+    onAdd({
+      id: null, // Must be null so backend Pydantic Optional[int] doesn't throw 422
+      name: customTaskName.trim(),
+      sprint: 'General'
+    });
+    onClose();
+  };
+
   return (
     <div className="ts-modal-overlay" onClick={onClose}>
       <div className="ts-modal" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div className="ts-modal__title">Add Task to Timesheet</div>
-            <div className="ts-modal__sub">Pick a sprint task to track hours</div>
+            <div className="ts-modal__sub">Pick a sprint task or add a custom one</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts-text-dim)' }}>
             <X size={18} />
           </button>
         </div>
+
         <div className="ts-modal__list">
           {available.length === 0 ? (
-            <p style={{ color: 'var(--ts-text-muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
-              All sprint tasks already added.
+            <p style={{ color: 'var(--ts-text-muted)', fontSize: 13, textAlign: 'center', padding: '16px 0', margin: 0 }}>
+              No assigned sprint tasks. Add a custom task below.
             </p>
           ) : (
             available.map(t => (
@@ -76,8 +89,36 @@ function AddTaskModal({ onAdd, onClose, existingIds, availableTasks }) {
             ))
           )}
         </div>
-        <div className="ts-modal__actions">
-          <button className="ts-modal__cancel-btn" onClick={onClose}>Cancel</button>
+
+        <div style={{ padding: '16px', borderTop: '1px solid var(--ts-border)', background: 'var(--ts-bg-inner)', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ts-text)', marginBottom: 8 }}>Or add a custom activity</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input 
+              type="text" 
+              placeholder="e.g., Interviews, Team Meeting, Admin" 
+              value={customTaskName}
+              onChange={e => setCustomTaskName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddCustom()}
+              style={{ 
+                flex: 1, padding: '8px 12px', borderRadius: 6, 
+                border: '1px solid var(--ts-border)', 
+                background: 'var(--ts-bg-card)', color: '#fff', fontSize: 13 
+              }}
+            />
+            <button 
+              onClick={handleAddCustom}
+              disabled={!customTaskName.trim()}
+              style={{ 
+                padding: '8px 16px', borderRadius: 6, 
+                background: customTaskName.trim() ? 'var(--ts-violet)' : 'var(--ts-border)', 
+                color: customTaskName.trim() ? '#fff' : 'var(--ts-text-muted)', 
+                border: 'none', cursor: customTaskName.trim() ? 'pointer' : 'not-allowed', 
+                fontWeight: 600, fontSize: 13, transition: 'background 0.2s'
+              }}
+            >
+              Add
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -397,7 +438,7 @@ export default function Timesheet() {
 
         {/* Task rows */}
         {rows.map((row, rowIdx) => (
-          <div key={row.taskId} style={{
+          <div key={rowIdx} style={{
             display: 'grid',
             gridTemplateColumns: '180px repeat(5, 1fr) 80px 36px',
             borderBottom: '1px solid var(--ts-border-subtle)',

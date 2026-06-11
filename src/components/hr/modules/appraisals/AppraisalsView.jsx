@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { notify } from '../../utils/notify';
 
-export function AppraisalsView({ db, onUpdateDb }) {
+export function AppraisalsView() {
+  const [db, setDb] = useState({ auditLogs: [] });
+  const onUpdateDb = setDb;
   const [appraisalTab, setAppraisalTab] = useState('proposals'); // proposals | cycles | scorecards | promotions
   const [selectedEmpId, setSelectedEmpId] = useState(104);
 

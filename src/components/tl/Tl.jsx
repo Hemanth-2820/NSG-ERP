@@ -4,6 +4,7 @@ import Team from './Team/team.module';
 import Projects from './Projects/projects.index';
 import Tasks from './Tasks/index';
 import Attendance from './Attendance/TeamAttendance';
+import ErrorBoundary from './ErrorBoundary';
 import Timesheets from './Timesheets/index';
 import Reports from './Reports/index';
 import Escalations from './Escalations/index';
@@ -11,22 +12,22 @@ import Approvals from './Approvals/index';
 import MessagingAndMeet from './Messaging & Meet/messages.module.index';
 import Performance from './Performance/index';
 
-export default function Tl({ activeTab, setActiveTab, db, onUpdateDb, currentUser }) {
+export default function Tl({ activeTab, setActiveTab, currentUser }) {
   const [selectedChatUser, setSelectedChatUser] = useState(null);
 
   return (
     <div className="component-container">
       {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} setSelectedChatUser={setSelectedChatUser} />}
       {activeTab === 'team' && <Team setActiveTab={setActiveTab} />}
-      {activeTab === 'projects' && <Projects db={db} onUpdateDb={onUpdateDb} />}
-      {activeTab === 'tasks' && <Tasks db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />}
-      {activeTab === 'attendance' && <Attendance db={db} onUpdateDb={onUpdateDb} />}
-      {activeTab === 'timesheets' && <Timesheets db={db} onUpdateDb={onUpdateDb} />}
-      {activeTab === 'approvals' && <Approvals db={db} onUpdateDb={onUpdateDb} />}
+      {activeTab === 'projects' && <Projects />}
+      {activeTab === 'tasks' && <Tasks currentUser={currentUser} />}
+      {activeTab === 'attendance' && <Attendance />}
+      {activeTab === 'timesheets' && <Timesheets />}
+      {activeTab === 'approvals' && <Approvals />}
       {activeTab === 'reports' && <Reports />}
       {activeTab === 'escalations' && <Escalations />}
-      {activeTab === 'messaging' && <MessagingAndMeet initialSelectedChannel={selectedChatUser} db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />}
-      {activeTab === 'performance' && <Performance db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />}
+      {activeTab === 'messaging' && <ErrorBoundary><MessagingAndMeet initialSelectedChannel={selectedChatUser} currentUser={currentUser} /></ErrorBoundary>}
+      {activeTab === 'performance' && <Performance currentUser={currentUser} />}
       
       {activeTab !== 'dashboard' && activeTab !== 'team' && activeTab !== 'projects' && activeTab !== 'tasks' && activeTab !== 'attendance' && activeTab !== 'timesheets' && activeTab !== 'approvals' && activeTab !== 'reports' && activeTab !== 'escalations' && activeTab !== 'messaging' && activeTab !== 'performance' && (
         <>

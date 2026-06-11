@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Users, CalendarCheck, GitCommit, X, Check, AlertTriangle } from 'lucide-react';
 import styles from './teamTimesheets.module.css';
 
-const TeamTimesheets = ({ db, onUpdateDb }) => {
+const TeamTimesheets = () => {
   const [activeTab, setActiveTab] = useState('table');
   const [timesheets, setTimesheets] = useState([]);
 

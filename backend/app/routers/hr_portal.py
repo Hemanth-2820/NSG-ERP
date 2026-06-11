@@ -501,6 +501,8 @@ def get_dashboard_metrics(current_user: models.User = Depends(security.get_curre
     ongoing_pips = db.query(models.PIP).filter(models.PIP.status == "ongoing").count()
     pending_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.status == "pending").count()
     pending_expenses = db.query(models.ExpenseClaim).filter(models.ExpenseClaim.status == "pending").count()
+    pending_exits = db.query(models.Resignation).filter(models.Resignation.status == "pending").count()
+    unresolved_grievances = db.query(models.DisciplinaryTicket).filter(models.DisciplinaryTicket.status == "issued").count()
 
     return {
         "totalEmployees": total_employees,
@@ -509,7 +511,9 @@ def get_dashboard_metrics(current_user: models.User = Depends(security.get_curre
         "activeCandidates": active_candidates,
         "ongoingPips": ongoing_pips,
         "pendingLeaves": pending_leaves,
-        "pendingExpenses": pending_expenses
+        "pendingExpenses": pending_expenses,
+        "pendingExits": pending_exits,
+        "unresolvedGrievances": unresolved_grievances
     }
 
 # 2. Recruitment Module (ATS Board)

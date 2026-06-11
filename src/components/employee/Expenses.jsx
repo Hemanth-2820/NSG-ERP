@@ -1,3 +1,4 @@
+// Crash fix applied
 import React, { useState, useEffect } from 'react';
 import ExpenseForm from './ExpenseForm';
 import ReimbursementTracker from './ReimbursementTracker';
@@ -13,7 +14,7 @@ const defaultClaims = [
   { id: 'EXP-104', date: '2026-05-25', category: 'client', amount: 1200, description: 'Dinner with international stakeholder', tlStatus: 'denied', hrStatus: 'pending', payrollStatus: 'pending', receiptName: 'restaurant_bill.png' }
 ];
 
-export default function Expenses({ db, onUpdateDb, currentUser }) {
+export default function Expenses({ currentUser }) {
   const employeeId = currentUser?.id || 102;
 
   const [claims, setClaims] = useState([]);
@@ -534,3 +535,4 @@ export default function Expenses({ db, onUpdateDb, currentUser }) {
     </div>
   );
 }
+

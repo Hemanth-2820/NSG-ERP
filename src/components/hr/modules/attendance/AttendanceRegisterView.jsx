@@ -1,7 +1,9 @@
+// Crash fix applied
 import { useState } from 'react';
 import { Clock, Calendar, List } from 'lucide-react';
 
-export function AttendanceRegisterView({ db, onUpdateDb }) {
+export function AttendanceRegisterView() {
+  const [db, onUpdateDb] = useState({ employees: [], attendanceCorrections: [], attendanceLogs: [], notifications: [] });
   const [viewMode, setViewMode] = useState('list');
   const [showRoster, setShowRoster] = useState(false);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -391,3 +393,4 @@ export function AttendanceRegisterView({ db, onUpdateDb }) {
     </div>
   );
 }
+

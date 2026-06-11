@@ -1,3 +1,4 @@
+// Crash fix applied
 import React from 'react';
 import Dashboard from './pages/Dashboard';
 import Finance from './pages/Finance';
@@ -14,9 +15,9 @@ import Vendors from './pages/Vendors';
 import DocumentVault from './pages/DocumentVault';
 import './CEO.css';
 
-export default function Ceo({ activeTab, db, onUpdateDb, queryParams, setQueryParams, currentUser }) {
+export default function Ceo({ activeTab, queryParams, setQueryParams, currentUser }) {
   const renderContent = () => {
-    const props = { db, onUpdateDb, queryParams, setQueryParams, currentUser };
+    const props = { queryParams, setQueryParams, currentUser };
     switch (activeTab) {
       case 'dashboard': return <Dashboard {...props} />;
       case 'companySetup': return <CompanySetup {...props} />;
@@ -41,4 +42,5 @@ export default function Ceo({ activeTab, db, onUpdateDb, queryParams, setQueryPa
     </div>
   );
 }
+
 

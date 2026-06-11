@@ -2,11 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { notify } from '../../utils/notify';
 
-export function OnboardingView({ db, onUpdateDb, queryParams, setQueryParams }) {
+export function OnboardingView({ queryParams, setQueryParams }) {
+  const [db, setDb] = useState({
+    employees: [],
+    auditLogs: [],
+    onboardingTasks: null,
+    esignRequests: null,
+    trainingProgress: null,
+    onboardingTemplates: null
+  });
+  const onUpdateDb = setDb;
   useEffect(() => {
     const syncOnboardingData = async () => {
       const token = localStorage.getItem('nsg_jwt_token');
-      if (!token || !db) return;
+      if (!token) return;
 
       try {
         const headers = { Authorization: `Bearer ${token}` };

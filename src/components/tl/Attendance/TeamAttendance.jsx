@@ -19,7 +19,7 @@ const monthsList = [
 const currentYearVal = new Date().getFullYear();
 const yearsList = Array.from({ length: currentYearVal - 2024 + 1 }, (_, i) => 2024 + i);
 
-const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
+const TeamAttendance = ({ onBack }) => {
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // current month
   const [selectedYear, setSelectedYear] = useState(2026);
@@ -293,12 +293,8 @@ const TeamAttendance = ({ onBack, db, onUpdateDb }) => {
       read: false
     };
 
-    if (db && onUpdateDb) {
-      onUpdateDb({
-        ...db,
-        notifications: [...(db.notifications || []), newNotification]
-      });
-    }
+    // In a real app, send this notification to the backend via POST
+    // fetch('/api/notifications', { method: 'POST', body: JSON.stringify(newNotification) })
 
     const newSet = new Set(notifiedIds);
     newSet.add(notifyModal.alertId);

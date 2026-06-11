@@ -25,22 +25,11 @@ const defaultDocs = [
   { id: 'degree', docType: 'Degree Certificate', status: 'missing', uploadedAt: null }
 ];
 
-export default function Profile({ db, onUpdateDb, currentUser }) {
-  // The logged-in employee ID is derived dynamically
+export default function Profile({ currentUser }) {
   const EMPLOYEE_ID = currentUser?.id || 102;
-  const empRecord = db?.employees?.find(e => e.id === EMPLOYEE_ID) || null;
+  const [liveProfile, setLiveProfile] = useState(null);
 
-  // --- Derive initial states from db.employees if available, else localStorage/defaults ---
   const getInitialPersonal = () => {
-    if (empRecord) {
-      return {
-        dob: empRecord.dob || defaultDetails.dob,
-        gender: empRecord.gender || defaultDetails.gender,
-        address: empRecord.address || defaultDetails.address,
-        emergencyContactName: empRecord.emergencyContactName || defaultDetails.emergencyContactName,
-        emergencyContactPhone: empRecord.emergencyContactPhone || defaultDetails.emergencyContactPhone
-      };
-    }
     const saved = localStorage.getItem('nsg_employee_profile_details');
     if (saved) {
       try {
@@ -59,29 +48,14 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
 
   const [personalDetails, setPersonalDetails] = useState(getInitialPersonal);
 
-  // Bank data: from db.employees bank fields
   const getInitialBank = () => {
-    if (empRecord && empRecord.bank_name) {
-      return {
-        bankName: empRecord.bank_name,
-        holderName: empRecord.name || defaultBank.holderName,
-        accountNumber: empRecord.account_number || defaultBank.accountNumber,
-        ifscCode: empRecord.ifsc_code || defaultBank.ifscCode,
-        status: empRecord.bank_status || 'verified'
-      };
-    }
     const saved = localStorage.getItem('nsg_employee_profile_bank');
     return saved ? JSON.parse(saved) : defaultBank;
   };
 
   const [bankData, setBankData] = useState(getInitialBank);
 
-  // Docs: from db.documents if available, else localStorage/defaults
   const getInitialDocs = () => {
-    if (db?.documents) {
-      const empDocs = db.documents.filter(d => d.employee_id === EMPLOYEE_ID);
-      if (empDocs.length > 0) return empDocs;
-    }
     const saved = localStorage.getItem('nsg_employee_profile_docs');
     return saved ? JSON.parse(saved) : defaultDocs;
   };
@@ -94,7 +68,6 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   
-  // Details form fields
   const [dob, setDob] = useState(personalDetails.dob);
   const [gender, setGender] = useState(personalDetails.gender);
   const [address, setAddress] = useState(personalDetails.address);
@@ -104,15 +77,30 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
   const [toast, setToast] = useState(null);
   const [detailsErrors, setDetailsErrors] = useState({});
 
-  // Image Cropping Dialog states
   const [croppedImageSrc, setCroppedImageSrc] = useState(null);
   const [showCropModal, setShowCropModal] = useState(false);
 
-  // Responsive / Viewport states
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [expandedSection, setExpandedSection] = useState('photo'); // 'photo', 'details', 'bank', 'docs'
+  const [expandedSection, setExpandedSection] = useState('photo');
 
-  // --- Resize Listener ---
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const res = await fetch('/api/employee-portal/profile/details', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setLiveProfile(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile', err);
+      }
+    };
+    fetchProfileData();
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -121,7 +109,6 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Sync to LocalStorage ---
   useEffect(() => {
     localStorage.setItem('nsg_employee_profile_details', JSON.stringify(personalDetails));
   }, [personalDetails]);
@@ -134,7 +121,6 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
     localStorage.setItem('nsg_employee_profile_docs', JSON.stringify(docs));
   }, [docs]);
 
-  // --- DOB Age Validator ---
   const checkAge = (dobString) => {
     if (!dobString) return { valid: false, message: 'Date of Birth is required.' };
     const birthDate = new Date(dobString);
@@ -156,23 +142,19 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
     return { valid: true };
   };
 
-  // --- Handlers ---
   const handleSaveDetails = (e) => {
     e.preventDefault();
     const newErrors = {};
 
-    // Validate DOB
     const ageCheck = checkAge(dob);
     if (!ageCheck.valid) {
       newErrors.dob = ageCheck.message;
     }
 
-    // Validate Emergency Contact Name
     if (!emergencyContactName.trim()) {
       newErrors.emergencyContactName = 'Emergency contact name is required.';
     }
 
-    // Validate Emergency Phone (Indian Mobile standard: ^(\+91[-\s]?)?[0]?[6-9]\d{9}$)
     const cleanPhone = emergencyContactPhone.trim().replace(/[\s-]/g, '');
     const phoneRegex = /^(\+91)?[0]?[6-9]\d{9}$/;
     if (!emergencyContactPhone.trim()) {
@@ -181,7 +163,6 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
       newErrors.emergencyContactPhone = 'Invalid format (e.g. +91 98765 43210 or 9876543210).';
     }
 
-    // Validate Address
     if (!address.trim()) {
       newErrors.address = 'Address is required.';
     } else if (address.length > 500) {
@@ -202,17 +183,7 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
       emergencyContactPhone: emergencyContactPhone.trim()
     };
     setPersonalDetails(updatedPersonal);
-
-    // Write back to shared db.employees so HR portal sees the update
-    if (db && onUpdateDb) {
-      const updatedEmployees = (db.employees || []).map(e =>
-        e.id === EMPLOYEE_ID ? { ...e, ...updatedPersonal } : e
-      );
-      onUpdateDb({ ...db, employees: updatedEmployees });
-    } else {
-      // Fallback to localStorage if db not available
-      localStorage.setItem('nsg_employee_profile_details', JSON.stringify(updatedPersonal));
-    }
+    localStorage.setItem('nsg_employee_profile_details', JSON.stringify(updatedPersonal));
 
     setIsEditingDetails(false);
     showToast('Personal details updated successfully');
@@ -221,7 +192,7 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
   const handleUpdateBank = async (updatedBank) => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/employee-portal/profile/update-bank', {
+      const res = await fetch('/api/employee-portal/profile/update-bank', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
@@ -240,12 +211,6 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
   const handleSimulateBankVerify = (status) => {
     const updated = { ...bankData, status };
     setBankData(updated);
-    if (db && onUpdateDb) {
-      const updatedEmployees = (db.employees || []).map(e =>
-        e.id === EMPLOYEE_ID ? { ...e, bank_status: status } : e
-      );
-      onUpdateDb({ ...db, employees: updatedEmployees });
-    }
     showToast(`Bank account status: ${status}`);
   };
 
@@ -320,12 +285,11 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
   // --- Sub-renderers to keep code clean and modular ---
 
   const renderPhotoSection = () => {
-    // Live data from db.employees — falls back to hardcoded if db not available
-    const liveName = empRecord?.name || 'Jane Smith';
-    const liveEmpId = empRecord?.emp_id || 'NSG-0102';
-    const liveEmail = empRecord?.email || 'jane.smith@hnms.com';
-    const liveDept = empRecord?.department || 'IT';
-    const liveDesignation = empRecord?.designation || 'Systems Executive';
+    const liveName = liveProfile?.name || 'Jane Smith';
+    const liveEmpId = liveProfile?.id ? `NSG-0${liveProfile.id}` : 'NSG-0102';
+    const liveEmail = liveProfile?.email || 'jane.smith@hnms.com';
+    const liveDept = liveProfile?.department || 'IT';
+    const liveDesignation = liveProfile?.role || 'Systems Executive';
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', position: 'relative' }}>
@@ -359,7 +323,7 @@ export default function Profile({ db, onUpdateDb, currentUser }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Home size={14} style={{ color: 'var(--text-muted)' }} />
-            <span>{liveDept} — {empRecord?.status === 'active' ? 'Active Employee' : empRecord?.status || 'Active Employee'}</span>
+            <span>{liveDept} — {liveProfile?.is_active ? 'Active Employee' : 'Inactive Employee'}</span>
           </div>
         </div>
       </div>

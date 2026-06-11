@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styles from './approvals.module.css';
 import { AlertTriangle, MapPin, CheckCircle, Clock, FileText, Camera, GitCommit, Calendar, DollarSign } from 'lucide-react';
 
-const Approvals = ({ db, onUpdateDb }) => {
+const Approvals = () => {
   const [activeTab, setActiveTab] = useState('leave');
   
   const [leaves, setLeaves] = useState([]);

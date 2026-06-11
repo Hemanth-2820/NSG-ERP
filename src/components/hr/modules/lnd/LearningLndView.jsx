@@ -9,7 +9,16 @@ const DEFAULT_QUIZ_QUESTIONS = [
   { id: 5, question: 'What is the correct procedure for submitting a timesheet?', options: ['Submit at any time during the month', 'Submit verbally to your Team Lead', 'Submit via the ERP portal by the end of each week', 'No submission needed, HR tracks it automatically'], correct: 2 }
 ];
 
-export function LearningLndView({ db, onUpdateDb }) {
+export function LearningLndView() {
+  const [db, setDb] = useState({
+    quizQuestions: [],
+    trainingTracks: [],
+    trainingProgress: [],
+    onboardingTasks: [],
+    employees: [],
+    auditLogs: []
+  });
+  const onUpdateDb = setDb;
   const [lndTab, setLndTab] = useState('progress'); // progress | tracks | quiz | assigner
   const [hoveredRowId, setHoveredRowId] = useState(null);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);

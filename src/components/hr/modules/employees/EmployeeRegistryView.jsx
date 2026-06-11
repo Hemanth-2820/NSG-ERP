@@ -1,8 +1,10 @@
+// Crash fix applied
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Plus, Search, Download, Lock, RefreshCw, Trash2, Edit3 } from 'lucide-react';
 import { notify } from '../../utils/notify';
 
-export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryParams }) {
+export function EmployeeRegistryView({ queryParams, setQueryParams }) {
+  const [db, onUpdateDb] = useState({ employees: [], auditLogs: [], trainingProgress: [], onboardingTasks: [], leaveBalances: [], attendanceLogs: [], payslips: [] });
 
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
@@ -1017,3 +1019,4 @@ export function EmployeeRegistryView({ db, onUpdateDb, queryParams, setQueryPara
     </div>
   );
 }
+

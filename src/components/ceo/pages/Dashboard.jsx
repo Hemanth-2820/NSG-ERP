@@ -8,7 +8,7 @@ import '../CEO.css';
 // ==========================================
 // DASHBOARD COMPONENT (INTEGRATED WITH REAL DATA)
 // ==========================================
-export default function Dashboard({ db, onUpdateDb }) {
+export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [summaryData, setSummaryData] = useState({

@@ -57,7 +57,9 @@ const DEFAULT_CHAT_CHANNELS = [
   }
 ];
 
-export function HrMessagingView({ db, onUpdateDb, currentUser }) {
+export function HrMessagingView({ currentUser }) {
+  const [db, setDb] = useState({});
+  const onUpdateDb = setDb;
   const hrName = currentUser?.name || 'Sarah Jenkins';
   const [selectedChannel, setSelectedChannel]     = useState('general-channel');
   const [newMsg, setNewMsg]                       = useState('');

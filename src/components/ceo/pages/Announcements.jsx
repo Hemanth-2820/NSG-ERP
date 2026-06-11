@@ -48,7 +48,7 @@ const formatAnnDate = (dateStr) => {
   }
 };
 
-export default function Announcements({ db, onUpdateDb }) {
+export default function Announcements() {
   const [announcements, setAnnouncements] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [title, setTitle] = useState('');
@@ -68,20 +68,12 @@ export default function Announcements({ db, onUpdateDb }) {
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data);
-        if (onUpdateDb) {
-          onUpdateDb({
-            ...db,
-            announcements: data
-          });
-        }
       } else {
-        const local = db?.announcements && db.announcements.length > 0 ? db.announcements : mockAnnouncements;
-        setAnnouncements(local);
+        setAnnouncements(mockAnnouncements);
       }
     } catch (err) {
       console.error("Failed to fetch announcements", err);
-      const local = db?.announcements && db.announcements.length > 0 ? db.announcements : mockAnnouncements;
-      setAnnouncements(local);
+      setAnnouncements(mockAnnouncements);
     }
   };
 

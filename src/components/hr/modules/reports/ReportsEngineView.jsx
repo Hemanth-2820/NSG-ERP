@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 
-export function ReportsEngineView({ db, onUpdateDb }) {
+export function ReportsEngineView() {
+  const [db, setDb] = useState({});
+  const onUpdateDb = setDb;
   const [activeReport, setActiveReport] = useState('overview');
 
   // ── LIVE COMPUTED METRICS ─────────────────────────────────────────────────

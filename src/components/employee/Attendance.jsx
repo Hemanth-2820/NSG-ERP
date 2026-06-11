@@ -626,7 +626,7 @@ function CorrectionForm() {
 //  ROOT — EmpAttendancePage
 // ════════════════════════════════════════════════════════
 
-export default function Attendance({ db, onUpdateDb, currentUser }) {
+export default function Attendance({ currentUser }) {
   const employeeId = currentUser?.id || 102;
   // Clock state: idle | searching | clocked-in | already
   const [clockState, setClockState] = useState('idle');
@@ -718,7 +718,8 @@ export default function Attendance({ db, onUpdateDb, currentUser }) {
     setGpsStatus('searching');
     setToast(null);
 
-    const geofence = db?.geofenceSettings || {
+    const savedGeofence = localStorage.getItem('nsg_geofence_settings');
+    const geofence = savedGeofence ? JSON.parse(savedGeofence) : {
       enabled: true,
       latitude: 12.9716,
       longitude: 77.5946,

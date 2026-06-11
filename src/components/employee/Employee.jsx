@@ -12,7 +12,7 @@ import Payroll from './Payroll';
 import Learning from './Learning';
 import EmployeeDashboard from './EmployeeDashboard';
 
-export default function Employee({ activeTab, db, onUpdateDb, navigateTo, currentUser }) {
+export default function Employee({ activeTab, navigateTo, currentUser }) {
   // Helper: switch to an employee tab
   const setActiveTab = (tab) => {
     if (navigateTo) navigateTo('Employee', tab);
@@ -20,57 +20,57 @@ export default function Employee({ activeTab, db, onUpdateDb, navigateTo, curren
   };
 
   if (activeTab === 'dashboard') {
-    return <EmployeeDashboard db={db} onUpdateDb={onUpdateDb} setActiveTab={setActiveTab} currentUser={currentUser} />;
+    return <EmployeeDashboard setActiveTab={setActiveTab} currentUser={currentUser} />;
   }
 
   if (activeTab === 'attendance') {
-    return <Attendance db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Attendance currentUser={currentUser} />;
   }
 
   if (activeTab === 'timesheet') {
-    return <Timesheet db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Timesheet currentUser={currentUser} />;
   }
 
   if (activeTab === 'tasks') {
-    return <Tasks db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Tasks currentUser={currentUser} />;
   }
 
   if (activeTab === 'leave') {
-    return <Leave db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Leave currentUser={currentUser} />;
   }
 
   if (activeTab === 'payroll') {
-    return <Payroll db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Payroll currentUser={currentUser} />;
   }
 
   if (activeTab === 'expenses') {
-    return <Expenses db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Expenses currentUser={currentUser} />;
   }
 
   if (activeTab === 'profile') {
-    return <Profile db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Profile currentUser={currentUser} />;
   }
 
   if (activeTab === 'resignation') {
-    return <Resignation db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Resignation currentUser={currentUser} />;
   }
 
   if (activeTab === 'help') {
-    return <Help db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Help currentUser={currentUser} />;
   }
 
   if (activeTab === 'assets') {
-    return <Assets db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Assets currentUser={currentUser} />;
   }
 
   if (activeTab === 'messaging') {
-    return <Messaging db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Messaging currentUser={currentUser} />;
   }
 
   if (activeTab === 'learning') {
-    return <Learning db={db} onUpdateDb={onUpdateDb} currentUser={currentUser} />;
+    return <Learning currentUser={currentUser} />;
   }
 
   // Fallback: show dashboard
-  return <EmployeeDashboard db={db} onUpdateDb={onUpdateDb} setActiveTab={setActiveTab} currentUser={currentUser} />;
+  return <EmployeeDashboard setActiveTab={setActiveTab} currentUser={currentUser} />;
 }

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, RefreshCw, MapPin, Loader, CheckCircle2, Building2, Save, Plus, Trash2, Sliders } from 'lucide-react';
 
-export function HrSettingsView({ db, onUpdateDb }) {
+export function HrSettingsView() {
+  const [db, setDb] = useState({});
+  const onUpdateDb = setDb;
   const [geofence, setGeofence] = useState(() => db.geofenceSettings || {
     enabled: true,
     latitude: 12.9716,

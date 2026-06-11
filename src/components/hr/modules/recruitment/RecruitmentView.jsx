@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, FileText, ArrowRight } from 'lucide-react';
 import { notify } from '../../utils/notify';
 
-export function RecruitmentView({ db, onUpdateDb, queryParams, setQueryParams }) {
+export function RecruitmentView({ queryParams, setQueryParams }) {
   const subTab = queryParams?.get('subTab') || '';
   const showScheduler = subTab === 'schedule';
   const setShowScheduler = (val) => setQueryParams({ subTab: val ? 'schedule' : '' });
@@ -14,8 +14,7 @@ export function RecruitmentView({ db, onUpdateDb, queryParams, setQueryParams })
   const setShowAnalyzer = (val) => setQueryParams({ subTab: val ? 'analyzer' : '' });
 
   const candIdStr = queryParams?.get('candId');
-  const candidates = db?.candidates || [];
-
+  const [candidates, setCandidates] = useState([]);
   const selectedCandidate = candIdStr ? candidates.find(c => String(c.id) === candIdStr) : null;
   const setSelectedCandidate = (cand) => setQueryParams({ subTab: cand ? 'offer' : '', candId: cand ? String(cand.id) : '' });
 
@@ -76,17 +75,7 @@ export function RecruitmentView({ db, onUpdateDb, queryParams, setQueryParams })
       });
       if (res.ok) {
         const data = await res.json();
-        // Also fetch employees to keep complete sync
-        const empRes = await fetch('/api/hr-portal/employees', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const empData = empRes.ok ? await empRes.json() : db.employees;
-        
-        onUpdateDb({
-          ...db,
-          candidates: data,
-          employees: empData
-        });
+        setCandidates(data);
       }
     } catch (err) {
       console.error('Failed to fetch candidates/employees:', err);

@@ -11,7 +11,7 @@ const defaultChecklist = [
   { id: 'kt_upload', label: 'KT document upload', completed: false, fileName: null }
 ];
 
-export default function Resignation({ db, onUpdateDb, currentUser }) {
+export default function Resignation({ currentUser }) {
   const [resignationData, setResignationData] = useState(null);
   const [checklist, setChecklist] = useState(defaultChecklist);
   const [earlyReliefStatus, setEarlyReliefStatus] = useState(null);
@@ -22,7 +22,7 @@ export default function Resignation({ db, onUpdateDb, currentUser }) {
   const fetchResignation = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/employee-portal/resignation/status', {
+      const res = await fetch('/api/employee-portal/resignation/status', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -69,7 +69,7 @@ export default function Resignation({ db, onUpdateDb, currentUser }) {
   const handleResignSubmit = async (data) => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/employee-portal/resignation/submit', {
+      const res = await fetch('/api/employee-portal/resignation/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ reason: data.reason || 'Personal Reasons' })
@@ -143,7 +143,7 @@ export default function Resignation({ db, onUpdateDb, currentUser }) {
   const handleResetResignation = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/employee-portal/resignation/withdraw', {
+      const res = await fetch('/api/employee-portal/resignation/withdraw', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -275,9 +275,8 @@ export default function Resignation({ db, onUpdateDb, currentUser }) {
         {/* left/main area: Form OR Submission status card */}
         <div className="area-main">
           {resignationData ? (() => {
-              const dbRecord = db?.resignations?.find(r => r.employee_id === employeeId);
-              const hrStatus = dbRecord?.status || 'pending';
-              const confirmedLwd = dbRecord?.LWD || resignationData.lwdDate;
+              const hrStatus = resignationData.status || 'pending';
+              const confirmedLwd = resignationData.lwdDate;
               return (
                 <div className="status-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent-green)' }}>

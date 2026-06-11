@@ -1,3 +1,4 @@
+// Crash fix applied
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { 
   Hash, Send, Plus, Search, Sparkles, X, PhoneCall, ChevronDown, ChevronUp, 
@@ -63,15 +64,10 @@ const DEFAULT_CHAT_CHANNELS = [
   }
 ];
 
-export default function Messaging({ initialSelectedChannel, db, onUpdateDb, currentUser }) {
+export default function Messaging({ initialSelectedChannel, currentUser }) {
   const ceoName = currentUser?.name || 'John Doe';
   const [huddlePeer, setHuddlePeer] = useState(null);
   const [dbChannels, setDbChannels] = useState([]);
-  useEffect(() => {
-    if (db?.chatChannels) {
-      setDbChannels(db.chatChannels);
-    }
-  }, [db?.chatChannels]);
 
   const socketRef = useRef(null);
 
@@ -119,12 +115,6 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
           };
         }));
         setDbChannels(loadedChannels);
-        if (onUpdateDb) {
-          onUpdateDb({
-            ...db,
-            chatChannels: loadedChannels
-          });
-        }
       }
     } catch (e) {
       console.error("Failed to load channels", e);
@@ -136,7 +126,7 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
   }, []);
   
   // === MOCK DATA ===
-  const chatChannels = dbChannels.length > 0 ? dbChannels : (db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS);
+  const chatChannels = dbChannels.length > 0 ? dbChannels : DEFAULT_CHAT_CHANNELS;
   const myChannels = chatChannels.filter(c => c.id === "general-channel" || (c.members && c.members.includes(String(currentUser?.id || 'ceo'))));
 
   const [selectedChannel, setSelectedChannel] = useState(() => {
@@ -147,10 +137,18 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
   const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
-    if (db?.employees && db.employees.length > 0) {
-      setEmployees(db.employees);
-    }
-  }, [db?.employees]);
+    const fetchEmployees = async () => {
+      const token = localStorage.getItem('nsg_jwt_token');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/team-lead/team-members', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) setEmployees(await res.json());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchEmployees();
+  }, []);
 
   const [localDmMessages, setLocalDmMessages] = useState({
     'dm-3': [
@@ -261,7 +259,7 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
     return () => {
       socket.close();
     };
-  }, [db, onUpdateDb, chatChannels, employees]);
+  }, [chatChannels, employees]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -322,7 +320,7 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
         }
         return c;
       });
-      setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+      setDbChannels(updatedChannels);
     } else {
       setLocalDmMessages(prev => ({
         ...prev,
@@ -389,7 +387,7 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
         }
         return c;
       });
-      setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+      setDbChannels(updatedChannels);
     } else {
       setLocalDmMessages(prev => ({
         ...prev,
@@ -428,7 +426,7 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
         }
         return c;
       });
-      setDbChannels(updatedChannels); onUpdateDb({ ...db, chatChannels: updatedChannels });
+      setDbChannels(updatedChannels);
     } else {
       setLocalDmMessages(prev => ({
         ...prev,
@@ -568,9 +566,9 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
       console.error("Failed to save channel to backend:", err);
     }
 
-    const currentChannels = db?.chatChannels && db.chatChannels.length > 0 ? db.chatChannels : DEFAULT_CHAT_CHANNELS;
+    const currentChannels = dbChannels.length > 0 ? dbChannels : DEFAULT_CHAT_CHANNELS;
     const updated = [...currentChannels, newChan];
-    setDbChannels(updated); onUpdateDb({ ...db, chatChannels: updated });
+    setDbChannels(updated);
     
     setNewChannelName('');
     setIsCreateChannelOpen(false);
@@ -605,8 +603,7 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
       }
       return c;
     });
-    setDbChannels(updated); 
-    if(onUpdateDb) onUpdateDb({ ...db, chatChannels: updated });
+    setDbChannels(updated);
     
     setSelectedChannel(formattedName);
     setIsEditChannelOpen(false);
@@ -619,8 +616,7 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
     }
     if (window.confirm(`Are you sure you want to delete #${selectedChannel}?`)) {
       const newChannels = dbChannels.filter(c => c.id !== selectedChannel);
-      setDbChannels(newChannels); 
-      if(onUpdateDb) onUpdateDb({ ...db, chatChannels: newChannels });
+      setDbChannels(newChannels);
       setSelectedChannel(newChannels[0].id);
     }
     setIsChannelMenuOpen(false);
@@ -1220,3 +1216,4 @@ export default function Messaging({ initialSelectedChannel, db, onUpdateDb, curr
     </div>
 );
 }
+

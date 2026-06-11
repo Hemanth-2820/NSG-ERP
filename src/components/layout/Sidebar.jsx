@@ -8,7 +8,7 @@ import HrSidebar from '../hr/HrSidebar';
 import TlSidebar from '../tl/TlSidebar';
 import EmployeeSidebar from '../employee/EmployeeSidebar';
 
-export default function Sidebar({ activeRole, activeTab, setActiveTab }) {
+export default function Sidebar({ activeRole, activeTab, setActiveTab, currentUser }) {
   const currentRoleColor = {
     CEO: '#f59e0b',
     HR: '#ec4899',
@@ -39,6 +39,12 @@ export default function Sidebar({ activeRole, activeTab, setActiveTab }) {
 
   const RoleIconComponent = roleIcon;
 
+  const handleLogout = () => {
+    localStorage.removeItem('nsg_jwt_token');
+    window.location.hash = '#/login';
+    window.location.reload();
+  };
+
   return (
     <aside className="app-sidebar">
       {/* Brand Header */}
@@ -53,16 +59,21 @@ export default function Sidebar({ activeRole, activeTab, setActiveTab }) {
         {activeRole === 'CEO' && <CeoSidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
         {activeRole === 'HR' && <HrSidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
         {activeRole === 'TL' && <TlSidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
-        {activeRole === 'Employee' && <EmployeeSidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
+        {activeRole === 'Employee' && <EmployeeSidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} />}
       </nav>
 
       {/* Footer Settings & Actions */}
       <div className="sidebar-footer">
-        <button className="nav-link footer-link">
-          <Settings size={18} />
-          <span>System Settings</span>
-        </button>
-        <button className="nav-link footer-link logout">
+        {(activeRole === 'CEO' || activeRole === 'HR') && (
+          <button 
+            className={`nav-link footer-link ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <Settings size={18} />
+            <span>System Settings</span>
+          </button>
+        )}
+        <button className="nav-link footer-link logout" onClick={handleLogout}>
           <LogOut size={18} />
           <span>Logout</span>
         </button>

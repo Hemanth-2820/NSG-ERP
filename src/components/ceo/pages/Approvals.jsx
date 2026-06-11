@@ -1,3 +1,4 @@
+// Crash fix applied
 import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, XCircle, Search, Filter, MessageSquare, Clock, ArrowRight, User, AlertCircle, X, Check, TrendingUp
@@ -255,7 +256,7 @@ const ApprovalTable = ({ data, activeTab, selectedIds, onToggleCheck, onToggleAl
 // ==========================================
 // MAIN EXPORT (ApprovalsPage)
 // ==========================================
-export default function ApprovalsPage({ db, onUpdateDb }) {
+export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState('All');
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -661,3 +662,4 @@ export default function ApprovalsPage({ db, onUpdateDb }) {
     </div>
   );
 }
+

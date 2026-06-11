@@ -3,7 +3,7 @@ import styles from './projects.module.css';
 import { Briefcase, Calendar, Users, ListTodo, KanbanSquare, GitCommit, Search, Plus, Play, MoreVertical, Flag, Clock, X, HelpCircle, Eye, CheckCircle, AlertCircle, ChevronRight, AlertTriangle, Menu, CheckSquare, Paperclip, MessageSquare, User, Tag, Info, Lock, ChevronDown } from 'lucide-react';
 
 
-const Projects = ({ db, onUpdateDb }) => {
+const Projects = () => {
   const [activeProject, setActiveProject] = useState(null);
   const [activeView, setActiveView] = useState('board'); // board, create_sprint, kanban, timeline
 
@@ -402,13 +402,8 @@ const Projects = ({ db, onUpdateDb }) => {
                   todo: [...prev.todo, ...newTasks]
                 }));
 
-                if (db && onUpdateDb) {
-                  const currentTasks = Array.isArray(db.tasks) ? db.tasks : [];
-                  onUpdateDb({
-                    ...db,
-                    tasks: [...currentTasks, ...newDbTasks]
-                  });
-                }
+                // In a real app, this would POST to the backend
+                // For now, we just update local kanbanData state
 
                 setSprintBacklog([]);
               }

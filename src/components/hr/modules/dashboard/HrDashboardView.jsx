@@ -1,16 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, UserPlus, LogOut, Briefcase } from 'lucide-react';
 
-export function HrDashboardView({ db }) {
-  const employees = db?.employees || [];
-  const candidates = db?.candidates || [];
-  const disciplinaryTickets = db?.disciplinaryTickets || [];
-  const resignations = db?.resignations || [];
+export function HrDashboardView() {
+  const [metrics, setMetrics] = useState({
+    probationEmployees: 0,
+    pendingExits: 0,
+    activeCandidates: 0,
+    unresolvedGrievances: 0
+  });
+  const [probationList, setProbationList] = useState([]);
+  const [criticalAlerts, setCriticalAlerts] = useState([]);
 
-  const openOnboardings = employees.filter(e => e.status === 'probation').length;
-  const pendingExits = resignations.filter(r => r.status === 'pending').length;
-  const activeRecruitments = candidates.filter(c => c.stage !== 'joined' && c.stage !== 'rejected').length;
-  const unresolvedGrievances = disciplinaryTickets.filter(t => t.status === 'issued').length;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        // Fetch metrics
+        const metricsRes = await fetch('/api/hr-portal/dashboard/metrics', { headers });
+        if (metricsRes.ok) {
+          const m = await metricsRes.json();
+          setMetrics(m);
+        }
+
+        // Fetch employees for probation list
+        const empRes = await fetch('/api/hr-portal/employees', { headers });
+        if (empRes.ok) {
+          const emps = await empRes.json();
+          setProbationList(emps.filter(e => e.status === 'probation'));
+        }
+
+        // Fetch tickets for alerts list
+        const ticketsRes = await fetch('/api/hr-portal/performance/disciplinary-tickets', { headers });
+        if (ticketsRes.ok) {
+          const tickets = await ticketsRes.json();
+          setCriticalAlerts(tickets.filter(t => t.status === 'issued'));
+        }
+      } catch (err) {
+        console.error('Failed to fetch HR dashboard data:', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="component-container">
@@ -30,7 +62,7 @@ export function HrDashboardView({ db }) {
               <UserPlus size={18} />
             </div>
           </div>
-          <span className="metric-value">{openOnboardings}</span>
+          <span className="metric-value">{metrics.probationEmployees}</span>
           <span className="info-txt">Active new hires in checklist</span>
         </div>
 
@@ -41,7 +73,7 @@ export function HrDashboardView({ db }) {
               <LogOut size={18} />
             </div>
           </div>
-          <span className="metric-value">{pendingExits}</span>
+          <span className="metric-value">{metrics.pendingExits}</span>
           <span className="info-txt">Resignations awaiting review</span>
         </div>
 
@@ -52,7 +84,7 @@ export function HrDashboardView({ db }) {
               <Briefcase size={18} />
             </div>
           </div>
-          <span className="metric-value">{activeRecruitments}</span>
+          <span className="metric-value">{metrics.activeCandidates}</span>
           <span className="info-txt">Candidates in ATS screening</span>
         </div>
 
@@ -63,7 +95,7 @@ export function HrDashboardView({ db }) {
               <AlertTriangle size={18} />
             </div>
           </div>
-          <span className="metric-value">{unresolvedGrievances}</span>
+          <span className="metric-value">{metrics.unresolvedGrievances}</span>
           <span className="info-txt">Warnings awaiting acknowledgment</span>
         </div>
       </div>
@@ -75,7 +107,7 @@ export function HrDashboardView({ db }) {
             <h3>New Joiners Checklist Progress</h3>
           </div>
           <div className="card-content-list">
-            {employees.filter(e => e.status === 'probation').map(joiner => (
+            {probationList.map(joiner => (
               <div key={joiner.id} className="strategic-list-item">
                 <div className="progress-ring-mini" style={{ backgroundColor: 'var(--accent-pink)' }}></div>
                 <div className="item-text">
@@ -94,13 +126,12 @@ export function HrDashboardView({ db }) {
             <h3 style={{ color: '#ef4444' }}>⚠️ SLA Watchdog Alerts</h3>
           </div>
           <div className="card-content-list">
-            {disciplinaryTickets.filter(t => t.status === 'issued').map(t => {
-              const emp = employees.find(e => e.id === t.employee_id) || { name: 'Unknown' };
+            {criticalAlerts.map(t => {
               return (
                 <div key={t.id} className="strategic-list-item" style={{ borderLeft: '3px solid #ef4444', paddingLeft: '8px' }}>
                   <div className="item-text">
-                    <h5 style={{ color: 'var(--text-primary)' }}>{t.violation_type.toUpperCase()} Warning</h5>
-                    <p>Target: {emp.name} — Pending response</p>
+                    <h5 style={{ color: 'var(--text-primary)' }}>{t.violation_type?.toUpperCase() || 'CONDUCT'} Warning</h5>
+                    <p>Employee ID: {t.employee_id} — Pending response</p>
                   </div>
                   <span className="badge-pill danger">Critical</span>
                 </div>
