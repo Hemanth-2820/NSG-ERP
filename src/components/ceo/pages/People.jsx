@@ -45,10 +45,9 @@ export default function People() {
           dbId: emp.id,
           role: emp.designation || 'Employee',
           dept: emp.department || 'Operations',
-          joinDate: emp.join_date || '12 Jan 2023',
+          joinDate: emp.join_date || 'N/A',
           status: emp.status === 'active' ? 'Active' : (emp.status || 'Active'),
           avatar: emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`,
-          leaves: { casual: 10, sick: 5 },
           sysRole: emp.role,
           email: emp.email
         }));
@@ -110,10 +109,9 @@ export default function People() {
           id: emp.emp_id || `EMP-${emp.id}`,
           role: emp.designation || 'Employee',
           dept: emp.department || 'Operations',
-          joinDate: emp.join_date || '12 Jan 2023',
+          joinDate: emp.join_date || 'N/A',
           status: emp.status === 'active' ? 'Active' : (emp.status || 'Active'),
           avatar: emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`,
-          leaves: { casual: 10, sick: 5 },
           sysRole: emp.role
         }));
         setEmployees(formatted);
@@ -190,8 +188,54 @@ export default function People() {
     }
   };
 
+  const handleDeleteEmployee = async () => {
+    if (!selectedEmp) return;
+    const confirmDelete = window.confirm(`Are you sure you want to permanently delete ${selectedEmp.name}? This action cannot be undone.`);
+    if (!confirmDelete) return;
+    
+    setUpdating(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch(`/api/ceo-portal/users/${selectedEmp.dbId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to delete employee');
+      }
+      await fetchEmployees();
+      setIsFullProfileOpen(false);
+      setSelectedEmp(null);
+      alert('Employee deleted successfully.');
+    } catch (err) {
+      alert('Error deleting employee: ' + err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleDownload = (filename) => {
-    const blob = new Blob([`Dummy content for ${filename}`], { type: 'text/plain' });
+    if (filteredEmployees.length === 0) {
+      alert("No data to export");
+      return;
+    }
+    const headers = ["Employee ID", "Name", "Email", "Department", "Designation", "System Role", "Status", "Join Date"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredEmployees.map(emp => [
+        emp.id,
+        `"${emp.name}"`,
+        emp.email,
+        `"${emp.dept}"`,
+        `"${emp.role}"`,
+        emp.sysRole,
+        emp.status,
+        emp.joinDate
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -211,17 +255,27 @@ export default function People() {
     });
   }, [employees, searchTerm, selectedDept, selectedStatus]);
 
-  // Dynamic KPIs based on filtered data (simulating a large org even with small mock data)
-  // For realism, if no filters, show org-wide stats. If filtered, show subset stats.
-  const isFiltered = searchTerm || selectedDept || selectedStatus;
-  const headcount = isFiltered ? filteredEmployees.length : 1245;
-  const activeCount = isFiltered ? filteredEmployees.filter(e => e.status === 'Active').length : 1180;
+  // Dynamic KPIs based on actual data
+  const headcount = filteredEmployees.length;
+  const activeCount = filteredEmployees.filter(e => e.status === 'Active' || e.status === 'active').length;
   
+  // Real dynamic data instead of hardcoded numbers
+  const uniqueDepartments = new Set(filteredEmployees.map(e => e.dept)).size;
+  
+  // Calculate recent joiners (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentJoiners = filteredEmployees.filter(e => {
+    if (!e.joinDate || e.joinDate === 'N/A') return false;
+    const d = new Date(e.joinDate);
+    return d >= thirtyDaysAgo;
+  }).length;
+
   const kpiStats = [
-    { label: 'Total Headcount', val: headcount.toLocaleString(), sub: isFiltered ? 'Filtered Results' : '+12 this month', status: 'primary', icon: Users },
-    { label: 'Active Employees', val: activeCount.toLocaleString(), sub: isFiltered ? 'Matching Active' : '94% Active Rate', status: 'success', icon: ShieldCheck },
-    { label: 'Open Positions', val: isFiltered ? '—' : '42', sub: isFiltered ? 'N/A in filter' : 'Critical: 8', status: 'warning', icon: Building },
-    { label: 'Avg. Attrition', val: isFiltered ? '—' : '4.2%', sub: isFiltered ? 'N/A in filter' : 'Target: < 5%', status: 'success', icon: TrendingUp },
+    { label: 'Total Headcount', val: headcount.toLocaleString(), sub: 'Filtered Results', status: 'primary', icon: Users },
+    { label: 'Active Employees', val: activeCount.toLocaleString(), sub: 'Matching Active', status: 'success', icon: ShieldCheck },
+    { label: 'Total Departments', val: uniqueDepartments.toString(), sub: 'Active Departments', status: 'warning', icon: Building },
+    { label: 'Recent Joiners', val: recentJoiners.toString(), sub: 'Last 30 Days', status: 'success', icon: TrendingUp },
   ];
 
   return (
@@ -294,7 +348,7 @@ export default function People() {
 
             <div style={{ flex: 1 }}></div>
             
-            <button className="ceo-btn" style={{ height: '40px', fontSize: '13px', fontWeight: 600, background: '#FFF' }}><Download size={16} /> Export CSV</button>
+            <button onClick={() => handleDownload('employees_export.csv')} className="ceo-btn" style={{ height: '40px', fontSize: '13px', fontWeight: 600, background: '#FFF' }}><Download size={16} /> Export CSV</button>
             <button onClick={() => setIsAddModalOpen(true)} className="ceo-btn ceo-btn-primary" style={{ height: '40px', fontSize: '13px', fontWeight: 600 }}><UserPlus size={16} /> Add Employee</button>
           </div>
 
@@ -372,7 +426,7 @@ export default function People() {
               
               {/* TABS */}
               <div style={{ display: 'flex', borderBottom: '1px solid var(--ceo-divider)', padding: '0 20px', background: '#FFF' }}>
-                {['Info', 'Documents', 'Leave Balance'].map(tab => (
+                {['Info', 'Documents'].map(tab => (
                   <button 
                     key={tab} 
                     onClick={() => setActiveTab(tab)}
@@ -459,18 +513,7 @@ export default function People() {
                   </div>
                 )}
 
-                {activeTab === 'Leave Balance' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div style={{ padding: '32px 24px', background: '#FFF', borderRadius: '12px', border: '1px solid var(--ceo-border)', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                      <div style={{ fontSize: '42px', fontWeight: 800, color: 'var(--ceo-primary)', lineHeight: 1 }}>{selectedEmp.leaves.casual}</div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginTop: '12px', letterSpacing: '0.5px' }}>CASUAL LEAVES</div>
-                    </div>
-                    <div style={{ padding: '32px 24px', background: '#FFF', borderRadius: '12px', border: '1px solid var(--ceo-border)', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                      <div style={{ fontSize: '42px', fontWeight: 800, color: 'var(--ceo-text-primary)', lineHeight: 1 }}>{selectedEmp.leaves.sick}</div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginTop: '12px', letterSpacing: '0.5px' }}>SICK LEAVES</div>
-                    </div>
-                  </div>
-                )}
+                {/* Leave Balance tab removed due to fake data rules */}
 
                 <div style={{ marginTop: 'auto', paddingTop: '16px', display: 'flex', gap: '12px' }}>
                   <button onClick={() => setIsMessageOpen(true)} className="ceo-btn" style={{ flex: 1, justifyContent: 'center', padding: '10px', fontWeight: 700, background: '#FFF' }}>Send Message</button>
@@ -599,6 +642,9 @@ export default function People() {
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button onClick={() => { setEditEmpData({...selectedEmp}); setIsEditProfileOpen(true); }} className="ceo-btn" style={{ fontWeight: 700 }}>Edit Profile</button>
                   <button onClick={() => setIsResetPasswordOpen(true)} className="ceo-btn" style={{ fontWeight: 700, color: 'var(--ceo-danger)', border: '1px solid var(--ceo-danger)' }}>Reset Password</button>
+                  <button onClick={handleDeleteEmployee} disabled={updating} className="ceo-btn" style={{ fontWeight: 700, color: '#FFF', background: 'var(--ceo-danger)', border: '1px solid var(--ceo-danger)' }}>
+                    {updating ? 'Deleting...' : 'Delete Employee'}
+                  </button>
                 </div>
               </div>
             </div>

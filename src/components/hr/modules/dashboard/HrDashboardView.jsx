@@ -10,6 +10,7 @@ export function HrDashboardView() {
   });
   const [probationList, setProbationList] = useState([]);
   const [criticalAlerts, setCriticalAlerts] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,17 +26,24 @@ export function HrDashboardView() {
         }
 
         // Fetch employees for probation list
-        const empRes = await fetch('/api/hr-portal/employees', { headers });
+        const empRes = await fetch('/api/hr-portal/dashboard/onboarding-progress', { headers });
         if (empRes.ok) {
           const emps = await empRes.json();
-          setProbationList(emps.filter(e => e.status === 'probation'));
+          setProbationList(emps);
         }
 
         // Fetch tickets for alerts list
-        const ticketsRes = await fetch('/api/hr-portal/performance/disciplinary-tickets', { headers });
-        if (ticketsRes.ok) {
-          const tickets = await ticketsRes.json();
-          setCriticalAlerts(tickets.filter(t => t.status === 'issued'));
+        const alertsRes = await fetch('/api/hr-portal/dashboard/sla-watchdog', { headers });
+        if (alertsRes.ok) {
+          const alerts = await alertsRes.json();
+          setCriticalAlerts(alerts);
+        }
+
+        // Fetch announcements
+        const annRes = await fetch('/api/hr-portal/announcements', { headers });
+        if (annRes.ok) {
+          const anns = await annRes.json();
+          setAnnouncements(anns);
         }
       } catch (err) {
         console.error('Failed to fetch HR dashboard data:', err);
@@ -52,6 +60,30 @@ export function HrDashboardView() {
           <p>Operational summary of talent lifecycles, onboarding SLAs, and compliance items.</p>
         </div>
       </div>
+
+      {/* CEO Announcements Section */}
+      {announcements.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>CEO Announcements</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            {announcements.slice(0, 3).map(ann => (
+              <div key={ann.id} style={{
+                background: '#FFF', border: '1px solid #E2E8F0', borderLeft: ann.priority === 'Urgent' ? '4px solid #ef4444' : '4px solid #3b82f6',
+                borderRadius: '8px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>{ann.author} • {ann.date}</span>
+                  {ann.priority === 'Urgent' && <span style={{ background: '#FEF2F2', color: '#ef4444', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800 }}>URGENT</span>}
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: '#0F172A' }}>{ann.title}</div>
+                <div dangerouslySetInnerHTML={{ __html: ann.body }} style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, maxHeight: '3.6em', overflow: 'hidden' }}></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="metrics-grid">
@@ -108,13 +140,22 @@ export function HrDashboardView() {
           </div>
           <div className="card-content-list">
             {probationList.map(joiner => (
-              <div key={joiner.id} className="strategic-list-item">
+              <div key={joiner.employee_id} className="strategic-list-item">
                 <div className="progress-ring-mini" style={{ backgroundColor: 'var(--accent-pink)' }}></div>
                 <div className="item-text">
                   <h5>{joiner.name}</h5>
-                  <p>{joiner.designation} — Joined {joiner.join_date}</p>
+                  <p>{joiner.designation || 'New Hire'} — Joined {joiner.join_date}</p>
                 </div>
-                <span className="badge-pill warning">Onboarding Checklist Active</span>
+                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px'}}>
+                   <span className={joiner.total_tasks > 0 && joiner.completed_tasks === joiner.total_tasks ? "badge-pill success" : "badge-pill warning"}>
+                     {joiner.total_tasks > 0 ? `${joiner.completed_tasks}/${joiner.total_tasks} Tasks Done` : 'No Tasks Assigned'}
+                   </span>
+                   {joiner.total_tasks > 0 && (
+                     <div style={{ width: '100px', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                       <div style={{ width: `${(joiner.completed_tasks/joiner.total_tasks)*100}%`, height: '100%', backgroundColor: 'var(--accent-pink)' }}></div>
+                     </div>
+                   )}
+                </div>
               </div>
             ))}
           </div>
@@ -127,13 +168,17 @@ export function HrDashboardView() {
           </div>
           <div className="card-content-list">
             {criticalAlerts.map(t => {
+              const borderCol = t.severity === 'critical' ? '#ef4444' : '#f59e0b';
               return (
-                <div key={t.id} className="strategic-list-item" style={{ borderLeft: '3px solid #ef4444', paddingLeft: '8px' }}>
+                <div key={t.id} className="strategic-list-item" style={{ borderLeft: `3px solid ${borderCol}`, paddingLeft: '8px' }}>
                   <div className="item-text">
-                    <h5 style={{ color: 'var(--text-primary)' }}>{t.violation_type?.toUpperCase() || 'CONDUCT'} Warning</h5>
-                    <p>Employee ID: {t.employee_id} — Pending response</p>
+                    <h5 style={{ color: 'var(--text-primary)' }}>{t.title}</h5>
+                    <p>{t.employee_name} ({t.employee_id}) — {t.description}</p>
+                    {t.due_date && <small style={{color: '#64748b', fontSize: '0.75rem'}}>Due: {new Date(t.due_date).toLocaleDateString()}</small>}
                   </div>
-                  <span className="badge-pill danger">Critical</span>
+                  <span className={`badge-pill ${t.severity === 'critical' ? 'danger' : 'warning'}`}>
+                    {t.severity.toUpperCase()}
+                  </span>
                 </div>
               );
             })}

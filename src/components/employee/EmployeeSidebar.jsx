@@ -1,8 +1,8 @@
 import React from 'react';
 import { 
   LayoutDashboard, CreditCard, User, UserMinus, 
-  HelpCircle, Briefcase, MessageSquare, 
-  Calendar, Clock, CheckSquare, Coins, GraduationCap
+  HelpCircle, Briefcase,
+  Calendar, Clock, CheckSquare, Coins
 } from 'lucide-react';
 
 export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }) {
@@ -17,8 +17,6 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }
   const isResignationActive = activeTab === 'resignation';
   const isHelpActive = activeTab === 'help';
   const isAssetsActive = activeTab === 'assets';
-  const isMessagingActive = activeTab === 'messaging';
-  const isLearningActive = activeTab === 'learning';
 
   const activeStyle = {
     color: '#10b981',
@@ -143,26 +141,6 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }
       >
         <Briefcase size={18} />
         <span>Asset Requests</span>
-      </button>
-
-      {/* Learning & Training Tab */}
-      <button
-        className={`nav-link ${isLearningActive ? 'active' : ''}`}
-        onClick={() => setActiveTab('learning')}
-        style={isLearningActive ? activeStyle : {}}
-      >
-        <GraduationCap size={18} />
-        <span>Learning & Training</span>
-      </button>
-
-      {/* Messaging & Meet Tab */}
-      <button
-        className={`nav-link ${isMessagingActive ? 'active' : ''}`}
-        onClick={() => setActiveTab('messaging')}
-        style={isMessagingActive ? activeStyle : {}}
-      >
-        <MessageSquare size={18} />
-        <span>Messaging & Meet</span>
       </button>
     </div>
   );

@@ -42,6 +42,31 @@ def get_announcements(db: Session = Depends(database.get_db), current_user: mode
         ))
     return res
 
+@router.post("/announcements/{id}/read")
+def mark_announcement_read(id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    ann = db.query(models.Announcement).filter(models.Announcement.id == id).first()
+    if not ann:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+        
+    already_read = db.query(models.AnnouncementRead).filter(
+        models.AnnouncementRead.announcement_id == id,
+        models.AnnouncementRead.user_id == current_user.id
+    ).first()
+    
+    if not already_read:
+        # Create read record
+        new_read = models.AnnouncementRead(announcement_id=id, user_id=current_user.id)
+        db.add(new_read)
+        
+        # Update aggregate counts
+        total_users = db.query(models.User).filter(models.User.is_active == True).count() or 1
+        ann.read_count += 1
+        ann.read_pct = round((ann.read_count / total_users) * 100, 1)
+        
+        db.commit()
+    
+    return {"status": "success"}
+
 # ─── 1.5 TASKS SCHEMAS & ROUTES ────────────────────────────────────────────────
 
 class SubtaskResponse(BaseModel):
@@ -303,6 +328,20 @@ def claim_expense(req: ExpenseClaimCreate, current_user: models.User = Depends(s
     db.refresh(claim)
     return claim
 
+@router.delete("/expenses/claim/{claim_id}")
+def cancel_expense_claim(claim_id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    claim = db.query(models.ExpenseClaim).filter(
+        models.ExpenseClaim.id == claim_id,
+        models.ExpenseClaim.user_id == current_user.id
+    ).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    if claim.tl_approval != "pending":
+        raise HTTPException(status_code=400, detail="Only pending claims can be cancelled")
+    db.delete(claim)
+    db.commit()
+    return {"status": "success", "message": "Claim cancelled successfully"}
+
 
 # ─── 4. PAYROLL SCHEMAS & ROUTES ──────────────────────────────────────────────
 
@@ -421,6 +460,13 @@ class BankUpdate(BaseModel):
     account_number: str
     ifsc_code: str
 
+class PersonalDetailsUpdate(BaseModel):
+    dob: Optional[str] = None
+    gender: Optional[str] = None
+    address: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+
 class UserProfileResponse(BaseModel):
     id: int
     name: str
@@ -428,6 +474,16 @@ class UserProfileResponse(BaseModel):
     role: str
     department: Optional[str] = None
     is_active: Optional[bool] = True
+    photo: Optional[str] = None
+    dob: Optional[str] = None
+    gender: Optional[str] = None
+    address: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    documents: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -436,11 +492,51 @@ class UserProfileResponse(BaseModel):
 def get_profile_details(current_user: models.User = Depends(security.get_current_user)):
     return current_user
 
+@router.post("/profile/update-personal")
+def update_personal_details(req: PersonalDetailsUpdate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    if req.dob:
+        try:
+            from datetime import date as dt_date
+            user.dob = dt_date.fromisoformat(req.dob)
+        except Exception:
+            pass
+    if req.gender is not None:
+        user.gender = req.gender
+    if req.address is not None:
+        user.address = req.address
+    if req.emergency_contact_name is not None:
+        user.emergency_contact_name = req.emergency_contact_name
+    if req.emergency_contact_phone is not None:
+        user.emergency_contact_phone = req.emergency_contact_phone
+    db.commit()
+    return {"status": "success", "message": "Personal details updated successfully."}
+
+@router.post("/profile/update-avatar")
+def update_avatar(req: dict, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    photo_url = req.get("photo_url", "")
+    if not photo_url:
+        raise HTTPException(status_code=400, detail="No photo_url provided")
+    user.photo = photo_url
+    db.commit()
+    return {"status": "success", "photo": user.photo}
+
 @router.post("/profile/update-bank")
 def update_bank_details(req: BankUpdate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    # Assuming bank fields could exist in User model or related details.
-    # For now, return a success message simulating bank record update.
-    return {"status": "success", "message": "Bank details submitted for verification."}
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    user.bank_name = req.bank_name
+    user.account_number = req.account_number
+    user.ifsc_code = req.ifsc_code
+    db.commit()
+    return {"status": "success", "message": "Bank details updated successfully."}
+
+@router.post("/profile/update-documents")
+def update_documents(req: dict, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    user.documents = json.dumps(req.get("documents", []))
+    db.commit()
+    return {"status": "success"}
 
 
 # ─── 6. RESIGNATION & ASSETS SCHEMAS & ROUTES ─────────────────────────────────
@@ -515,6 +611,70 @@ def withdraw_resignation(current_user: models.User = Depends(security.get_curren
 @router.get("/resignation/my-assets", response_model=List[AssetResponse])
 def get_my_assets(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     return db.query(models.Asset).filter(models.Asset.user_id == current_user.id).all()
+
+# ─── Asset Requests (separate from issued assets) ───────────────────────────
+
+class AssetRequestCreate(BaseModel):
+    asset_type: str
+    reason: str
+    urgency: str = "Low"
+
+class AssetRequestResponse(BaseModel):
+    id: int
+    asset_type: str
+    reason: str
+    urgency: str
+    status: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+@router.get("/assets/my-requests")
+def get_my_asset_requests(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    # Return from SupportTicket table using category='asset_request'
+    tickets = db.query(models.SupportTicket).filter(
+        models.SupportTicket.user_id == current_user.id,
+        models.SupportTicket.category == "asset_request"
+    ).order_by(models.SupportTicket.created_at.desc()).all()
+    return [{"id": t.id, "asset_type": t.title, "reason": t.description, "urgency": t.priority, "status": t.status, "created_at": t.created_at} for t in tickets]
+
+@router.post("/assets/request", status_code=201)
+def create_asset_request(req: AssetRequestCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    ticket = models.SupportTicket(
+        user_id=current_user.id,
+        title=req.asset_type,
+        description=req.reason,
+        category="asset_request",
+        priority=req.urgency.lower(),
+        status="open"
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    return {"id": ticket.id, "asset_type": ticket.title, "reason": ticket.description, "urgency": ticket.priority, "status": ticket.status, "created_at": ticket.created_at}
+
+@router.post("/assets/sign-noc/{asset_id}")
+def sign_asset_noc(asset_id: str, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    """Employee signs the NOC for a specific issued asset — updates returnStatus to 'Signed' in DB."""
+    asset = db.query(models.Asset).filter(
+        models.Asset.id == asset_id,
+        models.Asset.user_id == current_user.id
+    ).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found or not assigned to you")
+    if asset.returnStatus == "Signed":
+        raise HTTPException(status_code=400, detail="NOC already signed for this asset")
+    asset.returnStatus = "Signed"
+    asset.signedDate = date.today()
+    db.commit()
+    db.refresh(asset)
+    return {
+        "status": "success",
+        "asset_id": asset.id,
+        "returnStatus": asset.returnStatus,
+        "signedDate": str(asset.signedDate)
+    }
 
 
 # ─── 7. LEARNING & TRAINING SCHEMAS & ROUTES ───────────────────────────────────
@@ -629,6 +789,8 @@ class ChannelResponse(BaseModel):
 
 class MessageCreate(BaseModel):
     text: str
+    attachment_url: Optional[str] = None
+    attachment_type: Optional[str] = None
 
 class MessageResponse(BaseModel):
     id: int
@@ -636,9 +798,24 @@ class MessageResponse(BaseModel):
     sender: str
     text: str
     timestamp: datetime
+    is_edited: bool = False
+    deleted_at: Optional[datetime] = None
+    reactions: Optional[str] = None
+    seen_by: Optional[str] = None
+    attachment_url: Optional[str] = None
+    attachment_type: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class MessageUpdate(BaseModel):
+    text: Optional[str] = None
+    reactions: Optional[str] = None # JSON string of reactions
+    seen_by: Optional[str] = None # JSON string of seen users
+
+class ChannelUpdate(BaseModel):
+    name: Optional[str] = None
+    label: Optional[str] = None
 
 @router.get("/chat/channels", response_model=List[ChannelResponse])
 def get_channels(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
@@ -672,13 +849,67 @@ def send_message(channel_id: str, req: MessageCreate, db: Session = Depends(data
     msg = models.ChatMessage(
         channel_id=channel_id,
         sender=current_user.name,
-        text=req.text
+        text=req.text,
+        attachment_url=req.attachment_url,
+        attachment_type=req.attachment_type
     )
     db.add(msg)
     db.commit()
     db.refresh(msg)
     return msg
 
+from fastapi import UploadFile, File
+import os
+import uuid
+
+@router.post("/chat/upload")
+async def upload_chat_file(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user)):
+    try:
+        # Save file to uploads directory
+        file_ext = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        filepath = os.path.join("uploads", unique_filename)
+        
+        with open(filepath, "wb") as f:
+            content = await file.read()
+            f.write(content)
+            
+        file_url = f"/uploads/{unique_filename}"
+        
+        # Determine type
+        content_type = file.content_type
+        if content_type.startswith('image/'):
+            attachment_type = 'image'
+        elif content_type.startswith('video/'):
+            attachment_type = 'video'
+        else:
+            attachment_type = 'file'
+            
+        return {"url": file_url, "type": attachment_type, "name": file.filename}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/profile/upload-dp")
+async def upload_dp(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    try:
+        file_ext = os.path.splitext(file.filename)[1]
+        unique_filename = f"dp_{current_user.id}_{uuid.uuid4()}{file_ext}"
+        os.makedirs(os.path.join("uploads", "dps"), exist_ok=True)
+        filepath = os.path.join("uploads", "dps", unique_filename)
+        
+        with open(filepath, "wb") as f:
+            content = await file.read()
+            f.write(content)
+            
+        file_url = f"/uploads/dps/{unique_filename}"
+        
+        current_user.photo = file_url
+        db.commit()
+        db.refresh(current_user)
+        
+        return {"url": file_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class MembersUpdate(BaseModel):
     members: List[str]
@@ -703,6 +934,86 @@ def update_channel_members(channel_id: str, req: MembersUpdate, db: Session = De
     db.commit()
     db.refresh(channel)
     return channel
+
+@router.patch("/chat/channels/{channel_id}", response_model=ChannelResponse)
+def update_channel(channel_id: str, req: ChannelUpdate, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    channel = db.query(models.ChatChannel).filter(models.ChatChannel.id == channel_id).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    if req.name is not None:
+        channel.name = req.name
+    if req.label is not None:
+        channel.label = req.label
+    db.commit()
+    db.refresh(channel)
+    return channel
+
+@router.delete("/chat/channels/{channel_id}")
+def delete_channel(channel_id: str, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    channel = db.query(models.ChatChannel).filter(models.ChatChannel.id == channel_id).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    db.delete(channel)
+    db.commit()
+    return {"message": "Channel deleted"}
+
+@router.patch("/chat/messages/{message_id}", response_model=MessageResponse)
+async def update_message(message_id: int, req: MessageUpdate, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    msg = db.query(models.ChatMessage).filter(models.ChatMessage.id == message_id).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    if req.text is not None:
+        if msg.sender != current_user.name:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        msg.text = req.text
+        msg.is_edited = True
+    
+    if req.reactions is not None:
+        msg.reactions = req.reactions
+        
+    if req.seen_by is not None:
+        msg.seen_by = req.seen_by
+        
+    db.commit()
+    db.refresh(msg)
+    
+    # Broadcast edit event
+    broadcast_data = {
+        "event_type": "update_message",
+        "id": msg.id,
+        "channel_id": msg.channel_id,
+        "sender": msg.sender,
+        "text": msg.text,
+        "is_edited": msg.is_edited,
+        "reactions": msg.reactions,
+        "seen_by": msg.seen_by,
+        "timestamp": msg.timestamp.isoformat() if msg.timestamp else None
+    }
+    await manager.broadcast_message(broadcast_data)
+    
+    return msg
+
+@router.delete("/chat/messages/{message_id}")
+async def delete_message(message_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    msg = db.query(models.ChatMessage).filter(models.ChatMessage.id == message_id).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if msg.sender != current_user.name and current_user.role != "ceo":
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    msg.deleted_at = datetime.utcnow()
+    db.commit()
+    
+    # Broadcast delete event
+    broadcast_data = {
+        "event_type": "delete_message",
+        "id": msg.id,
+        "channel_id": msg.channel_id
+    }
+    await manager.broadcast_message(broadcast_data)
+    
+    return {"message": "Message deleted"}
 
 
 @router.get("/chat/my-channels", response_model=List[ChannelResponse])
@@ -734,12 +1045,32 @@ class ConnectionManager:
         if client_id not in self.active_connections:
             self.active_connections[client_id] = []
         self.active_connections[client_id].append(websocket)
+        
+        db = database.SessionLocal()
+        try:
+            user = db.query(models.User).filter(models.User.name == client_id).first()
+            if user:
+                user.last_active = datetime.utcnow()
+                db.commit()
+            await self.broadcast_message({"event_type": "presence_update", "user": client_id, "online": True})
+        finally:
+            db.close()
 
-    def disconnect(self, client_id: str, websocket: WebSocket):
+    async def disconnect(self, client_id: str, websocket: WebSocket):
         if client_id in self.active_connections:
             self.active_connections[client_id].remove(websocket)
             if not self.active_connections[client_id]:
                 del self.active_connections[client_id]
+                
+                db = database.SessionLocal()
+                try:
+                    user = db.query(models.User).filter(models.User.name == client_id).first()
+                    if user:
+                        user.last_active = datetime.utcnow()
+                        db.commit()
+                        await self.broadcast_message({"event_type": "presence_update", "user": client_id, "online": False, "last_active": user.last_active.isoformat()})
+                finally:
+                    db.close()
 
     async def broadcast_message(self, message: dict):
         import json
@@ -762,6 +1093,41 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             import json
             try:
                 msg_data = json.loads(data)
+                msg_type = msg_data.get("type")
+                
+                if msg_type in ["delivered", "read"]:
+                    msg_id = msg_data.get("msg_id")
+                    db_session = database.SessionLocal()
+                    try:
+                        db_msg = db_session.query(models.ChatMessage).filter(models.ChatMessage.id == msg_id).first()
+                        if db_msg:
+                            import json as pyjson
+                            if msg_type == "delivered":
+                                existing = pyjson.loads(db_msg.delivered_to) if db_msg.delivered_to else []
+                                if client_id not in existing:
+                                    existing.append(client_id)
+                                    db_msg.delivered_to = pyjson.dumps(existing)
+                                    db_session.commit()
+                                    await manager.broadcast_message({
+                                        "event_type": "message_delivered",
+                                        "msg_id": msg_id,
+                                        "by": client_id
+                                    })
+                            elif msg_type == "read":
+                                existing = pyjson.loads(db_msg.seen_by) if db_msg.seen_by else []
+                                if client_id not in existing:
+                                    existing.append(client_id)
+                                    db_msg.seen_by = pyjson.dumps(existing)
+                                    db_session.commit()
+                                    await manager.broadcast_message({
+                                        "event_type": "message_read",
+                                        "msg_id": msg_id,
+                                        "by": client_id
+                                    })
+                    finally:
+                        db_session.close()
+                    continue
+
                 channel_id = msg_data.get("channel_id")
                 text = msg_data.get("text")
                 sender = msg_data.get("sender", client_id)
@@ -781,7 +1147,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         db_msg = models.ChatMessage(
                             channel_id=channel_id,
                             sender=sender,
-                            text=text
+                            text=text,
+                            attachment_url=msg_data.get("attachment_url"),
+                            attachment_type=msg_data.get("attachment_type")
                         )
                         db_session.add(db_msg)
                         db_session.commit()
@@ -789,10 +1157,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         
                         # Broadcast
                         broadcast_data = {
+                            "event_type": "new_message",
                             "id": db_msg.id,
                             "channel_id": db_msg.channel_id,
                             "sender": db_msg.sender,
                             "text": db_msg.text,
+                            "attachment_url": db_msg.attachment_url,
+                            "attachment_type": db_msg.attachment_type,
                             "timestamp": db_msg.timestamp.isoformat()
                         }
                         await manager.broadcast_message(broadcast_data)
@@ -801,4 +1172,4 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             except Exception as e:
                 print(f"Error parsing websocket payload: {e}")
     except WebSocketDisconnect:
-        manager.disconnect(client_id, websocket)
+        await manager.disconnect(client_id, websocket)

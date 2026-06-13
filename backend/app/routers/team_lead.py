@@ -327,6 +327,7 @@ def get_pending_leaves(current_user: models.User = Depends(security.get_current_
 @router.post("/leaves/{id}/approve", response_model=LeaveRequestResponse)
 def approve_leave(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_manager_role(current_user)
+    security.check_rbac_permission(db, current_user, "Approve Leaves")
     req = db.query(models.LeaveRequest).filter(models.LeaveRequest.id == id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Leave request not found.")
@@ -703,3 +704,33 @@ def get_team_attendance(
             "is_late": log.is_late if hasattr(log, 'is_late') else False
         })
     return result
+
+
+class AnnouncementResponse(BaseModel):
+    id: int
+    title: str
+    body: str
+    priority: str
+    audience: str
+    author: str
+    date: str 
+
+    class Config:
+        from_attributes = True
+
+@router.get("/announcements", response_model=List[AnnouncementResponse])
+def get_announcements(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    anns = db.query(models.Announcement).order_by(models.Announcement.created_at.desc()).all()
+    res = []
+    for a in anns:
+        res.append(AnnouncementResponse(
+            id=a.id,
+            title=a.title,
+            body=a.body,
+            priority=a.priority,
+            audience=a.audience,
+            author=a.author,
+            date=a.created_at.strftime("%Y-%m-%d") if a.created_at else "N/A"
+        ))
+    return res
+

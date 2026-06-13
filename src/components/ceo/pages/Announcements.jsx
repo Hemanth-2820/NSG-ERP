@@ -5,8 +5,8 @@ import {
   Bold, Italic, List, Link as LinkIcon, AlertTriangle
 } from 'lucide-react';
 import '../CEO.css';
-
-const mockAnnouncements = [];
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
 const formatAnnDate = (dateStr) => {
   if (!dateStr) return '';
@@ -44,6 +44,31 @@ export default function Announcements() {
   const [audience, setAudience] = useState('All Employees');
   const [scheduleTime, setScheduleTime] = useState('');
   const [readDrawerId, setReadDrawerId] = useState(null);
+  const [unreadUsers, setUnreadUsers] = useState([]);
+
+  const fetchUnreadUsers = async (id) => {
+    const token = localStorage.getItem('nsg_jwt_token');
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/ceo-portal/announcements/${id}/unread-users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadUsers(data);
+      } else {
+        setUnreadUsers([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch unread users", err);
+      setUnreadUsers([]);
+    }
+  };
+
+  const openDrawer = (id) => {
+    setReadDrawerId(id);
+    fetchUnreadUsers(id);
+  };
 
   const fetchAnnouncements = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
@@ -109,6 +134,26 @@ export default function Announcements() {
       alert('Error connecting to backend server.');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this announcement?")) return;
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch(`/api/ceo-portal/announcements/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setReadDrawerId(null);
+        await fetchAnnouncements();
+      } else {
+        alert("Failed to delete announcement.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting announcement.");
     }
   };
 
@@ -179,14 +224,14 @@ export default function Announcements() {
                     {ann.priority === 'Urgent' && <span style={{ background: '#FEF2F2', color: 'var(--ceo-danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800, border: '1px solid #FCA5A5' }}>URGENT</span>}
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: 'var(--ceo-text-primary)' }}>{ann.title}</div>
-                  <div style={{ fontSize: '13px', color: 'var(--ceo-text-secondary)', marginBottom: '16px', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ann.body}</div>
+                  <div className="quill-content" dangerouslySetInnerHTML={{ __html: ann.body }} style={{ fontSize: '13px', color: 'var(--ceo-text-secondary)', marginBottom: '16px', lineHeight: 1.5, maxHeight: '3em', overflow: 'hidden' }}></div>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ceo-divider)', paddingTop: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ceo-text-muted)', fontWeight: 600 }}>
                       <Users size={14}/> {ann.audience}
                     </div>
                     <button 
-                      onClick={(e) => { e.stopPropagation(); setReadDrawerId(ann.id); }}
+                      onClick={(e) => { e.stopPropagation(); openDrawer(ann.id); }}
                       style={{ 
                         padding: '6px 12px', fontSize: '12px', background: readDrawerId === ann.id ? 'var(--ceo-primary)' : '#F8FAFC', 
                         color: readDrawerId === ann.id ? '#FFF' : 'var(--ceo-text-primary)',
@@ -238,14 +283,8 @@ export default function Announcements() {
 
                 <div className="ceo-form-group" style={{ marginBottom: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '8px', display: 'block' }}>Message Body</label>
-                  <div style={{ border: '1px solid var(--ceo-border)', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <div style={{ background: '#F8FAFC', borderBottom: '1px solid var(--ceo-border)', padding: '8px 12px', display: 'flex', gap: '16px' }}>
-                      <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-secondary)' }}><Bold size={16}/></button>
-                      <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-secondary)' }}><Italic size={16}/></button>
-                      <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-secondary)' }}><List size={16}/></button>
-                      <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-secondary)' }}><LinkIcon size={16}/></button>
-                    </div>
-                    <textarea className="ceo-form-input" value={body} onChange={e=>setBody(e.target.value)} placeholder="Write your corporate communication here. Rich text is supported." required style={{ flex: 1, border: 'none', padding: '16px', resize: 'none', fontSize: '14px', lineHeight: 1.6 }}></textarea>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <ReactQuill theme="snow" value={body} onChange={setBody} style={{ height: '200px', marginBottom: '40px' }} />
                   </div>
                 </div>
 
@@ -266,12 +305,20 @@ export default function Announcements() {
           ) : (
             /* ANALYTICS DRAWER */
             <>
-              <div className="ceo-command-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <button className="ceo-btn" onClick={() => setReadDrawerId(null)} style={{ padding: '8px', border: '1px solid var(--ceo-border)', background: '#F8FAFC' }}><ArrowLeft size={16}/></button>
-                <div>
-                  <div className="ceo-typography-card-title">Engagement Analytics</div>
-                  <div style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', marginTop: '2px' }}>{activeDrawerAnn?.title}</div>
+              <div className="ceo-command-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <button className="ceo-btn" onClick={() => setReadDrawerId(null)} style={{ padding: '8px', border: '1px solid var(--ceo-border)', background: '#F8FAFC' }}><ArrowLeft size={16}/></button>
+                  <div>
+                    <div className="ceo-typography-card-title">Engagement Analytics</div>
+                    <div style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', marginTop: '2px' }}>{activeDrawerAnn?.title}</div>
+                  </div>
                 </div>
+                <button 
+                  className="ceo-btn" 
+                  onClick={() => handleDeleteAnnouncement(activeDrawerAnn.id)} 
+                  style={{ padding: '8px 16px', background: 'var(--ceo-danger)', color: '#FFF', fontWeight: 600, border: 'none' }}>
+                  Delete Broadcast
+                </button>
               </div>
               <div className="ceo-command-content" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto' }}>
                 
@@ -309,18 +356,18 @@ export default function Announcements() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr style={{ borderBottom: '1px solid var(--ceo-divider)' }}>
-                          <td style={{ padding: '16px 24px', fontWeight: 600 }}>Arjun Sharma</td>
-                          <td style={{ padding: '16px 24px', color: 'var(--ceo-text-secondary)', textAlign: 'right' }}>IT Dept</td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid var(--ceo-divider)' }}>
-                          <td style={{ padding: '16px 24px', fontWeight: 600 }}>Priya Menon</td>
-                          <td style={{ padding: '16px 24px', color: 'var(--ceo-text-secondary)', textAlign: 'right' }}>Marketing</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: '16px 24px', fontWeight: 600 }}>Rahul Verma</td>
-                          <td style={{ padding: '16px 24px', color: 'var(--ceo-text-secondary)', textAlign: 'right' }}>Sales</td>
-                        </tr>
+                        {unreadUsers.length > 0 ? unreadUsers.map(u => (
+                          <tr key={u.id} style={{ borderBottom: '1px solid var(--ceo-divider)' }}>
+                            <td style={{ padding: '16px 24px', fontWeight: 600 }}>{u.name}</td>
+                            <td style={{ padding: '16px 24px', color: 'var(--ceo-text-secondary)', textAlign: 'right' }}>{u.department || 'N/A'}</td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan="2" style={{ padding: '16px 24px', textAlign: 'center', color: 'var(--ceo-text-muted)' }}>
+                              Everyone has read this broadcast!
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>

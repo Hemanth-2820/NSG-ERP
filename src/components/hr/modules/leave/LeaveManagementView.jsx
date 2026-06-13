@@ -249,7 +249,7 @@ export function LeaveManagementView() {
             </thead>
             <tbody>
               {leaveBalances.map(b => {
-                const emp = employees.find(e => e.id === b.employee_id) || { name: 'Unknown' };
+                const emp = employees.find(e => e.id === b.user_id) || { name: 'Unknown' };
                 return (
                   <tr key={b.id}>
                     <td style={{ padding: '16px 40px' }}><strong>{emp.name}</strong></td>
@@ -395,7 +395,7 @@ export function LeaveManagementView() {
 
       {/* ✏️ EDIT LEAVE BALANCES MODAL */}
       {editingBalance && (() => {
-        const emp = employees.find(e => e.id === editingBalance.employee_id) || { name: 'Employee' };
+        const emp = employees.find(e => e.id === editingBalance.user_id) || { name: 'Employee' };
         return (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
             <form 
@@ -624,7 +624,7 @@ export function LeaveManagementView() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {displayedRequests.map(r => {
-                const emp = employees.find(e => e.id === r.employee_id) || { name: 'Unknown', designation: 'Employee' };
+                const emp = employees.find(e => e.id === r.user_id) || { name: 'Unknown', designation: 'Employee' };
                 return (
                   <div key={r.id} style={{ display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '16px', gap: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

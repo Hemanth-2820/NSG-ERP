@@ -157,6 +157,9 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
         const notifications = notifRes.ok ? await notifRes.json() : [];
         const channels = chanRes.ok ? await chanRes.json() : [];
 
+        announcements.forEach(ann => {
+          fetch(`/api/employee-portal/announcements/${ann.id}/read`, { method: 'POST', headers }).catch(() => {});
+        });
         setDbData({ tasks, leaveBalances, payslips, assets, announcements, notifications, channels });
       } catch (e) { console.error('Dashboard fetch error', e); }
     };
@@ -418,7 +421,7 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
                       )}
                     </div>
                     <strong style={{ fontSize: 13, color: '#fff' }}>{ann.title}</strong>
-                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{ann.body}</p>
+                    <div dangerouslySetInnerHTML={{ __html: ann.body }} className="quill-content" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }} />
                   </div>
                 ))
               )}

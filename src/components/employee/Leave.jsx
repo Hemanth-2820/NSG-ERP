@@ -4,8 +4,8 @@ import './Leave.css';
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 
-const TEAM_ON_LEAVE = ['Priya S.', 'Arjun M.'];
-const HOLIDAYS = ['2026-05-01', '2026-05-14', '2026-06-15']; // for day count calc
+const TEAM_ON_LEAVE = [];
+const HOLIDAYS = [];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(iso) {
@@ -108,7 +108,7 @@ function OverlapWarning({ visible, members, dates }) {
 }
 
 // ─── ApplyLeaveForm ───────────────────────────────────────────────────────────
-function ApplyLeaveForm({ prefillType, onSuccess, onRefreshData }) {
+function ApplyLeaveForm({ prefillType, balances, onSuccess, onRefreshData }) {
   const [leaveType, setLeaveType] = useState(prefillType || '');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -204,7 +204,7 @@ function ApplyLeaveForm({ prefillType, onSuccess, onRefreshData }) {
       <div className="lv-form-header">
         <span className="lv-form-title">Apply Leave</span>
         {dayCount > 0 && (
-          <span className={`lv-day-count ${calculating ? 'lv-calculating' : ''}`} style={{ color: leaveType ? LEAVE_BALANCES.find(b => b.label === leaveType || b.type === leaveType)?.color || 'var(--lv-emerald)' : 'var(--lv-emerald)' }}>
+          <span className={`lv-day-count ${calculating ? 'lv-calculating' : ''}`} style={{ color: leaveType ? (balances || []).find(b => b.label === leaveType || b.type === leaveType)?.color || 'var(--lv-emerald)' : 'var(--lv-emerald)' }}>
             {calculating ? <span className="lv-spin-sm"/> : dayCount} {!calculating && 'days'}
           </span>
         )}
@@ -443,7 +443,7 @@ export default function Leave() {
       <div className="lv-bottom-grid">
         {/* Apply Form */}
         <div ref={formRef}>
-          <ApplyLeaveForm prefillType={prefillType} onSuccess={handleSuccess} onRefreshData={fetchData} />
+          <ApplyLeaveForm prefillType={prefillType} balances={balances} onSuccess={handleSuccess} onRefreshData={fetchData} />
         </div>
 
         {/* History Table */}

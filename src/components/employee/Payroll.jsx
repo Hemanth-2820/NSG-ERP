@@ -96,9 +96,44 @@ function PayslipsTab({ employeeId }) {
     fetchPayslips();
   }, []);
 
-  function handleDownload(id) {
-    setDownloading(id);
-    setTimeout(() => setDownloading(null), 1800);
+  function handleDownload(p) {
+    setDownloading(p.id);
+    const INR_fmt = n => `₹${Number(n).toLocaleString('en-IN')}`;
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthLabel = `${monthNames[(p.month||1)-1]} ${p.year || 2026}`;
+    const gross = (p.basic||0) + (p.hra||0) + (p.allowances||0);
+    const deductions = (p.epf||0) + (p.tds||0);
+    const html = `
+      <html><head><title>Payslip - ${monthLabel}</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e;background:#fff;}
+        h1{color:#6d28d9;margin:0 0 4px;}
+        .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #6d28d9;padding-bottom:16px;margin-bottom:24px;}
+        .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:14px;}
+        .bold{font-weight:700;} .green{color:#10b981;} .red{color:#ef4444;}
+        .net{background:#6d28d9;color:#fff;padding:16px;border-radius:8px;display:flex;justify-content:space-between;margin-top:24px;font-size:20px;font-weight:800;}
+      </style></head><body>
+      <div class="header">
+        <div><h1>NSG Group</h1><p style="margin:0;font-size:13px;color:#666;">Payslip for ${monthLabel}</p></div>
+        <div style="text-align:right;font-size:13px;"><p style="margin:0;"><strong>Status:</strong> Paid</p><p style="margin:4px 0 0;"><strong>Generated:</strong> ${new Date().toLocaleDateString('en-IN')}</p></div>
+      </div>
+      <h3 style="margin:0 0 12px;font-size:14px;text-transform:uppercase;color:#666;letter-spacing:0.05em;">Earnings</h3>
+      <div class="row"><span>Basic Salary</span><span class="bold green">${INR_fmt(p.basic||0)}</span></div>
+      <div class="row"><span>HRA</span><span class="bold green">${INR_fmt(p.hra||0)}</span></div>
+      <div class="row"><span>Allowances</span><span class="bold green">${INR_fmt(p.allowances||0)}</span></div>
+      ${p.lop > 0 ? `<div class="row"><span>LOP Penalty</span><span class="bold red">-${INR_fmt(p.lop)}</span></div>` : ''}
+      <div class="row bold" style="background:#f0fdf4;padding:8px;"><span>Gross Earnings</span><span class="green">${INR_fmt(gross)}</span></div>
+      <h3 style="margin:20px 0 12px;font-size:14px;text-transform:uppercase;color:#666;letter-spacing:0.05em;">Deductions</h3>
+      <div class="row"><span>EPF (Employee)</span><span class="bold red">-${INR_fmt(p.epf||0)}</span></div>
+      <div class="row"><span>TDS</span><span class="bold red">-${INR_fmt(p.tds||0)}</span></div>
+      <div class="row bold" style="background:#fff5f5;padding:8px;"><span>Total Deductions</span><span class="red">-${INR_fmt(deductions)}</span></div>
+      <div class="net"><span>Net Take-Home Pay</span><span>${INR_fmt(p.net)}</span></div>
+      </body></html>`;
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.print(); win.close(); };
+    setTimeout(() => setDownloading(null), 1000);
   }
 
   return (
@@ -160,7 +195,7 @@ function PayslipsTab({ employeeId }) {
             {/* Download */}
             <button
               className="pay-download-btn"
-              onClick={() => handleDownload(p.id)}
+              onClick={() => handleDownload(p)}
               disabled={downloading === p.id}
               style={{ minWidth: 130, justifyContent: 'center' }}
             >
@@ -254,9 +289,31 @@ function TdsDeclarationTab({ employeeId }) {
   const [currentDeclaration, setCurrentDeclaration] = useState(null);
 
   useEffect(() => {
-    // TODO: fetch tds declarations from API
-    // Setting null for now to just show the form
-    setCurrentDeclaration(null);
+    const fetchDeclarations = async () => {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const res = await fetch('/api/employee-portal/payroll/tds-declarations', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            // Show latest declaration status
+            setCurrentDeclaration({
+              status: data[0].status,
+              submitted_at: new Date().toISOString(),
+              sec80c: data.find(d => d.declaration_type === '80C')?.declared_amount || 0,
+              hra_rent: data.find(d => d.declaration_type === 'HRA')?.declared_amount || 0,
+              sec80d: 0,
+              verified_by: data[0].verified_by
+            });
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchDeclarations();
   }, []);
 
   const [form, setForm] = useState({ sec80c: '', hra_rent: '', hra_city: 'metro', sec80d: '' });

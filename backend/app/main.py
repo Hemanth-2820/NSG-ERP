@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 from app.config import settings
 from app.database import engine, Base
 from app.routers import auth, attendance, timesheets, employee_portal, team_lead, hr_portal, ceo_portal, resume_analyzer
@@ -34,6 +36,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 # Include routers
 app.include_router(auth.router)
 app.include_router(attendance.router)
@@ -43,6 +48,11 @@ app.include_router(team_lead.router)
 app.include_router(hr_portal.router)
 app.include_router(ceo_portal.router)
 app.include_router(resume_analyzer.router)
+
+import os
+# Ensure uploads directory exists before mounting
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def read_root():

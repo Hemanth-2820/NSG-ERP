@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     designation: Optional[str] = None
     emp_id: Optional[str] = None
     phone: Optional[str] = None
+    photo: Optional[str] = None
 
     class Config:
         from_attributes = True

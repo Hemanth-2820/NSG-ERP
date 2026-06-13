@@ -229,12 +229,12 @@ export default function Timesheet() {
     const fetchTasks = async () => {
       try {
         const token = localStorage.getItem('nsg_jwt_token');
-        const res = await fetch('http://localhost:8000/employee-portal/tasks/my-tasks', {
+        const res = await fetch('/api/employee-portal/tasks/my-tasks', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
           const data = await res.json();
-          setAvailableTasks(data.map(t => ({ id: t.id, name: t.title, sprint: t.sprint })));
+          setAvailableTasks(data.map(t => ({ id: t.id, name: t.title, sprint: t.sprint || 'General' })));
         }
       } catch (e) { console.error(e); }
     };
@@ -246,7 +246,7 @@ export default function Timesheet() {
     const fetchTimesheet = async () => {
       try {
         const token = localStorage.getItem('nsg_jwt_token');
-        const res = await fetch(`http://localhost:8000/timesheets/my-timesheets?week_start_date=${weekStartDateStr}`, {
+        const res = await fetch(`/api/timesheets/my-timesheets?week_start_date=${weekStartDateStr}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -257,45 +257,31 @@ export default function Timesheet() {
             setStatus(ts.status || 'draft');
             setRejectedReason(ts.rejection_comment || '');
           } else {
-            // Setup defaults
-            setRows(availableTasks.slice(0, 3).map(t => ({
-              taskId: t.id,
-              name: t.name,
-              sprint: t.sprint,
-              hours: { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0 },
-            })));
+            // Empty week — start with blank rows
+            setRows([]);
             setStatus('draft');
             setRejectedReason('');
           }
         }
       } catch (e) { console.error(e); }
     };
-    // Re-run whenever week offset or available tasks change (so we have default tasks if empty)
     fetchTimesheet();
-  }, [weekStartDateStr, availableTasks.length]);
+  }, [weekStartDateStr]);
 
   // Autosave draft edits to global database
   const triggerAutoSave = async (updatedRows) => {
     if (status === 'submitted' || status === 'approved') return;
-    
-    // Clear existing timer
-    if (autoSaveTimer.current) {
-      clearTimeout(autoSaveTimer.current);
-    }
-    
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(async () => {
       try {
         const token = localStorage.getItem('nsg_jwt_token');
-        await fetch('http://localhost:8000/timesheets/save', {
+        await fetch('/api/timesheets/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({
-            week_start_date: weekStartDateStr,
-            rows: updatedRows
-          })
+          body: JSON.stringify({ week_start_date: weekStartDateStr, rows: updatedRows })
         });
       } catch (e) { console.error(e); }
-    }, 1000); // 1s debounce
+    }, 1000);
   };
 
   function updateHours(rowIdx, day, val) {
@@ -324,17 +310,14 @@ export default function Timesheet() {
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      // Ensure it's saved first
-      await fetch('http://localhost:8000/timesheets/save', {
+      // Save first
+      await fetch('/api/timesheets/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          week_start_date: weekStartDateStr,
-          rows: rows
-        })
+        body: JSON.stringify({ week_start_date: weekStartDateStr, rows: rows })
       });
       // Then submit
-      const res = await fetch('http://localhost:8000/timesheets/submit', {
+      const res = await fetch('/api/timesheets/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ week_start_date: weekStartDateStr })

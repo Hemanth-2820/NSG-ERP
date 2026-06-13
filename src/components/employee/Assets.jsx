@@ -3,19 +3,6 @@ import AssetRequestForm from './AssetRequestForm';
 import AssetNoc from './AssetNoc';
 import { Briefcase, Laptop, CreditCard, Headphones, ShieldAlert } from 'lucide-react';
 
-let requestCounter = 501;
-const generateRequestId = () => `REQ-${requestCounter++}`;
-
-const defaultIssued = [
-  { id: 'LAP-089', assetTag: 'NSG-LAP-089', type: 'Laptop', serialNumber: 'SN-89736412', issueDate: '2024-03-15', condition: 'Excellent', returnStatus: 'Pending NOC', signedDate: null },
-  { id: 'ACC-512', assetTag: 'NSG-ACC-512', type: 'Access Card', serialNumber: 'SN-00512', issueDate: '2024-03-15', condition: 'Good', returnStatus: 'Pending NOC', signedDate: null },
-  { id: 'HDS-990', assetTag: 'NSG-HDS-990', type: 'Headset', serialNumber: 'SN-990812', issueDate: '2025-01-10', condition: 'Fair', returnStatus: 'Pending NOC', signedDate: null }
-];
-
-const defaultRequests = [
-  { id: 'REQ-402', assetType: 'Keyboard', reason: 'Ergonomic keyboard for wrist support', urgency: 'Low', status: 'Approved', createdAt: '2026-05-15' }
-];
-
 export default function Assets({ currentUser }) {
   const EMPLOYEE_ID = currentUser?.id || 102;
 
@@ -30,15 +17,30 @@ export default function Assets({ currentUser }) {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      // Fetch Assets
+      // Fetch Issued Assets from DB
       const assetsRes = await fetch('/api/employee-portal/resignation/my-assets', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (assetsRes.ok) {
-        setIssuedAssets(await assetsRes.json());
+      if (assetsRes.ok) setIssuedAssets(await assetsRes.json());
+
+      // Fetch Asset Requests from DB
+      const reqRes = await fetch('/api/employee-portal/assets/my-requests', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (reqRes.ok) {
+        const reqData = await reqRes.json();
+        setRequests(reqData.map(r => ({
+          id: `REQ-${r.id}`,
+          originalId: r.id,
+          assetType: r.asset_type,
+          reason: r.reason,
+          urgency: r.urgency,
+          status: r.status === 'open' ? 'Pending' : r.status,
+          createdAt: r.created_at ? new Date(r.created_at).toLocaleDateString() : ''
+        })));
       }
-      
-      // Fetch Resignation to know if NOC is required
+
+      // Check resignation status for NOC
       const resigRes = await fetch('/api/employee-portal/resignation/status', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -46,17 +48,7 @@ export default function Assets({ currentUser }) {
         const resigData = await resigRes.json();
         setHasResigned(!!resigData);
       }
-
-      // We still fall back to localStorage for requests as the backend model is not fully implemented
-      const savedRequests = localStorage.getItem('nsg_employee_asset_requests');
-      if (savedRequests) {
-        setRequests(JSON.parse(savedRequests));
-      } else {
-        setRequests(defaultRequests);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   useEffect(() => {
@@ -72,72 +64,54 @@ export default function Assets({ currentUser }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleRequestSubmit = (newReq) => {
-    const requestItem = {
-      id: generateRequestId(),
-      employee_id: EMPLOYEE_ID,
-      assetType: newReq.assetType,
-      reason: newReq.reason,
-      urgency: newReq.urgency,
-      status: 'Pending',
-      createdAt: new Date().toLocaleDateString()
-    };
-
-    setRequests((prev) => [requestItem, ...prev]);
-    localStorage.setItem('nsg_employee_asset_requests', JSON.stringify([requestItem, ...requests]));
-    
-    showToast(`Request for ${newReq.assetType} submitted for TL approval.`);
+  const handleRequestSubmit = async (newReq) => {
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/employee-portal/assets/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ asset_type: newReq.assetType, reason: newReq.reason, urgency: newReq.urgency || 'Low' })
+      });
+      if (res.ok) {
+        showToast(`Request for ${newReq.assetType} submitted for TL approval.`);
+        fetchData(); // Refresh from DB
+      } else {
+        showToast('Failed to submit asset request');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Network error submitting request');
+    }
   };
 
-  const handleSignNoc = (assetId, assetType) => {
-    const today = new Date().toLocaleDateString();
-
-    // Fallback update local state & localStorage since no NOC backend API
-    setIssuedAssets((prev) => {
-      const updated = prev.map((asset) => {
-        if (asset.id === assetId) {
-          return {
-            ...asset,
-            returnStatus: 'Signed',
-            signedDate: today
-          };
-        }
-        return asset;
+  const handleSignNoc = async (assetId, assetType) => {
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch(`/api/employee-portal/assets/sign-noc/${assetId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      localStorage.setItem('nsg_employee_issued_assets', JSON.stringify(updated));
-      return updated;
-    });
 
-    // Sync with resignation exit checklist in localStorage
-    const savedChecklist = localStorage.getItem('nsg_employee_resignation_checklist');
-    if (savedChecklist) {
-      try {
-        const checklist = JSON.parse(savedChecklist);
-        let taskUpdated = false;
-
-        const updatedChecklist = checklist.map((task) => {
-          if (assetType === 'Laptop' && task.id === 'laptop') {
-            taskUpdated = true;
-            return { ...task, completed: true };
-          }
-          if (assetType === 'Access Card' && task.id === 'access_card') {
-            taskUpdated = true;
-            return { ...task, completed: true };
-          }
-          return task;
-        });
-
-        if (taskUpdated) {
-          localStorage.setItem('nsg_employee_resignation_checklist', JSON.stringify(updatedChecklist));
-          showToast(`NOC signed! Resignation Exit Checklist updated.`);
-          return;
-        }
-      } catch (err) {
-        console.error('Error syncing exit checklist:', err);
+      if (res.ok) {
+        const data = await res.json();
+        const today = new Date().toLocaleDateString();
+        // Update local state from DB response
+        setIssuedAssets((prev) =>
+          prev.map((asset) =>
+            asset.id === assetId
+              ? { ...asset, returnStatus: data.returnStatus, signedDate: data.signedDate || today }
+              : asset
+          )
+        );
+        showToast(`NOC signed for ${assetType} — saved to database ✓`);
+      } else {
+        const err = await res.json();
+        showToast(err.detail || 'Failed to sign NOC');
       }
+    } catch (e) {
+      console.error('Error signing NOC:', e);
+      showToast('Network error — please try again');
     }
-
-    showToast(`NOC signed for ${assetType}..`);
   };
 
   const showToast = (msg) => {

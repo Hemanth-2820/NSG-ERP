@@ -127,6 +127,21 @@ export default function Projects() {
     }
   };
 
+  const handleDeleteProject = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this project?")) return;
+    try {
+      const res = await fetch(`/api/ceo-portal/projects/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token()}` }
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      setProjects(prev => prev.filter(p => p.id !== id));
+      alert('Project deleted successfully.');
+    } catch (err) {
+      alert('Failed to delete project: ' + err.message);
+    }
+  };
+
   const filteredProjects = projects.filter(proj => {
     const matchesSearch = proj.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           proj.client.toLowerCase().includes(searchQuery.toLowerCase());
@@ -234,10 +249,15 @@ export default function Projects() {
                 </div>
               </div>
 
-              <div style={{ borderTop: '1px solid var(--ceo-border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between' }}>
-                <button className="ceo-btn" onClick={() => setEditProject({...proj})}>
-                  Edit
-                </button>
+              <div style={{ borderTop: '1px solid var(--ceo-border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="ceo-btn" onClick={() => setEditProject({...proj})}>
+                    Edit
+                  </button>
+                  <button className="ceo-btn" style={{ color: 'var(--ceo-danger)', borderColor: 'var(--ceo-danger)' }} onClick={() => handleDeleteProject(proj.id)}>
+                    Delete
+                  </button>
+                </div>
                 <button 
                   className="ceo-btn" 
                   onClick={() => { setSignoffProject(proj); setSignature(false); }} 

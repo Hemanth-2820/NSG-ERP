@@ -33,7 +33,11 @@ export default function Login({ onLoginSuccess }) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Incorrect email or password.');
+        if (response.status === 401) {
+          throw new Error(errData.detail || 'Incorrect email or password.');
+        } else {
+          throw new Error(errData.detail || 'Server error. Please check if the backend is running.');
+        }
       }
 
       const data = await response.json();

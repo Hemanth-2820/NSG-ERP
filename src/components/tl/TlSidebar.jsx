@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, Briefcase, CheckSquare, Calendar, Clock, FileText, AlertTriangle, MessageSquare, CheckCircle, Award } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, CheckSquare, Calendar, Clock, FileText, AlertTriangle, CheckCircle, Award } from 'lucide-react';
 
 export default function TlSidebar({ activeTab, setActiveTab }) {
   const isDashboardActive = activeTab === 'dashboard';
@@ -12,7 +12,6 @@ export default function TlSidebar({ activeTab, setActiveTab }) {
   const isTimesheetsActive = activeTab === 'timesheets';
   const isReportsActive = activeTab === 'reports';
   const isEscalationsActive = activeTab === 'escalations';
-  const isMessagingActive = activeTab === 'messaging';
 
   return (
     <div className="nav-group">
@@ -145,19 +144,6 @@ export default function TlSidebar({ activeTab, setActiveTab }) {
       >
         <AlertTriangle size={18} />
         <span>Escalations</span>
-      </button>
-
-      <button
-        className={`nav-link ${isMessagingActive ? 'active' : ''}`}
-        onClick={() => setActiveTab('messaging')}
-        style={isMessagingActive ? { 
-          color: '#3b82f6',
-          borderLeftColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.05)' 
-        } : {}}
-      >
-        <MessageSquare size={18} />
-        <span>Messaging & Meet</span>
       </button>
     </div>
   );

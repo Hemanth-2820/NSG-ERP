@@ -2,39 +2,29 @@ import { useState, useEffect } from 'react';
 import { notify } from '../../utils/notify';
 
 export function AppraisalsView() {
-  const [db, setDb] = useState({ auditLogs: [] });
-  const onUpdateDb = setDb;
   const [appraisalTab, setAppraisalTab] = useState('proposals'); // proposals | cycles | scorecards | promotions
   const [selectedEmpId, setSelectedEmpId] = useState(104);
 
-  const [employees, setEmployees] = useState(db?.employees || []);
-  const [appraisalCycles, setAppraisalCycles] = useState(db?.appraisalCycles || []);
-  const [incrementProposals, setIncrementProposals] = useState(db?.incrementProposals || []);
-  const [scorecards, setScorecards] = useState(db?.appraisalScorecards || [
-    { id: 1, employee_name: 'John Doe', tl_name: 'Sarah Jenkins', rating: 'A — Excellent', comments: 'Outstanding system design velocity. Handled HDFC payment integration flawlessly.' },
-    { id: 2, employee_name: 'Jane Smith', tl_name: 'Sarah Jenkins', rating: 'B — Competent', comments: 'Consistent uptime and server provisioning logs. Excellent IT compliance.' },
-    { id: 3, employee_name: 'Rahul Roy', tl_name: 'Vikram Sen', rating: 'C — Developing', comments: 'Good work on content SEO audits, but needs more punctuality on clock-ins.' }
-  ]);
-  const [promotionTracker, setPromotionTracker] = useState(db?.promotions || [
-    { id: 1, name: 'Priya Patel', current: 'Junior Architect', proposed: 'Systems Architect', status: 'approved_by_ceo' }
-  ]);
+  const [employees, setEmployees] = useState([]);
+  const [appraisalCycles, setAppraisalCycles] = useState([]);
+  const [incrementProposals, setIncrementProposals] = useState([]);
+  const [scorecards, setScorecards] = useState([]);
+  const [promotionTracker, setPromotionTracker] = useState([]);
 
-  const emp = employees.find(e => e.id === selectedEmpId) || { name: 'Staff', grade: 1, designation: 'Developer' };
+  const emp = employees.find(e => e.id === selectedEmpId) || { name: 'Staff', grade: 1, designation: 'Developer', ctc: 300000 };
   
   // Base current CTC calculation simulation
-  const currentMonthlyCTC = emp.grade * 15000 + 10000;
-  const currentAnnualCTC = currentMonthlyCTC * 12;
+  const currentAnnualCTC = emp.ctc || 300000;
 
   const [proposedCTC, setProposedCTC] = useState(() => Math.round(currentAnnualCTC * 1.10));
   const [incrementPct, setIncrementPct] = useState(10);
 
   // Sync values when the selected employee changes
   useEffect(() => {
-    const monthly = emp.grade * 15000 + 10000;
-    const annual = monthly * 12;
+    const annual = emp.ctc || 300000;
     setIncrementPct(10);
     setProposedCTC(Math.round(annual * 1.10));
-  }, [selectedEmpId, emp.grade]);
+  }, [selectedEmpId, emp.ctc]);
 
   // Fetch all appraisal data from backend on mount
   useEffect(() => {
@@ -160,30 +150,6 @@ export function AppraisalsView() {
       }
     }
 
-    const newProposalLocal = {
-      ...newProposal,
-      id: +new Date(),
-      approved_by: null
-    };
-
-    const newLogs = [...db.auditLogs, {
-      id: +new Date() + 1,
-      timestamp: new Date().toISOString(),
-      initiator_id: 'Sarah Jenkins',
-      module: 'Appraisals',
-      record_id: selectedEmpId,
-      action_type: 'verify_doc',
-      change_diff: { increment_proposed: `${incrementPct}%`, new_ctc: proposedCTC },
-      ip_address: '192.168.1.104',
-      client_agent: 'Chrome / Windows'
-    }];
-
-    onUpdateDb({
-      ...db,
-      incrementProposals: [...(db.incrementProposals || []), newProposalLocal],
-      auditLogs: newLogs
-    });
-
     notify(`Increment proposal of ${incrementPct}% submitted to CEO approvals queue.`);
   };
 
@@ -230,16 +196,6 @@ export function AppraisalsView() {
         console.error("Failed to post appraisal cycle", err);
       }
     }
-
-    const newCycleLocal = {
-      ...newCycle,
-      id: +new Date()
-    };
-
-    onUpdateDb({
-      ...db,
-      appraisalCycles: [...(db.appraisalCycles || []), newCycleLocal]
-    });
 
     setCycleName('');
     setStartDate('');

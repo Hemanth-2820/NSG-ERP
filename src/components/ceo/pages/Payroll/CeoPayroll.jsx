@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, Search, AlertCircle, FileText, IndianRupee, History, DollarSign } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import './CeoPayroll.css';
 
 export default function CeoPayroll() {
@@ -135,11 +137,80 @@ export default function CeoPayroll() {
       setLoading(false);
     }
   };
+  const processAllPending = async () => {
+    if (pendingRecords.length === 0) return;
+    if (!window.confirm(`Are you sure you want to process payroll for all ${pendingRecords.length} pending employees?`)) return;
+
+    setLoading(true);
+    let successCount = 0;
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      for (const user of pendingRecords) {
+        const res = await fetch(`/api/ceo-portal/payroll/process/${user.employee_id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            month,
+            year,
+            basic: user.basic,
+            hra: user.hra,
+            allowances: user.allowances,
+            bonus: user.bonus,
+            epf: user.epf,
+            tds: user.tds,
+            lop: user.lop,
+            payment_method: 'Bank Transfer',
+            transaction_ref: 'BULK-PROCESS-' + new Date().getTime()
+          })
+        });
+        if (res.ok) successCount++;
+      }
+      showNotification(`Successfully processed ${successCount} payrolls.`);
+      fetchPending();
+    } catch (e) {
+      console.error(e);
+      showNotification('An error occurred during bulk processing', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const downloadPDF = (record) => {
-    // In a real app, this would call an API or use jsPDF.
-    // We will just show a notification for now.
-    showNotification(`Downloading PDF for ${record.employee_name}...`, 'success');
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.text('NSG ERP Systems', 105, 20, null, null, 'center');
+    doc.setFontSize(12);
+    doc.text('Payslip', 105, 28, null, null, 'center');
+    
+    // Employee Details
+    doc.setFontSize(10);
+    doc.text(`Employee Name: ${record.employee_name}`, 14, 40);
+    doc.text(`Month/Year: ${record.month}/${record.year}`, 14, 46);
+    doc.text(`Transaction Ref: ${record.transaction_ref || 'N/A'}`, 14, 52);
+    doc.text(`Payment Method: ${record.payment_method}`, 14, 58);
+    
+    // Earnings & Deductions
+    doc.autoTable({
+      startY: 65,
+      head: [['Description', 'Amount (INR)']],
+      body: [
+        ['Net Salary Paid', `Rs. ${Math.round(record.net).toLocaleString()}`]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.text('This is a computer generated payslip and does not require a signature.', 105, 100, null, null, 'center');
+    
+    doc.save(`Payslip_${record.employee_name}_${record.month}_${record.year}.pdf`);
+    showNotification(`Downloaded PDF for ${record.employee_name}`, 'success');
   };
 
   return (
@@ -158,7 +229,9 @@ export default function CeoPayroll() {
             ))}
           </select>
           <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+            {Array.from({ length: 21 }, (_, i) => new Date().getFullYear() - 10 + i).map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -170,13 +243,20 @@ export default function CeoPayroll() {
         </div>
       )}
 
-      <div className="ceo-payroll-tabs">
-        <button className={activeTab === 'pending' ? 'active' : ''} onClick={() => setActiveTab('pending')}>
-          <DollarSign size={16} /> Pending Payroll
-        </button>
-        <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>
-          <History size={16} /> History & Payslips
-        </button>
+      <div className="ceo-payroll-tabs" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button className={activeTab === 'pending' ? 'active' : ''} onClick={() => setActiveTab('pending')}>
+            <DollarSign size={16} /> Pending Payroll
+          </button>
+          <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>
+            <History size={16} /> History & Payslips
+          </button>
+        </div>
+        {activeTab === 'pending' && pendingRecords.length > 0 && (
+          <button className="ceo-btn ceo-btn-primary" onClick={processAllPending}>
+            Process All ({pendingRecords.length})
+          </button>
+        )}
       </div>
 
       {loading && <div className="ceo-payroll-loader"><Loader className="spin" size={24}/> Processing...</div>}

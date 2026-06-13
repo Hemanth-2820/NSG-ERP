@@ -40,8 +40,6 @@ def wipe_database():
         
         # 6. Communication & Logs
         print(f"Deleted {db.query(models.Notification).delete()} Notifications.")
-        print(f"Deleted {db.query(models.Message).delete()} Messages.")
-        print(f"Deleted {db.query(models.Conversation).delete()} Conversations.")
         print(f"Deleted {db.query(models.AuditLog).delete()} Audit Logs.")
         print(f"Deleted {db.query(models.SystemSetting).delete()} System Settings.")
         

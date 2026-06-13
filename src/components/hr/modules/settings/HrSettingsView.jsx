@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, RefreshCw, MapPin, Loader, CheckCircle2, Building2, Save, Plus, Trash2, Sliders } from 'lucide-react';
 
 export function HrSettingsView() {
-  const [db, setDb] = useState({});
-  const onUpdateDb = setDb;
-  const [geofence, setGeofence] = useState(() => db.geofenceSettings || {
+  const [geofence, setGeofence] = useState({
     enabled: true,
     latitude: 12.9716,
     longitude: 77.5946,
@@ -221,11 +219,10 @@ export function HrSettingsView() {
         console.error("Failed to save geofence settings to backend", err);
         success = false;
       }
+    } else {
+      success = false;
     }
-    onUpdateDb({
-      ...db,
-      geofenceSettings: geofence
-    });
+
     if (success) {
       if (window.toast) {
         window.toast.success("Geofence settings saved successfully!");
