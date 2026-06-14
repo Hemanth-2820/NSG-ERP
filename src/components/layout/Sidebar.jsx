@@ -8,7 +8,7 @@ import HrSidebar from '../hr/HrSidebar';
 import TlSidebar from '../tl/TlSidebar';
 import EmployeeSidebar from '../employee/EmployeeSidebar';
 
-export default function Sidebar({ activeRole, activeTab, setActiveTab, currentUser }) {
+export default function Sidebar({ activeRole, activeTab, setActiveTab, currentUser, onLogout }) {
   const currentRoleColor = {
     CEO: '#f59e0b',
     HR: '#ec4899',
@@ -39,11 +39,6 @@ export default function Sidebar({ activeRole, activeTab, setActiveTab, currentUs
 
   const RoleIconComponent = roleIcon;
 
-  const handleLogout = () => {
-        window.location.hash = '#/login';
-    window.location.reload();
-  };
-
   return (
     <aside className="app-sidebar">
       {/* Brand Header */}
@@ -72,7 +67,7 @@ export default function Sidebar({ activeRole, activeTab, setActiveTab, currentUs
             <span>System Settings</span>
           </button>
         )}
-        <button className="nav-link footer-link logout" onClick={handleLogout}>
+        <button className="nav-link footer-link logout" onClick={onLogout}>
           <LogOut size={18} />
           <span>Logout</span>
         </button>
