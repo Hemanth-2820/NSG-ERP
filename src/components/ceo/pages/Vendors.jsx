@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { 
   Building, CreditCard, Clock, CheckCircle, AlertTriangle, Search, Filter, 
   Plus, MoreVertical, ShieldCheck, Box, RefreshCw, X
@@ -6,7 +7,20 @@ import {
 import '../CEO.css';
 
 export default function Vendors() {
-  const [vendors, setVendors] = useState([]);
+  const token = localStorage.getItem('nsg_jwt_token');
+  const fetcher = (url) => fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json());
+
+    const { data: rawVendors = [], mutate: mutateVendors } = useSWR('/api/ceo-portal/vendors', fetcher);
+  const vendors = Array.isArray(rawVendors) ? rawVendors.map(v => ({
+    id: v.vendor_id || v.id,
+    db_id: v.id,
+    name: v.name,
+    category: v.category,
+    status: v.status,
+    spend: v.annual_spend,
+    renewal: v.renewal_date || 'N/A',
+    risk: v.risk_level
+  })) : [];
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
   

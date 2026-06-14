@@ -2187,17 +2187,17 @@ def get_all_approvals(current_user: models.User = Depends(security.get_current_u
     # 4. Policies
     policies = db.query(models.CompanyPolicy).offset(skip).limit(limit).all()
     for p in policies:
-        status_label = 'Pending'
-        if p.status == 'approved': status_label = 'Approved'
-        elif p.status == 'rejected': status_label = 'Denied'
+        status_label = getattr(p, 'status', 'Approved')
+        if status_label == 'approved': status_label = 'Approved'
+        elif status_label == 'rejected': status_label = 'Denied'
         
         approvals.append({
             "id": f"POL-{p.id}",
             "type": "Policy",
-            "requestedBy": p.created_by,
+            "requestedBy": getattr(p, 'created_by', 'Admin'),
             "dept": "HR/Admin",
             "urgency": "Normal",
-            "submittedAt": str(p.submitted_at),
+            "submittedAt": str(getattr(p, 'submitted_at', getattr(p, 'updated_at', 'Recent'))),
             "amount": "-",
             "status": status_label,
             "policyId": p.id,

@@ -48,7 +48,6 @@ export default function Announcements() {
 
   const fetchUnreadUsers = async (id) => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch(`/api/ceo-portal/announcements/${id}/unread-users`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -72,7 +71,6 @@ export default function Announcements() {
 
   const fetchAnnouncements = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/announcements', {
         headers: { 'Authorization': `Bearer ${token}` }

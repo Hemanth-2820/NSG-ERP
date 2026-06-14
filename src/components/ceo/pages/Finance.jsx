@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { 
   IndianRupee, TrendingUp, TrendingDown, AlertTriangle, 
   Plus, Check, X, Calculator, Settings, Clock, CheckCircle,
@@ -474,7 +475,6 @@ export default function Finance() {
   const token = localStorage.getItem('nsg_jwt_token');
 
   const fetchFinanceData = async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -518,7 +518,6 @@ export default function Finance() {
   }, []);
 
   const handleActionApproval = async (id, rawType, action) => {
-    if (!token) return;
     try {
       const endpoint = rawType === 'expense' 
         ? `/api/ceo-portal/expenses/${id}/${action}`
@@ -534,7 +533,6 @@ export default function Finance() {
   };
 
   const handleActionBudget = async (id, action) => {
-    if (!token) return;
     try {
       const res = await fetch(`/api/ceo-portal/finance/budgets/${id}/${action}`, {
         method: 'POST',
@@ -546,7 +544,6 @@ export default function Finance() {
   };
 
   const handleSaveSalaryStructure = async (components) => {
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/finance/salary-components', {
         method: 'POST',
@@ -562,7 +559,6 @@ export default function Finance() {
   };
 
   const handleSaveKpi = async () => {
-    if (!token) return;
     const newKpiData = {
       revenue: { val: kpiForm.revenue, trend: kpiForm.revTrend, up: true },
       grossProfit: { val: kpiForm.grossProfit, trend: kpiForm.gpTrend, up: true },

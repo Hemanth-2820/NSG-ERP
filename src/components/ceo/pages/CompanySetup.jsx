@@ -179,7 +179,6 @@ export default function CompanySetup() {
   // ─── API Integration ──────────────────────────────────────────────────────────
 
   const fetchProfile = async () => {
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/configs', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
@@ -198,7 +197,6 @@ export default function CompanySetup() {
   };
 
   const fetchDepartments = async () => {
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/departments', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
@@ -210,7 +208,6 @@ export default function CompanySetup() {
   };
 
   const fetchDesignations = async () => {
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/designations', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setDesignations(await res.json());
@@ -218,7 +215,6 @@ export default function CompanySetup() {
   };
 
   const fetchShifts = async () => {
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/shifts', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setShifts(await res.json());
@@ -226,7 +222,6 @@ export default function CompanySetup() {
   };
 
   const fetchHolidays = async () => {
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/holidays', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setHolidays(await res.json());
@@ -244,7 +239,6 @@ export default function CompanySetup() {
   }, []);
 
   const saveSetting = async (key, value) => {
-    if (!token) return false;
     try {
       const res = await fetch('/api/ceo-portal/configs', {
         method: 'POST',

@@ -272,7 +272,6 @@ export default function ApprovalsPage() {
   const [promoLoading, setPromoLoading] = useState(false);
   const fetchApprovals = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -343,7 +342,7 @@ export default function ApprovalsPage() {
     const action = isApprove ? 'approve' : 'reject';
     const token = localStorage.getItem('nsg_jwt_token');
 
-    if (!token || !item) return;
+    if (!item) return;
 
     try {
       if (item.id.startsWith('PAY-')) {

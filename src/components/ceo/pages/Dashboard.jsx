@@ -32,7 +32,6 @@ export default function Dashboard() {
   const token = localStorage.getItem('nsg_jwt_token');
 
   const fetchData = async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {

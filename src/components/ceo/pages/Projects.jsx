@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { 
   Search, CheckCircle, AlertTriangle, Clock, Target, Plus, RefreshCw, AlertCircle
 } from 'lucide-react';
 import '../CEO.css';
 
 export default function Projects() {
-  const [projects, setProjects] = useState([]);
+  const token = localStorage.getItem('nsg_jwt_token');
+  const fetcher = (url) => fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json());
+
+  const { data: projects = [], mutate: mutateProjects } = useSWR('/api/ceo-portal/projects', fetcher);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -23,18 +27,18 @@ export default function Projects() {
   const [newProject, setNewProject] = useState({ name: '', client: '', budget: '', used: '', status: 'Active', deadline: '' });
   const [creating, setCreating] = useState(false);
 
-  const token = () => localStorage.getItem('nsg_jwt_token');
+  
 
   const fetchProjects = async () => {
     setLoading(true);
     setError('');
     try {
       const res = await fetch('/api/ceo-portal/projects', {
-        headers: { 'Authorization': `Bearer ${token()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setProjects(data);
+      mutateProjects();
     } catch (err) {
       console.error(err);
       setError('Failed to load projects from server.');
@@ -58,11 +62,11 @@ export default function Projects() {
     try {
       const res = await fetch(`/api/ceo-portal/projects/${signoffProject.id}/signoff`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Signoff failed');
       const updated = await res.json();
-      setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+      mutateProjects();
       setSignoffProject(null);
       setSignature(false);
     } catch (err) {
@@ -78,7 +82,7 @@ export default function Projects() {
     try {
       const res = await fetch(`/api/ceo-portal/projects/${editProject.id}`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: editProject.name,
           client: editProject.client,
@@ -90,7 +94,7 @@ export default function Projects() {
       });
       if (!res.ok) throw new Error('Save failed');
       const updated = await res.json();
-      setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+      mutateProjects();
       setEditProject(null);
     } catch (err) {
       alert('Failed to save project: ' + err.message);
@@ -105,7 +109,7 @@ export default function Projects() {
     try {
       const res = await fetch('/api/ceo-portal/projects', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newProject.name,
           client: newProject.client,
@@ -132,7 +136,7 @@ export default function Projects() {
     try {
       const res = await fetch(`/api/ceo-portal/projects/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Delete failed');
       setProjects(prev => prev.filter(p => p.id !== id));

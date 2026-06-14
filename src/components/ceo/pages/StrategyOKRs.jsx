@@ -31,7 +31,6 @@ export default function StrategyOKRs() {
 
   const fetchOkrs = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/okrs', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -100,7 +99,6 @@ export default function StrategyOKRs() {
 
   const saveKrProgress = async (krId) => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch(`/api/ceo-portal/okrs/key-results/${krId}/progress`, {
         method: 'POST',
@@ -125,7 +123,6 @@ export default function StrategyOKRs() {
 
   const handleCreateOkr = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch('/api/ceo-portal/okrs', {
         method: 'POST',
@@ -151,7 +148,6 @@ export default function StrategyOKRs() {
   const handleDeleteOkr = async (id) => {
     if (!window.confirm("Are you sure you want to delete this OKR?")) return;
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch(`/api/ceo-portal/okrs/${id}`, {
         method: 'DELETE',

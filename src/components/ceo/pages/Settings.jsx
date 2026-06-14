@@ -100,7 +100,6 @@ export default function Settings() {
   useEffect(() => {
     const fetchConfigsAndAudit = async () => {
       const token = localStorage.getItem('nsg_jwt_token');
-      if (!token) return;
       
       // 1. Fetch system configs
       try {
@@ -154,7 +153,6 @@ export default function Settings() {
 
   const saveSetting = async (key, value) => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return false;
     try {
       const res = await fetch('/api/ceo-portal/configs', {
         method: 'POST',
