@@ -40,8 +40,7 @@ export default function Sidebar({ activeRole, activeTab, setActiveTab, currentUs
   const RoleIconComponent = roleIcon;
 
   const handleLogout = () => {
-    localStorage.removeItem('nsg_jwt_token');
-    window.location.hash = '#/login';
+        window.location.hash = '#/login';
     window.location.reload();
   };
 

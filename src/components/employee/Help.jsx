@@ -11,7 +11,6 @@ export default function Help({ currentUser }) {
   const token = localStorage.getItem('nsg_jwt_token');
 
   const fetchTickets = async () => {
-    if (!token) return;
     try {
       const res = await fetch('/api/employee-portal/helpdesk/my-tickets', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -30,7 +29,6 @@ export default function Help({ currentUser }) {
   }, [token]);
 
   const handleSubmitTicket = async (newTicket) => {
-    if (!token) return;
     try {
       const res = await fetch('/api/employee-portal/helpdesk/ticket', {
         method: 'POST',

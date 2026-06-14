@@ -15,7 +15,6 @@ export function OnboardingView({ queryParams, setQueryParams }) {
   useEffect(() => {
     const syncOnboardingData = async () => {
       const token = localStorage.getItem('nsg_jwt_token');
-      if (!token) return;
 
       try {
         const headers = { Authorization: `Bearer ${token}` };

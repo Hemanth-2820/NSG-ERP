@@ -22,7 +22,6 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
 
   const fetchChannelsAndMessages = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch('/api/hr-portal/chat/channels', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -127,7 +126,6 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
   useEffect(() => {
     const fetchEmployees = async () => {
       const token = localStorage.getItem('nsg_jwt_token');
-      if (!token) return;
       try {
         const res = await fetch('/api/hr-portal/chat/users', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) setEmployees(await res.json());

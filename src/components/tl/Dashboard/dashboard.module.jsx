@@ -40,7 +40,6 @@ const Dashboard = ({ setActiveTab, setSelectedChatUser }) => {
 
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     const headers = { 'Authorization': `Bearer ${token}` };
 
     try {

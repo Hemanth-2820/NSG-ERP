@@ -25,7 +25,6 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
   const token = localStorage.getItem('nsg_jwt_token');
 
   useEffect(() => {
-    if (!token) return;
     const fetchLogs = async () => {
       try {
         const res = await fetch('/api/attendance/my-logs', {
@@ -143,7 +142,6 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
   });
 
   useEffect(() => {
-    if (!token) return;
     const fetchAll = async () => {
       try {
         const headers = { 'Authorization': `Bearer ${token}` };

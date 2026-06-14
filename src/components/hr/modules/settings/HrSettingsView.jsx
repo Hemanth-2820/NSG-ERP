@@ -173,7 +173,6 @@ export function HrSettingsView() {
   useEffect(() => {
     const fetchGeofenceSettings = async () => {
       const token = localStorage.getItem('nsg_jwt_token');
-      if (!token) return;
       try {
         const res = await fetch('/api/attendance/geofence-settings', {
           headers: { 'Authorization': `Bearer ${token}` }

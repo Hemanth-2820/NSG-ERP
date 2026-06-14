@@ -15,7 +15,6 @@ const Escalations = () => {
   const token = localStorage.getItem('nsg_jwt_token');
 
   const fetchData = async () => {
-    if (!token) return;
     try {
       // Fetch escalations
       const escRes = await fetch('/api/team-lead/escalations', {
@@ -41,7 +40,6 @@ const Escalations = () => {
       return;
     }
 
-    if (!token) return;
     try {
       const res = await fetch('/api/team-lead/escalations', {
         method: 'POST',
@@ -69,7 +67,6 @@ const Escalations = () => {
   };
 
   const handleResolve = async (id) => {
-    if (!token) return;
     try {
       const res = await fetch(`/api/team-lead/escalations/${id}/resolve`, {
         method: 'POST',

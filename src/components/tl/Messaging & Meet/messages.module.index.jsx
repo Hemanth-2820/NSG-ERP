@@ -23,7 +23,6 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
   const fetchChannelsAndMessages = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
-    if (!token) return;
     try {
       const res = await fetch('/api/employee-portal/chat/channels', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -140,7 +139,6 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   useEffect(() => {
     const fetchEmployees = async () => {
       const token = localStorage.getItem('nsg_jwt_token');
-      if (!token) return;
       try {
         const res = await fetch('/api/employee-portal/chat/users', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) setEmployees(await res.json());
@@ -214,7 +212,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   // Initialize WebSocket connection for real-time messaging
   useEffect(() => {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//127.0.0.1:8000/chat/ws/${encodeURIComponent(tlName)}`;
+    const wsUrl = `${wsProtocol}//127.0.0.1:8000/employee-portal/ws/${encodeURIComponent(tlName)}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 

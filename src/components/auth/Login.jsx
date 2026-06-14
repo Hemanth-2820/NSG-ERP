@@ -42,8 +42,7 @@ export default function Login({ onLoginSuccess }) {
 
       const data = await response.json();
       if (data.access_token) {
-        localStorage.setItem('nsg_jwt_token', data.access_token);
-        onLoginSuccess();
+                onLoginSuccess();
       } else {
         throw new Error('Authentication token not received.');
       }
