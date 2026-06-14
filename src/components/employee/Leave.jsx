@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Leave.css';
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-
-
-const TEAM_ON_LEAVE = [];
-const HOLIDAYS = [];
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '—';
@@ -20,7 +14,7 @@ function countWorkDays(from, to) {
   const end = new Date(to);
   while (cur <= end) {
     const d = cur.getDay();
-    if (d !== 0 && d !== 6 && !HOLIDAYS.includes(cur.toISOString().slice(0, 10))) count++;
+    if (d !== 0 && d !== 6) count++;
     cur.setDate(cur.getDate() + 1);
   }
   return count;
@@ -94,18 +88,6 @@ function LeaveBalanceCard({ type, label, used, total, color, onApply }) {
   );
 }
 
-// ─── OverlapWarning ───────────────────────────────────────────────────────────
-function OverlapWarning({ visible, members, dates }) {
-  return (
-    <div className={`lv-overlap-warning ${visible ? 'lv-overlap-visible' : ''}`}>
-      <span className="lv-overlap-icon">⚠️</span>
-      <span>
-        <strong>{members.join(', ')}</strong> {members.length === 1 ? 'is' : 'are'} also on leave:{' '}
-        {dates.join(', ')}
-      </span>
-    </div>
-  );
-}
 
 // ─── ApplyLeaveForm ───────────────────────────────────────────────────────────
 function ApplyLeaveForm({ prefillType, balances, onSuccess, onRefreshData }) {
@@ -115,7 +97,6 @@ function ApplyLeaveForm({ prefillType, balances, onSuccess, onRefreshData }) {
   const [reason, setReason] = useState('');
   const [dayCount, setDayCount] = useState(0);
   const [calculating, setCalculating] = useState(false);
-  const [showOverlap, setShowOverlap] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState({});
@@ -136,11 +117,9 @@ function ApplyLeaveForm({ prefillType, balances, onSuccess, onRefreshData }) {
         const count = countWorkDays(fromDate, toDate);
         setDayCount(count);
         setCalculating(false);
-        setShowOverlap(count > 0 && TEAM_ON_LEAVE.length > 0);
       }, 600);
     } else {
       setDayCount(0);
-      setShowOverlap(false);
     }
     return () => clearTimeout(calcTimer.current);
   }, [fromDate, toDate]);
@@ -191,7 +170,7 @@ function ApplyLeaveForm({ prefillType, balances, onSuccess, onRefreshData }) {
       setTimeout(() => {
         setSuccess(false);
         setLeaveType(''); setFromDate(''); setToDate('');
-        setReason(''); setDayCount(0); setShowOverlap(false);
+        setReason(''); setDayCount(0);
         if (onSuccess) onSuccess();
       }, 1800);
     }
@@ -246,8 +225,6 @@ function ApplyLeaveForm({ prefillType, balances, onSuccess, onRefreshData }) {
         </div>
       </div>
 
-      {/* Overlap Warning */}
-      <OverlapWarning visible={showOverlap} members={TEAM_ON_LEAVE} dates={[fromDate, toDate].filter(Boolean).map(fmtDate)} />
 
       {/* Reason */}
       <div className="lv-field-group">
@@ -348,7 +325,7 @@ export default function Leave() {
   const [cancelTarget, setCancelTarget] = useState(null);
   const formRef = useRef(null);
   
-  const [myDbBalance, setMyDbBalance] = useState({ CL: 12, SL: 8, EL: 15, Maternity: 0, Paternity: 0 });
+  const [myDbBalance, setMyDbBalance] = useState(null);
   const [myHistory, setMyHistory] = useState([]);
 
   const fetchData = async () => {
@@ -386,11 +363,12 @@ export default function Leave() {
     fetchData();
   }, []);
 
+  const dbBal = myDbBalance || { CL: 12, SL: 8, EL: 15, Maternity: 26, Paternity: 0 };
   const balances = [
-    { type: 'CL',      label: 'Casual Leave',       used: 12 - (myDbBalance.CL || 0),  total: 12, color: 'var(--cl-color)'      },
-    { type: 'SL',      label: 'Sick Leave',          used: 8 - (myDbBalance.SL || 0),   total: 8,  color: 'var(--sl-color)'      },
-    { type: 'EL',      label: 'Earned Leave',        used: 15 - (myDbBalance.EL || 0),  total: 15, color: 'var(--el-color)'      },
-    { type: 'Maternity', label: 'Maternity Leave', used: 26 - (myDbBalance.Maternity || 0), total: 26, color: 'var(--compoff-color)' },
+    { type: 'CL',      label: 'Casual Leave',       used: myDbBalance ? 12 - (dbBal.CL || 0) : 0,  total: myDbBalance ? 12 : 0, color: 'var(--cl-color)'      },
+    { type: 'SL',      label: 'Sick Leave',          used: myDbBalance ? 8 - (dbBal.SL || 0) : 0,   total: myDbBalance ? 8 : 0,  color: 'var(--sl-color)'      },
+    { type: 'EL',      label: 'Earned Leave',        used: myDbBalance ? 15 - (dbBal.EL || 0) : 0,  total: myDbBalance ? 15 : 0, color: 'var(--el-color)'      },
+    { type: 'Maternity', label: 'Maternity Leave', used: myDbBalance ? 26 - (dbBal.Maternity || 0) : 0, total: myDbBalance ? 26 : 0, color: 'var(--compoff-color)' },
   ];
 
   function handleApply(type) {

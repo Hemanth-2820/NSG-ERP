@@ -4,7 +4,6 @@ import './Tasks.css';
 
 
 
-const SPRINTS = ['All Sprints', 'Sprint 14', 'Sprint 13'];
 const STATUS_FILTERS = ['All', 'Todo', 'In-Progress', 'Done'];
 
 const PRIORITY_COLOR = { high: '#f87171', medium: '#fbbf24', low: '#34d399' };
@@ -357,7 +356,7 @@ export default function Tasks() {
   const fetchSchema = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/employee-portal/tasks/schema', {
+      const res = await fetch('/api/employee-portal/tasks/schema', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -370,7 +369,7 @@ export default function Tasks() {
   const fetchTasks = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('http://localhost:8000/employee-portal/tasks/my-tasks', {
+      const res = await fetch('/api/employee-portal/tasks/my-tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -378,7 +377,6 @@ export default function Tasks() {
         // The API returns the data, we might need to map it slightly to match the UI expectation
         const formatted = data.map(t => ({
           ...t,
-          acceptance: [], // acceptance criteria not returned by backend
           subtasks: t.subtasks || []
         }));
         setTasks(formatted);
@@ -391,7 +389,7 @@ export default function Tasks() {
 
   const selectedTask = tasks.find(t => t.id === selectedId) || null;
 
-  const sprintList = [...new Set(['All Sprints', 'Sprint 14', 'Sprint 13', ...tasks.map(t => t.sprint).filter(Boolean)])];
+  const sprintList = [...new Set(['All Sprints', ...tasks.map(t => t.sprint).filter(Boolean)])];
 
   const handleUpdate = async (id, changes) => {
     // If the change is a subtask toggle
@@ -405,7 +403,7 @@ export default function Tasks() {
       if (changedSubtask) {
         try {
           const token = localStorage.getItem('nsg_jwt_token');
-          await fetch(`http://localhost:8000/employee-portal/tasks/${id}/subtasks/${changedSubtask.id}/toggle`, {
+          await fetch(`/api/employee-portal/tasks/${id}/subtasks/${changedSubtask.id}/toggle`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -424,7 +422,7 @@ export default function Tasks() {
     if (changes.prUrl && changes.prStatus === 'submitted') {
       try {
         const token = localStorage.getItem('nsg_jwt_token');
-        await fetch(`http://localhost:8000/employee-portal/tasks/${id}/submit-pr`, {
+        await fetch(`/api/employee-portal/tasks/${id}/submit-pr`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

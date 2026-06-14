@@ -52,7 +52,7 @@ const TeamAttendance = ({ onBack }) => {
         const [empRes, attRes, corrRes] = await Promise.all([
           fetch('/api/team-lead/team-members', { headers }),
           fetch('/api/team-lead/attendance', { headers }),
-          fetch('/api/attendance/corrections', { headers })
+          fetch('/api/team-lead/attendance-corrections/pending', { headers })
         ]);
         
         if (empRes.ok) setEmployees(await empRes.json());
@@ -131,12 +131,11 @@ const TeamAttendance = ({ onBack }) => {
             timeIn = '-';
             timeOut = '-';
           } else {
-            // Seeding default present times for dates past the current date to keep the mock grid fully populated
             const todayKey = new Date().toISOString().slice(0, 10);
             if (lookupDate > todayKey) {
-              status = 'Present';
-              timeIn = '09:00';
-              timeOut = '18:00';
+              status = '-';
+              timeIn = '-';
+              timeOut = '-';
             } else {
               status = 'Absent';
               timeIn = '-';
@@ -281,39 +280,44 @@ const TeamAttendance = ({ onBack }) => {
       message: `Hi ${alert.name}, we noticed a missing or late punch (${alert.type}) on ${alert.date}. Please update/regularize your attendance in the portal.`
     });
   };
+  const [sendingNotification, setSendingNotification] = useState(false);
 
-  const handleSendNotification = () => {
-    // Append notification targeted at the employee to the database!
-    const newNotification = {
-      id: +new Date(),
-      employee_id: notifyModal.employeeId || 102,
-      message: notifyModal.message,
-      timestamp: new Date().toISOString(),
-      type: 'warning',
-      read: false
-    };
+  const handleSendNotification = async () => {
+    setSendingNotification(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const response = await fetch('/api/team-lead/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          employee_id: notifyModal.employeeId,
+          message: notifyModal.message,
+          type: 'warning'
+        })
+      });
 
-    // In a real app, send this notification to the backend via POST
-    // fetch('/api/notifications', { method: 'POST', body: JSON.stringify(newNotification) })
+      if (!response.ok) {
+        throw new Error('Failed to send notification');
+      }
 
-    const newSet = new Set(notifiedIds);
-    newSet.add(notifyModal.alertId);
-    setNotifiedIds(newSet);
-
-    setNotifiedMessages(prev => ({
-      ...prev,
-      [notifyModal.alertId]: notifyModal.message
-    }));
-
-    setNotifyModal({
-      isOpen: false,
-      alertId: null,
-      employeeId: null,
-      employeeName: '',
-      date: '',
-      type: '',
-      message: ''
-    });
+      const newSet = new Set(notifiedIds);
+      newSet.add(notifyModal.alertId);
+      setNotifiedIds(newSet);
+      
+      setNotifiedMessages(prev => ({
+        ...prev,
+        [notifyModal.alertId]: notifyModal.message
+      }));
+      setNotifyModal({ ...notifyModal, isOpen: false });
+    } catch (err) {
+      console.error(err);
+      alert('Error sending notification.');
+    } finally {
+      setSendingNotification(false);
+    }
   };
 
   const handleCancelNotification = () => {
@@ -529,7 +533,9 @@ const TeamAttendance = ({ onBack }) => {
                           {row[day.dateNum].status}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          In: {row[day.dateNum].in} <br/> Out: {row[day.dateNum].out}
+                          {row[day.dateNum].status !== '-' && row[day.dateNum].status !== 'Off' && row[day.dateNum].status !== 'Absent' ? (
+                            <>In: {row[day.dateNum].in} <br/> Out: {row[day.dateNum].out}</>
+                          ) : ''}
                         </div>
                       </td>
                     )) : (
@@ -725,7 +731,9 @@ const TeamAttendance = ({ onBack }) => {
                 Cancel
               </button>
               <button 
+                className={styles.sendAlertBtn} 
                 onClick={handleSendNotification}
+                disabled={sendingNotification}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '6px',

@@ -277,7 +277,7 @@ export function AttendanceRegisterView() {
                   <tr key={emp.id}>
                     <td style={{ padding: '12px 16px', position: 'sticky', left: 0, backgroundColor: 'var(--bg-primary)', zIndex: 10, borderRight: '1px solid var(--border-color)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <img src={emp.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`} alt={emp.name} style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                        <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`} alt={emp.name} style={{ width: '28px', height: '28px', borderRadius: '50%' }}  />
                         <span style={{ fontWeight: '600', fontSize: '13px' }}>{emp.name}</span>
                       </div>
                     </td>

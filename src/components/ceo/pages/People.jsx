@@ -31,6 +31,7 @@ export default function People() {
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
+  const [teamLeads, setTeamLeads] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEmployees = async () => {
@@ -49,9 +50,14 @@ export default function People() {
           status: emp.status === 'active' ? 'Active' : (emp.status || 'Active'),
           avatar: emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`,
           sysRole: emp.role,
-          email: emp.email
+          email: emp.email,
+          manager_id: emp.manager_id
         }));
         setEmployees(formatted);
+      }
+      const tlRes = await fetch('/api/hr-portal/team-leads', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (tlRes.ok) {
+        setTeamLeads(await tlRes.json());
       }
     } catch (e) {
       console.error(e);
@@ -130,8 +136,8 @@ export default function People() {
     setUpdating(true);
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch(`/api/ceo-portal/users/${selectedEmp.dbId}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/hr-portal/employees/${selectedEmp.dbId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -142,7 +148,9 @@ export default function People() {
           department: editEmpData.dept,
           designation: editEmpData.role,
           role: editEmpData.sysRole,
-          status: editEmpData.status.toLowerCase()
+          status: editEmpData.status.toLowerCase(),
+          manager_id: editEmpData.manager_id ? parseInt(editEmpData.manager_id) : null,
+          manager: editEmpData.manager_id ? teamLeads.find(tl => tl.id === parseInt(editEmpData.manager_id))?.name : null
         })
       });
       if (!res.ok) {
@@ -378,7 +386,7 @@ export default function People() {
                     >
                       <td style={{ padding: '16px 20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <img src={emp.avatar} alt={emp.name} style={{ width: '40px', height: '40px', borderRadius: '20px', border: '1px solid var(--ceo-border)' }} />
+                          <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '40px', height: '40px', borderRadius: '20px', border: '1px solid var(--ceo-border)' }}  />
                           <div>
                             <div style={{ fontWeight: 700, color: 'var(--ceo-text-primary)' }}>{emp.name}</div>
                             <div style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', fontWeight: 600, marginTop: '2px' }}>{emp.id}</div>
@@ -409,7 +417,7 @@ export default function People() {
           <div className="ceo-command-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div className="ceo-command-header" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'linear-gradient(to right, #F8FAFC, #FFFFFF)', borderBottom: '1px solid var(--ceo-border)' }}>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <img src={selectedEmp.avatar} alt={selectedEmp.name} style={{ width: '56px', height: '56px', borderRadius: '10px', border: '3px solid #FFF', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={selectedEmp.avatar} alt={selectedEmp.name} style={{ width: '56px', height: '56px', borderRadius: '10px', border: '3px solid #FFF', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}  />
                 <div>
                   <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--ceo-text-primary)' }}>{selectedEmp.name}</div>
                   <div style={{ fontSize: '13px', color: 'var(--ceo-text-secondary)', fontWeight: 600, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -590,7 +598,7 @@ export default function People() {
           <div style={{ background: '#FFF', width: '800px', height: '80vh', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ padding: '32px', borderBottom: '1px solid var(--ceo-divider)', background: 'linear-gradient(to right, #F8FAFC, #FFFFFF)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                <img src={selectedEmp.avatar} alt={selectedEmp.name} style={{ width: '80px', height: '80px', borderRadius: '16px', border: '4px solid #FFF', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={selectedEmp.avatar} alt={selectedEmp.name} style={{ width: '80px', height: '80px', borderRadius: '16px', border: '4px solid #FFF', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}  />
                 <div>
                   <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--ceo-text-primary)' }}>{selectedEmp.name}</div>
                   <div style={{ fontSize: '15px', color: 'var(--ceo-text-secondary)', fontWeight: 600, marginTop: '4px' }}>{selectedEmp.role} &bull; {selectedEmp.dept}</div>
@@ -615,7 +623,7 @@ export default function People() {
                   <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '16px' }}>REPORTING STRUCTURE</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                     <Users size={20} color="var(--ceo-text-muted)" />
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Reports to: CTO</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Reports to: {selectedEmp.manager_id ? (teamLeads.find(tl => tl.id === selectedEmp.manager_id)?.name || 'Team Lead') : 'CEO/HR'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Users size={20} color="var(--ceo-text-muted)" />
@@ -725,14 +733,25 @@ export default function People() {
                   <input required value={editEmpData.role} onChange={e => setEditEmpData({...editEmpData, role: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} />
                 </div>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>STATUS</label>
-                <select value={editEmpData.status} onChange={e => setEditEmpData({...editEmpData, status: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
-                  <option value="Active">Active</option>
-                  <option value="Probation">Probation</option>
-                  <option value="Terminated">Terminated</option>
-                  <option value="Resigned">Resigned</option>
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>STATUS</label>
+                  <select value={editEmpData.status} onChange={e => setEditEmpData({...editEmpData, status: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
+                    <option value="Active">Active</option>
+                    <option value="Probation">Probation</option>
+                    <option value="Terminated">Terminated</option>
+                    <option value="Resigned">Resigned</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>REPORTS TO (TEAM LEAD)</label>
+                  <select value={editEmpData.manager_id || ''} onChange={e => setEditEmpData({...editEmpData, manager_id: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
+                    <option value="">None (Direct to CEO/HR)</option>
+                    {teamLeads.map(tl => (
+                      <option key={tl.id} value={tl.id}>{tl.name} ({tl.department})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div style={{ marginTop: '12px', display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--ceo-divider)', paddingTop: '24px' }}>
                 <button type="button" onClick={() => setIsEditProfileOpen(false)} className="ceo-btn" style={{ fontWeight: 700, padding: '10px 20px' }}>Cancel</button>

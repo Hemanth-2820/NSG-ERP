@@ -272,11 +272,11 @@ export default function ReceiptUpload({ onFile, accept = 'image/*,application/pd
                 PDF File
               </span>
             ) : preview ? (
-              <img 
+              <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} 
                 src={preview} 
                 alt="Receipt Preview" 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-              />
+               />
             ) : (
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No preview</span>
             )}

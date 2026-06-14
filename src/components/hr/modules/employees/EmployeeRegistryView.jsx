@@ -9,6 +9,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
   const [apiEmployees, setApiEmployees] = useState(null);
+  const [teamLeads, setTeamLeads] = useState([]);
   const employeeList = apiEmployees || db.employees;
   
   const empIdStr = queryParams?.get('empId');
@@ -35,6 +36,8 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [newPhoto, setNewPhoto] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80');
   const [newJoinDate, setNewJoinDate] = useState(new Date().toISOString().split('T')[0]);
   const [newStatus, setNewStatus] = useState('probation');
+  const [newManagerId, setNewManagerId] = useState('');
+  const [newSystemRole, setNewSystemRole] = useState('employee');
 
   // Edit Employee Modal States
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +50,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [editPhone, setEditPhone] = useState('');
   const [editGrade, setEditGrade] = useState(3);
   const [editManager, setEditManager] = useState('');
+  const [editSystemRole, setEditSystemRole] = useState('employee');
   const [editPhoto, setEditPhoto] = useState('');
 
   // Reset Password States
@@ -82,6 +86,10 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           ...db,
           employees: enriched
         });
+        const tlRes = await fetch('/api/hr-portal/team-leads', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (tlRes.ok) {
+          setTeamLeads(await tlRes.json());
+        }
       }
     } catch (err) {
       console.error('Failed to fetch employees:', err);
@@ -147,7 +155,9 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           designation: newRole,
           status: newStatus,
           join_date: newJoinDate,
-          photo: newPhoto
+          photo: newPhoto,
+          manager_id: newManagerId ? parseInt(newManagerId) : null,
+          role: newSystemRole
         })
       });
 
@@ -300,7 +310,9 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           designation: editRole,
           phone: editPhone,
           grade: editGrade,
-          manager: editManager,
+          manager: editManager ? teamLeads.find(tl => String(tl.id) === String(editManager))?.name : null,
+          manager_id: editManager ? parseInt(editManager) : null,
+          role: editSystemRole,
           photo: editPhoto
         })
       });
@@ -381,7 +393,8 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
     setEditRole(emp.designation || 'Developer');
     setEditPhone(emp.phone || '');
     setEditGrade(emp.grade || 3);
-    setEditManager(emp.manager || '');
+    setEditManager(emp.manager_id || '');
+    setEditSystemRole(emp.role || 'employee');
     setEditPhoto(emp.photo || '');
     setShowEditModal(true);
   };
@@ -522,7 +535,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
               {filtered.map(emp => (
                 <tr key={emp.id} onClick={() => { setSelectedEmp(emp); setProfileTab('info'); setRevealBank(false); }} style={{ cursor: 'pointer' }}>
                   <td>
-                    <img src={emp.photo} alt={emp.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    <img src={emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`} alt={emp.name} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`; }} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                   </td>
                   <td><span className="code-span">{emp.emp_id}</span></td>
                   <td><strong>{emp.name}</strong></td>
@@ -569,7 +582,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
             <div className="card" style={{ width: '420px', display: 'flex', flexDirection: 'column', gap: '16px', borderLeft: '4px solid var(--accent-pink)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <img src={selectedEmp.photo} alt={selectedEmp.name} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
+                  <img src={selectedEmp.photo || `https://ui-avatars.com/api/?name=${selectedEmp.name.replace(/ /g, '+')}&background=0F172A&color=fff`} alt={selectedEmp.name} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${selectedEmp.name.replace(/ /g, '+')}&background=0F172A&color=fff`; }} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
                   <div>
                     <h3 style={{ margin: 0, border: 'none', padding: 0 }}>{selectedEmp.name}</h3>
                     <span className="code-span">{selectedEmp.emp_id}</span>
@@ -909,6 +922,21 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
+
+              <label style={{ fontSize: '12px' }}>System Role</label>
+              <select value={newSystemRole} onChange={(e) => setNewSystemRole(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
+                <option value="employee">Employee</option>
+                <option value="tl">Team Lead (TL)</option>
+                <option value="hr">HR Admin</option>
+              </select>
+
+              <label style={{ fontSize: '12px' }}>Reports To (Team Lead)</label>
+              <select value={newManagerId} onChange={(e) => setNewManagerId(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
+                <option value="">None / Executive</option>
+                {teamLeads.map(tl => (
+                  <option key={tl.id} value={tl.id}>{tl.name}</option>
+                ))}
+              </select>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button type="button" style={{ background: 'none', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }} onClick={() => setShowAddWizard(false)}>Cancel</button>
@@ -950,8 +978,20 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
               <label style={{ fontSize: '12px' }}>Structural Grade</label>
               <input type="number" value={editGrade} onChange={(e) => setEditGrade(Number(e.target.value))} min={1} max={10} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
 
-              <label style={{ fontSize: '12px' }}>Reporting Manager</label>
-              <input type="text" value={editManager} onChange={(e) => setEditManager(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <label style={{ fontSize: '12px' }}>System Role</label>
+              <select value={editSystemRole} onChange={(e) => setEditSystemRole(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
+                <option value="employee">Employee</option>
+                <option value="tl">Team Lead (TL)</option>
+                <option value="hr">HR Admin</option>
+              </select>
+
+              <label style={{ fontSize: '12px' }}>Reports To (Team Lead)</label>
+              <select value={editManager} onChange={(e) => setEditManager(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
+                <option value="">None / Executive</option>
+                {teamLeads.map(tl => (
+                  <option key={tl.id} value={tl.id}>{tl.name}</option>
+                ))}
+              </select>
 
               <label style={{ fontSize: '12px' }}>Profile Photo URL</label>
               <input type="text" value={editPhoto} onChange={(e) => setEditPhoto(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />

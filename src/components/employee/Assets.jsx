@@ -84,12 +84,13 @@ export default function Assets({ currentUser }) {
     }
   };
 
-  const handleSignNoc = async (assetId, assetType) => {
+  const handleSignNoc = async (assetId, assetType, signatureData) => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
       const res = await fetch(`/api/employee-portal/assets/sign-noc/${assetId}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ signature_data: signatureData })
       });
 
       if (res.ok) {

@@ -4,13 +4,6 @@ import './Timesheet.css';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-const SPRINT_TASKS = [
-  { id: 1, name: 'API Integration – Auth Module',   sprint: 'Sprint 14' },
-  { id: 2, name: 'UI Fix – Dashboard Cards',         sprint: 'Sprint 14' },
-  { id: 3, name: 'Code Review – PR #204',            sprint: 'Sprint 14' },
-  { id: 4, name: 'Write Unit Tests – UserService',   sprint: 'Sprint 13' },
-  { id: 5, name: 'Deploy Staging v2.4',              sprint: 'Sprint 13' },
-];
 
 function getWeekDates(offset = 0) {
   const now = new Date();
@@ -46,12 +39,16 @@ function weekTotal(rows) {
 
 // ─── AddTaskModal ─────────────────────────────────────────────────────────────
 
-function AddTaskModal({ onAdd, onClose, existingIds, availableTasks }) {
+function AddTaskModal({ onAdd, onClose, existingIds, existingNames, availableTasks }) {
   const available = availableTasks.filter(t => !existingIds.includes(t.id));
   const [customTaskName, setCustomTaskName] = useState('');
 
   const handleAddCustom = () => {
     if (!customTaskName.trim()) return;
+    if (existingNames && existingNames.includes(customTaskName.trim().toLowerCase())) {
+      alert("This task already exists in your timesheet.");
+      return;
+    }
     onAdd({
       id: null, // Must be null so backend Pydantic Optional[int] doesn't throw 422
       name: customTaskName.trim(),
@@ -549,17 +546,6 @@ export default function Timesheet() {
         </button>
       </div>
 
-      {/* Dev test */}
-      {status === 'submitted' && (
-        <div style={{ marginTop: 10, textAlign: 'right' }}>
-          <button
-            onClick={() => { setStatus('rejected'); setRejectedReason('Monday hours missing — only 6h logged.'); }}
-            style={{ fontSize: 11, color: 'var(--ts-red)', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            [Dev] Simulate TL Rejection
-          </button>
-        </div>
-      )}
 
       {/* Modals */}
       {showAddModal && (
@@ -567,6 +553,7 @@ export default function Timesheet() {
           onAdd={addTask}
           onClose={() => setShowAddModal(false)}
           existingIds={rows.map(r => r.taskId)}
+          existingNames={rows.map(r => r.name.toLowerCase())}
           availableTasks={availableTasks}
         />
       )}

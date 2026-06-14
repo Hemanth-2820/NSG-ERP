@@ -9,6 +9,7 @@ export default function Tasks({ currentUser }) {
   
   const [teamMembers, setTeamMembers] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [projectsData, setProjectsData] = useState([]);
 
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPoints, setTaskPoints] = useState('');
@@ -32,6 +33,7 @@ export default function Tasks({ currentUser }) {
   useEffect(() => {
     fetchTeamMembers();
     fetchTasks();
+    fetchProjects();
   }, []);
 
   const fetchTeamMembers = async () => {
@@ -51,6 +53,16 @@ export default function Tasks({ currentUser }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setTasks(await res.json());
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/team-lead/projects', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) setProjectsData(await res.json());
     } catch (e) { console.error(e); }
   };
 
@@ -234,8 +246,6 @@ export default function Tasks({ currentUser }) {
       id: t.id,
       title: t.title,
       reason: t.rejected_reason || 'Rework required.',
-      rejectedBy: 'Marcus Vance',
-      rejectedAt: 'Recently',
       resubmitDue: t.due || 'TBD'
     }));
 
@@ -246,8 +256,7 @@ export default function Tasks({ currentUser }) {
       title: t.title,
       prUrl: t.pr_url || '#PR',
       author: getAssigneeName(t.user_id),
-      openedAt: 'Today',
-      hoursPending: 2
+      due: t.due || 'TBD'
     }));
 
   const getGroupedTasks = () => {
@@ -318,16 +327,16 @@ export default function Tasks({ currentUser }) {
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Project</label>
                 <select className={styles.formSelect} value={taskProject} onChange={(e) => setTaskProject(e.target.value)}>
-                  <option>Select Project...</option>
-                  <option>NSG-ERP Core</option>
-                  <option>Mobile App</option>
-                  <option>Marketing Website</option>
+                  <option value="">Select Project...</option>
+                  {projectsData.map(proj => (
+                    <option key={proj.id} value={proj.name}>{proj.name}</option>
+                  ))}
                 </select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Sprint ID</label>
                 <select className={styles.formSelect} value={taskSprint} onChange={(e) => setTaskSprint(e.target.value)}>
-                  {[...new Set(['Sprint 14', 'Sprint 13', ...((tasks || []).map(t => t.sprint).filter(Boolean))])].map(s => (
+                  {[...new Set(((tasks || []).map(t => t.sprint).filter(Boolean)))].map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                   <option value="Backlog">Backlog</option>
@@ -443,8 +452,6 @@ export default function Tasks({ currentUser }) {
                   <tr>
                     <th>Task Title</th>
                     <th>Rejection Reason</th>
-                    <th>Rejected By</th>
-                    <th>Rejected At</th>
                     <th>Resubmit Deadline</th>
                     <th>Action</th>
                   </tr>
@@ -454,8 +461,6 @@ export default function Tasks({ currentUser }) {
                     <tr key={task.id}>
                       <td className={styles.taskTitle}>{task.title}</td>
                       <td style={{ color: 'var(--danger)', fontWeight: 500 }}>{task.reason}</td>
-                      <td>{task.rejectedBy}</td>
-                      <td>{task.rejectedAt}</td>
                       <td style={{ fontWeight: 600 }}>{task.resubmitDue}</td>
                       <td>
                         <button className={`${styles.actionBtn} ${styles.primary}`}>
@@ -480,8 +485,7 @@ export default function Tasks({ currentUser }) {
                     <th>Task Title</th>
                     <th>PR Link</th>
                     <th>Author</th>
-                    <th>Opened At</th>
-                    <th>Time Pending</th>
+                    <th>Due Date</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -495,12 +499,7 @@ export default function Tasks({ currentUser }) {
                         </a>
                       </td>
                       <td>{pr.author}</td>
-                      <td>{pr.openedAt}</td>
-                      <td>
-                        <span className={`${styles.timePending} ${pr.hoursPending > 24 ? styles.red : ''}`}>
-                          {pr.hoursPending} hours
-                        </span>
-                      </td>
+                      <td>{pr.due}</td>
                       <td>
                         <div className={styles.actionGroup}>
                           <button className={`${styles.actionBtn} ${styles.success}`} onClick={() => handleApprovePr(pr.id)}><Check size={12}/> Approve PR</button>

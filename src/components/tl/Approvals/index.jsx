@@ -7,7 +7,24 @@ const Approvals = () => {
   
   const [leaves, setLeaves] = useState([]);
   const [corrections, setCorrections] = useState([]);
-  
+  const [teamMembers, setTeamMembers] = useState([]);
+
+  React.useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const res = await fetch('/api/team-lead/team-members', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) setTeamMembers(await res.json());
+      } catch (e) { console.error(e); }
+    };
+    fetchTeamMembers();
+  }, []);
+
+  const getEmpName = (id) => {
+    const emp = teamMembers.find(m => m.id === id);
+    return emp ? emp.name : `Emp #${id}`;
+  };
+
   const fetchLeaves = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
@@ -17,7 +34,7 @@ const Approvals = () => {
         // Format to match UI expectations
         const formatted = data.map(r => ({
           id: r.id,
-          employee: `Emp #${r.employee_id}`, // Note: normally joined with employee name
+          employee: getEmpName(r.employee_id),
           employee_id: r.employee_id,
           type: r.leave_type === 'CL' ? 'Casual Leave' : r.leave_type === 'SL' ? 'Sick Leave' : r.leave_type === 'EL' ? 'Earned Leave' : r.leave_type === 'CompOff' ? 'Comp Off' : r.leave_type,
           days: r.days,
@@ -34,12 +51,12 @@ const Approvals = () => {
   const fetchCorrections = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('/api/attendance/corrections', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('/api/team-lead/attendance-corrections/pending', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         const formatted = data.map(c => ({
           id: c.id,
-          employee: `Emp #${c.user_id}`,
+          employee: getEmpName(c.user_id),
           date: c.correction_date,
           requestedTimes: `${new Date(c.requested_clock_in).toLocaleTimeString()} - ${new Date(c.requested_clock_out).toLocaleTimeString()}`,
           reason: c.reason,
@@ -52,11 +69,58 @@ const Approvals = () => {
     } catch (e) { console.error(e); }
   };
 
+  const fetchWfhs = async () => {
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/team-lead/wfh/pending', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        const formatted = data.map(r => ({
+          id: r.id,
+          employee: getEmpName(r.user_id),
+          date: `${r.from_date} – ${r.to_date}`,
+          reason: r.reason,
+          status: r.status,
+          locationVerified: true
+        }));
+        setWfhs(formatted);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchTimesheets = async () => {
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/timesheets/pending', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        const formatted = data.map(ts => {
+          let totalH = 0;
+          (ts.rows || []).forEach(r => {
+            totalH += Object.values(r.hours || {}).reduce((sum, h) => sum + (parseFloat(h) || 0), 0);
+          });
+          return {
+            id: ts.id,
+            employee: getEmpName(ts.employee_id),
+            employee_id: ts.employee_id,
+            weekOf: ts.week_start_date,
+            totalHours: totalH,
+            hours: ts.rows?.[0]?.hours || { Mon:0, Tue:0, Wed:0, Thu:0, Fri:0, Sat:0, Sun:0 } // simplified
+          };
+        });
+        setTimesheets(formatted);
+      }
+    } catch (e) { console.error(e); }
+  };
+
   React.useEffect(() => {
+    if (teamMembers.length === 0) return;
     if (activeTab === 'leave') fetchLeaves();
     if (activeTab === 'corrections') fetchCorrections();
     if (activeTab === 'expense') fetchExpenses();
-  }, [activeTab]);
+    if (activeTab === 'wfh') fetchWfhs();
+    if (activeTab === 'timesheet') fetchTimesheets();
+  }, [activeTab, teamMembers]);
 
   const [expenses, setExpenses] = useState([]);
 
@@ -66,17 +130,20 @@ const Approvals = () => {
       const res = await fetch('/api/team-lead/expenses/pending', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        const formatted = data.map(c => ({
-          id: c.id,
-          employee: `Emp #${c.user_id || c.employee_id || 102}`, // Need to lookup name normally
-          employee_id: c.user_id || c.employee_id,
-          category: c.category || 'Other',
-          amount: c.amount || 0,
-          date: c.claim_date || c.date || '',
-          description: c.description || '',
-          receiptName: c.receipt_url || c.receiptName || 'receipt.pdf',
-          status: c.tl_approval || 'pending'
-        }));
+        const formatted = data.map(c => {
+          const empId = c.user_id || c.employee_id;
+          return {
+            id: c.id,
+            employee: getEmpName(empId),
+            employee_id: empId,
+            category: c.category || 'Other',
+            amount: c.amount || 0,
+            date: c.claim_date || c.date || '',
+            description: c.description || '',
+            receiptName: c.receipt_url || c.receiptName || 'receipt.pdf',
+            status: c.tl_approval || 'pending'
+          };
+        });
         setExpenses(formatted);
       }
     } catch (e) { console.error(e); }
@@ -103,12 +170,10 @@ const Approvals = () => {
         });
         fetchLeaves();
       } else if (activeTab === 'corrections') {
-        const action = actionType === 'approve' ? 'approve' : 'deny';
-        const body = actionType === 'deny' ? JSON.stringify({ comment: 'Denied by TL' }) : null;
-        await fetch(`/api/attendance/corrections/${id}/${action}`, {
+        const action = actionType === 'approve' ? 'approve' : 'reject';
+        await fetch(`/api/team-lead/attendance-corrections/${id}/${action}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         fetchCorrections();
       } else if (activeTab === 'expense') {
@@ -119,9 +184,24 @@ const Approvals = () => {
         });
         fetchExpenses();
       } else if (activeTab === 'timesheet') {
-        setTimesheets(prev => prev.filter(item => item.id !== id));
+        const action = actionType === 'approve' ? 'approve' : 'reject';
+        const body = actionType === 'reject' ? JSON.stringify({ comment: 'Rejected by TL from approvals' }) : null;
+        await fetch(`/api/timesheets/${id}/${action}`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            ...(body ? {'Content-Type': 'application/json'} : {})
+          },
+          body
+        });
+        fetchTimesheets();
       } else if (activeTab === 'wfh') {
-        setWfhs(prev => prev.filter(item => item.id !== id));
+        const action = actionType === 'approve' ? 'approve' : 'reject';
+        await fetch(`/api/team-lead/wfh/${id}/${action}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        fetchWfhs();
       }
       if (selectedId === id) setSelectedId(null);
     } catch (e) {
@@ -187,10 +267,6 @@ const Approvals = () => {
         <span style={{ color: '#94a3b8', fontSize: '14px' }}>Week of {item.weekOf}</span>
       </div>
 
-      <div className={styles.gitBadge}>
-        <GitCommit size={14} />
-        {item.gitCommits} Git Commits Matching Logged Hours
-      </div>
 
       <div className={styles.detailSection} style={{ marginTop: '24px' }}>
         <span className={styles.detailLabel}>Weekly Hours Grid</span>

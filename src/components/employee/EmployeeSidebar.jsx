@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   LayoutDashboard, CreditCard, User, UserMinus, 
-  HelpCircle, Briefcase,
+  HelpCircle, Briefcase, MessageSquare,
   Calendar, Clock, CheckSquare, Coins
 } from 'lucide-react';
 
@@ -17,6 +17,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }
   const isResignationActive = activeTab === 'resignation';
   const isHelpActive = activeTab === 'help';
   const isAssetsActive = activeTab === 'assets';
+  const isMessagingActive = activeTab === 'messaging';
 
   const activeStyle = {
     color: '#10b981',
@@ -141,6 +142,16 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }
       >
         <Briefcase size={18} />
         <span>Asset Requests</span>
+      </button>
+
+      {/* Messaging Tab */}
+      <button
+        className={`nav-link ${isMessagingActive ? 'active' : ''}`}
+        onClick={() => setActiveTab('messaging')}
+        style={isMessagingActive ? activeStyle : {}}
+      >
+        <MessageSquare size={18} />
+        <span>Messaging</span>
       </button>
     </div>
   );

@@ -13,6 +13,20 @@ router = APIRouter(
     tags=["employee-portal"]
 )
 
+class UserPublicResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    department: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+@router.get("/users", response_model=List[UserPublicResponse])
+def get_all_users(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    return db.query(models.User).filter(models.User.is_active == True).all()
+
 # ─── 1. TASKS SCHEMAS & ROUTES ────────────────────────────────────────────────
 class AnnouncementResponse(BaseModel):
     id: int
@@ -27,8 +41,8 @@ class AnnouncementResponse(BaseModel):
         from_attributes = True
 
 @router.get("/announcements", response_model=List[AnnouncementResponse])
-def get_announcements(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
-    anns = db.query(models.Announcement).order_by(models.Announcement.created_at.desc()).all()
+def get_announcements(skip: int = 0, limit: int = 50, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    anns = db.query(models.Announcement).order_by(models.Announcement.created_at.desc()).offset(skip).limit(limit).all()
     res = []
     for a in anns:
         res.append(AnnouncementResponse(
@@ -111,8 +125,8 @@ class PRSubmitRequest(BaseModel):
     prUrl: str
 
 @router.get("/tasks/my-tasks", response_model=List[TaskResponse])
-def get_my_tasks(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    tasks = db.query(models.Task).filter(models.Task.user_id == current_user.id).all()
+def get_my_tasks(skip: int = 0, limit: int = 100, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    tasks = db.query(models.Task).filter(models.Task.user_id == current_user.id).offset(skip).limit(limit).all()
     # Map fields to match camelCase expected by the React frontend
     resp_tasks = []
     for t in tasks:
@@ -130,6 +144,7 @@ def get_my_tasks(current_user: models.User = Depends(security.get_current_user),
             prUrl=t.pr_url,
             rejectedReason=t.rejected_reason,
             customData=t.custom_data,
+            acceptance=t.acceptance,
             subtasks=[SubtaskResponse(id=st.id, title=st.title, done=st.done) for st in t.subtasks]
         ))
     return resp_tasks
@@ -175,6 +190,7 @@ def submit_pr(id: int, req: PRSubmitRequest, current_user: models.User = Depends
         prUrl=task.pr_url,
         rejectedReason=task.rejected_reason,
         customData=task.custom_data,
+        acceptance=task.acceptance,
         subtasks=[SubtaskResponse(id=st.id, title=st.title, done=st.done) for st in task.subtasks]
     )
 
@@ -233,19 +249,26 @@ class LeaveRequestResponse(BaseModel):
 def get_my_leave_balances(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     bal = db.query(models.LeaveBalance).filter(models.LeaveBalance.user_id == current_user.id).first()
     if not bal:
-        # Seed default balances if none found
-        bal = models.LeaveBalance(user_id=current_user.id, CL=6.0, SL=8.0, EL=12.0, year=2026)
-        db.add(bal)
-        db.commit()
-        db.refresh(bal)
+        # Return 0 balances instead of mocking, as HR should provision this.
+        return models.LeaveBalance(id=0, user_id=current_user.id, CL=0.0, SL=0.0, EL=0.0, Maternity=0.0, Paternity=0.0, year=date.today().year)
     return bal
 
 @router.get("/leave/my-requests", response_model=List[LeaveRequestResponse])
-def get_my_leave_requests(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    return db.query(models.LeaveRequest).filter(models.LeaveRequest.user_id == current_user.id).order_by(models.LeaveRequest.from_date.desc()).all()
+def get_my_leave_requests(skip: int = 0, limit: int = 50, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.LeaveRequest).filter(models.LeaveRequest.user_id == current_user.id).order_by(models.LeaveRequest.from_date.desc()).offset(skip).limit(limit).all()
 
 @router.post("/leave/request", response_model=LeaveRequestResponse, status_code=status.HTTP_201_CREATED)
 def request_leave(req: LeaveRequestCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    # Check for overlapping leave requests
+    overlap = db.query(models.LeaveRequest).filter(
+        models.LeaveRequest.user_id == current_user.id,
+        models.LeaveRequest.status.in_(["pending", "tl_approved", "hr_approved"]),
+        models.LeaveRequest.from_date <= req.to_date,
+        models.LeaveRequest.to_date >= req.from_date
+    ).first()
+    if overlap:
+        raise HTTPException(status_code=400, detail="Leave request overlaps with an existing request.")
+        
     new_req = models.LeaveRequest(
         user_id=current_user.id,
         leave_type=req.leave_type,
@@ -256,6 +279,16 @@ def request_leave(req: LeaveRequestCreate, current_user: models.User = Depends(s
         status="pending"
     )
     db.add(new_req)
+    
+    # Create System Notification for the employee
+    notif = models.Notification(
+        user_id=current_user.id,
+        title="Leave Request Submitted",
+        message=f"Your {req.leave_type} request for {req.days} days ({req.from_date} to {req.to_date}) has been successfully submitted and is pending approval.",
+        type="leave"
+    )
+    db.add(notif)
+    
     db.commit()
     db.refresh(new_req)
     return new_req
@@ -292,6 +325,8 @@ def cancel_leave(id: int, current_user: models.User = Depends(security.get_curre
 class ExpenseClaimCreate(BaseModel):
     amount: float
     category: str
+    description: str
+    claim_date: date
     receipt_url: Optional[str] = "#"
 
 class ExpenseClaimResponse(BaseModel):
@@ -299,6 +334,7 @@ class ExpenseClaimResponse(BaseModel):
     claim_date: date
     amount: float
     category: str
+    description: Optional[str] = None
     receipt_url: Optional[str]
     tl_approval: str
     hr_approval: str
@@ -308,22 +344,33 @@ class ExpenseClaimResponse(BaseModel):
         from_attributes = True
 
 @router.get("/expenses/my-claims", response_model=List[ExpenseClaimResponse])
-def get_my_expense_claims(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    return db.query(models.ExpenseClaim).filter(models.ExpenseClaim.user_id == current_user.id).order_by(models.ExpenseClaim.claim_date.desc()).all()
+def get_my_expense_claims(skip: int = 0, limit: int = 50, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.ExpenseClaim).filter(models.ExpenseClaim.user_id == current_user.id, models.ExpenseClaim.deleted_at == None).order_by(models.ExpenseClaim.claim_date.desc()).offset(skip).limit(limit).all()
 
 @router.post("/expenses/claim", response_model=ExpenseClaimResponse, status_code=status.HTTP_201_CREATED)
 def claim_expense(req: ExpenseClaimCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     claim = models.ExpenseClaim(
         user_id=current_user.id,
-        claim_date=date.today(),
+        claim_date=req.claim_date,
         amount=req.amount,
         category=req.category,
+        description=req.description,
         receipt_url=req.receipt_url,
         tl_approval="pending",
         hr_approval="pending",
         status="pending"
     )
     db.add(claim)
+    
+    # Create System Notification for the employee
+    notif = models.Notification(
+        user_id=current_user.id,
+        title="Expense Claim Submitted",
+        message=f"Your {req.category} expense claim for ₹{req.amount} has been successfully submitted and is pending TL review.",
+        type="expenses"
+    )
+    db.add(notif)
+    
     db.commit()
     db.refresh(claim)
     return claim
@@ -332,13 +379,14 @@ def claim_expense(req: ExpenseClaimCreate, current_user: models.User = Depends(s
 def cancel_expense_claim(claim_id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     claim = db.query(models.ExpenseClaim).filter(
         models.ExpenseClaim.id == claim_id,
-        models.ExpenseClaim.user_id == current_user.id
+        models.ExpenseClaim.user_id == current_user.id,
+        models.ExpenseClaim.deleted_at == None
     ).first()
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
     if claim.tl_approval != "pending":
         raise HTTPException(status_code=400, detail="Only pending claims can be cancelled")
-    db.delete(claim)
+    claim.deleted_at = datetime.utcnow()
     db.commit()
     return {"status": "success", "message": "Claim cancelled successfully"}
 
@@ -377,8 +425,8 @@ class LoanResponse(BaseModel):
         from_attributes = True
 
 @router.get("/payroll/my-payslips", response_model=List[PayslipResponse])
-def get_my_payslips(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    return db.query(models.Payslip).filter(models.Payslip.user_id == current_user.id).order_by(models.Payslip.year.desc(), models.Payslip.month.desc()).all()
+def get_my_payslips(skip: int = 0, limit: int = 50, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.Payslip).filter(models.Payslip.user_id == current_user.id).order_by(models.Payslip.year.desc(), models.Payslip.month.desc()).offset(skip).limit(limit).all()
 
 @router.get("/payroll/my-loans", response_model=List[LoanResponse])
 def get_my_loans(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -392,15 +440,16 @@ class CTCResponse(BaseModel):
     net_take_home: float
 
 @router.get("/payroll/ctc", response_model=CTCResponse)
-def get_my_ctc(current_user: models.User = Depends(security.get_current_user)):
-    base_annual = 500000 + (current_user.grade or 1) * 200000
-    monthly_gross = base_annual / 12
-    basic = monthly_gross * 0.5
-    hra = monthly_gross * 0.2
-    sa = monthly_gross * 0.3
-    pf = basic * 0.12
-    pt = 200
-    tds = monthly_gross * 0.1
+def get_my_ctc(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    # Currently we don't have an EmployeeSalary table mapped yet, so returning 0s 
+    # to avoid mocking until HR module sets up proper salary structures.
+    basic = 0.0
+    hra = 0.0
+    sa = 0.0
+    pf = 0.0
+    pt = 0.0
+    tds = 0.0
+    monthly_gross = 0.0
     
     return {
         "earnings": [
@@ -444,11 +493,19 @@ def get_my_tds_declarations(current_user: models.User = Depends(security.get_cur
 
 @router.post("/payroll/tds-declarations")
 def submit_tds_declaration(req: TDSSubmission, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    # Simple implementation: log 80C and HRA
     if req.sec80c > 0:
         db.add(models.TDSDeclaration(employee_id=current_user.id, financial_year="2026-27", declaration_type="80C", declared_amount=req.sec80c, status="pending"))
     if req.hra_rent > 0:
         db.add(models.TDSDeclaration(employee_id=current_user.id, financial_year="2026-27", declaration_type="HRA", declared_amount=req.hra_rent, status="pending"))
+        
+    notif = models.Notification(
+        user_id=current_user.id,
+        title="TDS Declaration Submitted",
+        message="Your TDS investment declaration has been successfully submitted and is under HR review.",
+        type="payroll"
+    )
+    db.add(notif)
+    
     db.commit()
     return {"status": "success", "message": "TDS Declaration submitted successfully."}
 
@@ -528,6 +585,16 @@ def update_bank_details(req: BankUpdate, current_user: models.User = Depends(sec
     user.bank_name = req.bank_name
     user.account_number = req.account_number
     user.ifsc_code = req.ifsc_code
+    
+    # Notify HR
+    notif = models.Notification(
+        user_id=current_user.id,
+        title="Bank Details Updated",
+        message=f"You have successfully updated your bank account details. HR will review them.",
+        type="info"
+    )
+    db.add(notif)
+    
     db.commit()
     return {"status": "success", "message": "Bank details updated successfully."}
 
@@ -535,6 +602,16 @@ def update_bank_details(req: BankUpdate, current_user: models.User = Depends(sec
 def update_documents(req: dict, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.id == current_user.id).first()
     user.documents = json.dumps(req.get("documents", []))
+    
+    # Notify HR
+    notif = models.Notification(
+        user_id=current_user.id,
+        title="Documents Updated",
+        message="You have uploaded/updated your verification documents.",
+        type="info"
+    )
+    db.add(notif)
+    
     db.commit()
     return {"status": "success"}
 
@@ -542,6 +619,8 @@ def update_documents(req: dict, current_user: models.User = Depends(security.get
 # ─── 6. RESIGNATION & ASSETS SCHEMAS & ROUTES ─────────────────────────────────
 
 class ResignationCreate(BaseModel):
+    submissionDate: date
+    lwdDate: date
     reason: str
 
 class ResignationResponse(BaseModel):
@@ -550,6 +629,8 @@ class ResignationResponse(BaseModel):
     LWD: date
     status: str
     reason: str
+    early_relief_status: Optional[str] = None
+    exit_checklist: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -570,27 +651,32 @@ class AssetResponse(BaseModel):
 
 @router.get("/resignation/status", response_model=Optional[ResignationResponse])
 def get_resignation_status(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    return db.query(models.Resignation).filter(models.Resignation.user_id == current_user.id).first()
+    return db.query(models.Resignation).filter(models.Resignation.user_id == current_user.id, models.Resignation.deleted_at == None).first()
 
 @router.post("/resignation/submit", response_model=ResignationResponse)
 def submit_resignation(req: ResignationCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    existing = db.query(models.Resignation).filter(models.Resignation.user_id == current_user.id).first()
+    existing = db.query(models.Resignation).filter(models.Resignation.user_id == current_user.id, models.Resignation.deleted_at == None).first()
     if existing:
          raise HTTPException(status_code=400, detail="Resignation already submitted.")
     
-    # Auto compute Last Working Day as 30 days from now
-    res_date = date.today()
-    lwd_date = res_date + int(30) # simply add days logic or offset
-    lwd_calculated = date.fromordinal(res_date.toordinal() + 30)
-    
     res = models.Resignation(
         user_id=current_user.id,
-        resignation_date=res_date,
-        LWD=lwd_calculated,
+        resignation_date=req.submissionDate,
+        LWD=req.lwdDate,
         reason=req.reason,
         status="pending"
     )
     db.add(res)
+    
+    # Notify HR
+    notif = models.Notification(
+        user_id=current_user.id,
+        title="Resignation Submitted",
+        message=f"You have submitted your resignation. HR will review and confirm your LWD.",
+        type="warning"
+    )
+    db.add(notif)
+    
     db.commit()
     db.refresh(res)
     return res
@@ -599,14 +685,41 @@ def submit_resignation(req: ResignationCreate, current_user: models.User = Depen
 def withdraw_resignation(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     res = db.query(models.Resignation).filter(
         models.Resignation.user_id == current_user.id,
-        models.Resignation.status == "pending"
+        models.Resignation.status == "pending",
+        models.Resignation.deleted_at == None
     ).first()
     if not res:
         raise HTTPException(status_code=404, detail="No active resignation request found.")
         
-    db.delete(res)
+    res.deleted_at = datetime.utcnow()
     db.commit()
     return {"status": "success", "message": "Resignation request withdrawn successfully."}
+
+@router.post("/resignation/update-checklist")
+def update_checklist(req: dict, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    res = db.query(models.Resignation).filter(
+        models.Resignation.user_id == current_user.id,
+        models.Resignation.deleted_at == None
+    ).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="No active resignation found.")
+    
+    res.exit_checklist = json.dumps(req.get("checklist", []))
+    db.commit()
+    return {"status": "success"}
+
+@router.post("/resignation/request-early-relief")
+def request_early_relief(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    res = db.query(models.Resignation).filter(
+        models.Resignation.user_id == current_user.id,
+        models.Resignation.deleted_at == None
+    ).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="No active resignation found.")
+    
+    res.early_relief_status = "requested"
+    db.commit()
+    return {"status": "success"}
 
 @router.get("/resignation/my-assets", response_model=List[AssetResponse])
 def get_my_assets(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -654,9 +767,12 @@ def create_asset_request(req: AssetRequestCreate, current_user: models.User = De
     db.refresh(ticket)
     return {"id": ticket.id, "asset_type": ticket.title, "reason": ticket.description, "urgency": ticket.priority, "status": ticket.status, "created_at": ticket.created_at}
 
+class NocSignRequest(BaseModel):
+    signature_data: str
+
 @router.post("/assets/sign-noc/{asset_id}")
-def sign_asset_noc(asset_id: str, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    """Employee signs the NOC for a specific issued asset — updates returnStatus to 'Signed' in DB."""
+def sign_asset_noc(asset_id: str, req: NocSignRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    """Employee signs the NOC for a specific issued asset — updates returnStatus to 'Signed' in DB and stores signature."""
     asset = db.query(models.Asset).filter(
         models.Asset.id == asset_id,
         models.Asset.user_id == current_user.id
@@ -667,6 +783,7 @@ def sign_asset_noc(asset_id: str, current_user: models.User = Depends(security.g
         raise HTTPException(status_code=400, detail="NOC already signed for this asset")
     asset.returnStatus = "Signed"
     asset.signedDate = date.today()
+    asset.signature_data = req.signature_data
     db.commit()
     db.refresh(asset)
     return {
@@ -739,8 +856,8 @@ class TicketResponse(BaseModel):
         from_attributes = True
 
 @router.get("/helpdesk/my-tickets", response_model=List[TicketResponse])
-def get_my_tickets(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    return db.query(models.SupportTicket).filter(models.SupportTicket.user_id == current_user.id).order_by(models.SupportTicket.created_at.desc()).all()
+def get_my_tickets(skip: int = 0, limit: int = 50, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    return db.query(models.SupportTicket).filter(models.SupportTicket.user_id == current_user.id, models.SupportTicket.deleted_at == None).order_by(models.SupportTicket.created_at.desc()).offset(skip).limit(limit).all()
 
 @router.post("/helpdesk/ticket", response_model=TicketResponse, status_code=status.HTTP_201_CREATED)
 def submit_ticket(req: TicketCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -759,6 +876,10 @@ def submit_ticket(req: TicketCreate, current_user: models.User = Depends(securit
 
 
 # ─── 8. CHAT SCHEMAS & ROUTES ─────────────────────────────────────────────────
+
+@router.get("/chat/users", response_model=List[UserProfileResponse])
+def get_chat_users(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    return db.query(models.User).all()
 
 class ChannelCreate(BaseModel):
     id: str
@@ -791,6 +912,8 @@ class MessageCreate(BaseModel):
     text: str
     attachment_url: Optional[str] = None
     attachment_type: Optional[str] = None
+    parent_id: Optional[int] = None
+    mentions: Optional[str] = None
 
 class MessageResponse(BaseModel):
     id: int
@@ -804,6 +927,9 @@ class MessageResponse(BaseModel):
     seen_by: Optional[str] = None
     attachment_url: Optional[str] = None
     attachment_type: Optional[str] = None
+    parent_id: Optional[int] = None
+    is_pinned: bool = False
+    mentions: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -812,6 +938,7 @@ class MessageUpdate(BaseModel):
     text: Optional[str] = None
     reactions: Optional[str] = None # JSON string of reactions
     seen_by: Optional[str] = None # JSON string of seen users
+    is_pinned: Optional[bool] = None
 
 class ChannelUpdate(BaseModel):
     name: Optional[str] = None
@@ -836,6 +963,10 @@ def create_channel(req: ChannelCreate, db: Session = Depends(database.get_db), c
     db.refresh(channel)
     return channel
 
+@router.get("/chat/search", response_model=List[MessageResponse])
+def search_messages(query: str, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    return db.query(models.ChatMessage).filter(models.ChatMessage.text.ilike(f"%{query}%")).order_by(models.ChatMessage.timestamp.desc()).limit(100).all()
+
 @router.get("/chat/channels/{channel_id}/messages", response_model=List[MessageResponse])
 def get_channel_messages(channel_id: str, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
     return db.query(models.ChatMessage).filter(models.ChatMessage.channel_id == channel_id).order_by(models.ChatMessage.timestamp.asc()).all()
@@ -851,7 +982,9 @@ def send_message(channel_id: str, req: MessageCreate, db: Session = Depends(data
         sender=current_user.name,
         text=req.text,
         attachment_url=req.attachment_url,
-        attachment_type=req.attachment_type
+        attachment_type=req.attachment_type,
+        parent_id=req.parent_id,
+        mentions=req.mentions
     )
     db.add(msg)
     db.commit()
@@ -975,6 +1108,9 @@ async def update_message(message_id: int, req: MessageUpdate, db: Session = Depe
     if req.seen_by is not None:
         msg.seen_by = req.seen_by
         
+    if req.is_pinned is not None:
+        msg.is_pinned = req.is_pinned
+        
     db.commit()
     db.refresh(msg)
     
@@ -988,6 +1124,7 @@ async def update_message(message_id: int, req: MessageUpdate, db: Session = Depe
         "is_edited": msg.is_edited,
         "reactions": msg.reactions,
         "seen_by": msg.seen_by,
+        "is_pinned": msg.is_pinned,
         "timestamp": msg.timestamp.isoformat() if msg.timestamp else None
     }
     await manager.broadcast_message(broadcast_data)
@@ -1128,6 +1265,40 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         db_session.close()
                     continue
 
+                if msg_type in ["typing_start", "typing_stop"]:
+                    await manager.broadcast_message({
+                        "event_type": msg_type,
+                        "channel_id": msg_data.get("channel_id"),
+                        "user": msg_data.get("sender") or client_id
+                    })
+                    continue
+
+                if msg_type == "pin_message":
+                    msg_id = msg_data.get("msg_id")
+                    is_pinned = msg_data.get("is_pinned", True)
+                    db_session = database.SessionLocal()
+                    try:
+                        # Try to parse as integer, some clients send float timestamp strings like "171092831.123"
+                        try:
+                            msg_id_int = int(float(msg_id))
+                        except (ValueError, TypeError):
+                            msg_id_int = msg_id
+
+                        db_msg = db_session.query(models.ChatMessage).filter(models.ChatMessage.id == msg_id_int).first()
+                        if db_msg:
+                            db_msg.is_pinned = is_pinned
+                            db_session.commit()
+                            await manager.broadcast_message({
+                                "event_type": "message_pinned",
+                                "msg_id": msg_id,
+                                "is_pinned": is_pinned,
+                                "channel_id": db_msg.channel_id
+                            })
+                    finally:
+                        db_session.close()
+                    continue
+
+
                 channel_id = msg_data.get("channel_id")
                 text = msg_data.get("text")
                 sender = msg_data.get("sender", client_id)
@@ -1149,7 +1320,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             sender=sender,
                             text=text,
                             attachment_url=msg_data.get("attachment_url"),
-                            attachment_type=msg_data.get("attachment_type")
+                            attachment_type=msg_data.get("attachment_type"),
+                            parent_id=msg_data.get("parent_id"),
+                            mentions=msg_data.get("mentions")
                         )
                         db_session.add(db_msg)
                         db_session.commit()
@@ -1164,6 +1337,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             "text": db_msg.text,
                             "attachment_url": db_msg.attachment_url,
                             "attachment_type": db_msg.attachment_type,
+                            "parent_id": db_msg.parent_id,
+                            "mentions": db_msg.mentions,
+                            "is_pinned": db_msg.is_pinned,
                             "timestamp": db_msg.timestamp.isoformat()
                         }
                         await manager.broadcast_message(broadcast_data)

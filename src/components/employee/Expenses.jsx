@@ -55,6 +55,8 @@ export default function Expenses({ currentUser }) {
         body: JSON.stringify({
           amount: newClaimData.amount,
           category: newClaimData.category,
+          description: newClaimData.description,
+          claim_date: newClaimData.date,
           receipt_url: newClaimData.receiptName || 'receipt.pdf'
         })
       });

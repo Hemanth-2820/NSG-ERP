@@ -2,21 +2,19 @@
 import { useState, useEffect } from 'react';
 import './Employee.css';
 
-const CURRENT_EMPLOYEE_ID = 102; // Jane Smith (logged-in employee)
-
 export default function EmployeeDashboard({ setActiveTab, currentUser }) {
-  const employeeId = currentUser?.id || CURRENT_EMPLOYEE_ID;
+  const employeeId = currentUser?.id;
   const employee = currentUser ? {
     id: currentUser.id,
     name: currentUser.name,
     designation: currentUser.designation || 'Senior Developer',
     department: currentUser.department || 'Engineering',
-    employeeCode: currentUser.emp_id || 'NSG-EMP-102'
+    employeeCode: currentUser.emp_id || `NSG-EMP-${currentUser.id}`
   } : {
-    name: 'Jane Smith',
-    designation: 'Senior Developer',
-    department: 'Engineering',
-    employeeCode: 'NSG-EMP-102'
+    name: 'Loading...',
+    designation: '...',
+    department: '...',
+    employeeCode: '...'
   };
 
   // ── Clock-in state ────────────────────────────────────────────────
@@ -68,11 +66,24 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
 
   const handleClockIn = async () => {
     setClockBusy(true);
+    let mode = "office";
+    let lat = 12.9716;
+    let lng = 77.5946;
+
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 }));
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        if (Math.abs(lat - 12.9716) > 0.05 || Math.abs(lng - 77.5946) > 0.05) mode = "wfh";
+      } catch (e) { mode = "wfh"; }
+    }
+    
     try {
       const res = await fetch('/api/attendance/clock-in', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ work_mode: "office", latitude: 12.9716, longitude: 77.5946 })
+        body: JSON.stringify({ work_mode: mode, latitude: lat, longitude: lng })
       });
       if (res.ok) {
         const data = await res.json();

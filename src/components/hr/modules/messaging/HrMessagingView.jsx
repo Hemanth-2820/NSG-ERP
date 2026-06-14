@@ -747,7 +747,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
               <MessageSquare size={20} color="var(--ceo-primary)" /> Team Chat
             </h2>
             <label style={{ cursor: 'pointer', position: 'relative' }} title="Change Profile Picture">
-              <img src={currentUser?.photo ? `http://localhost:8000${currentUser.photo}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}`} alt="You" style={{ width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover', border: '2px solid var(--ceo-border)' }} />
+              <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={currentUser?.photo ? `http://localhost:8000${currentUser.photo}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}`} alt="You" style={{ width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover', border: '2px solid var(--ceo-border)' }}  />
               <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--ceo-primary)', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #FFF' }}>
                 <Camera size={10} color="#FFF" />
               </div>
@@ -801,7 +801,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                   }}
                 >
                   <div style={{ position: 'relative' }}>
-                    <img src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}`)} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '12px', objectFit: 'cover' }} />
+                    <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}`)} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '12px', objectFit: 'cover' }}  />
                     <div style={{ position: 'absolute', bottom: -2, right: -2, width: '8px', height: '8px', borderRadius: '4px', background: emp.status === 'Active' ? 'var(--ceo-success)' : 'var(--ceo-warning)', border: '2px solid #FFF' }}></div>
                   </div>
                   {emp.name}
@@ -905,7 +905,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                   {(() => {
                     const senderEmp = employees.find(e => e.name === msg.sender);
                     const senderAvatar = senderEmp?.photo ? `http://localhost:8000${senderEmp.photo}` : (msg.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender)}`);
-                    return <img src={senderAvatar} alt={msg.sender} style={{ width: '36px', height: '36px', borderRadius: '18px', border: '1px solid var(--ceo-border)', flexShrink: 0, objectFit: 'cover' }} />;
+                    return <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={senderAvatar} alt={msg.sender} style={{ width: '36px', height: '36px', borderRadius: '18px', border: '1px solid var(--ceo-border)', flexShrink: 0, objectFit: 'cover' }}  />;
                   })()}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMsgMe ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexDirection: isMsgMe ? 'row-reverse' : 'row' }}>
@@ -968,7 +968,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                             {msg.attachment_url && (
                               <div style={{ marginBottom: '4px' }}>
                                 {msg.attachment_type === 'image' ? (
-                                  <img src={`http://localhost:8000${msg.attachment_url}`} alt="attachment" style={{ maxWidth: '250px', maxHeight: '250px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer' }} onClick={() => setLightboxMedia({ url: `http://localhost:8000${msg.attachment_url}`, type: msg.attachment_type })} />
+                                  <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={`http://localhost:8000${msg.attachment_url}`} alt="attachment" style={{ maxWidth: '250px', maxHeight: '250px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer' }} onClick={() => setLightboxMedia({ url: `http://localhost:8000${msg.attachment_url}`, type: msg.attachment_type })} />
                                 ) : msg.attachment_type === 'video' ? (
                                   <video src={`http://localhost:8000${msg.attachment_url}`} style={{ maxWidth: '250px', maxHeight: '250px', borderRadius: '8px', cursor: 'pointer' }} controls={false} onClick={() => setLightboxMedia({ url: `http://localhost:8000${msg.attachment_url}`, type: msg.attachment_type })} />
                                 ) : (
@@ -1011,7 +1011,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
           {/* Attachment Preview */}
           {attachmentFile && (
             <div style={{ position: 'absolute', bottom: '100%', left: '24px', background: '#FFF', border: '1px solid var(--ceo-border)', padding: '8px', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.05)' }}>
-              {attachmentPreview === 'document' ? <div style={{width:'40px', height:'40px', background:'#F1F5F9', borderRadius:'4px', display:'flex', alignItems:'center', justifyContent:'center'}}><Paperclip size={20}/></div> : <img src={attachmentPreview} alt="preview" style={{width:'40px', height:'40px', objectFit:'cover', borderRadius:'4px'}} />}
+              {attachmentPreview === 'document' ? <div style={{width:'40px', height:'40px', background:'#F1F5F9', borderRadius:'4px', display:'flex', alignItems:'center', justifyContent:'center'}}><Paperclip size={20}/></div> : <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={attachmentPreview} alt="preview" style={{width:'40px', height:'40px', objectFit:'cover', borderRadius:'4px'}}  />}
               <div style={{fontSize:'12px', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{attachmentFile.name}</div>
               <button onClick={clearAttachment} style={{background:'transparent', border:'none', cursor:'pointer'}}><X size={14} color="var(--ceo-danger)"/></button>
             </div>
@@ -1183,7 +1183,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                       </>
                     ) : (
                       <>
-                        <img src={emp.avatar} alt={emp.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+                        <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }}  />
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)' }}></div>
                       </>
                     )}
@@ -1214,7 +1214,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                     return (
                       <div key={id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img src={emp.avatar} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '18px' }} />
+                          <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '18px' }}  />
                           <div style={{ color: '#F8FAFC', fontSize: '14px', fontWeight: 600 }}>{emp.name} {emp.isMe && '(You)'}</div>
                         </div>
                         {emp.isMe ? (callScreenMic ? <Mic size={16} color="#10B981" /> : <MicOff size={16} color="#EF4444" />) : <Mic size={16} color="#10B981" />}
@@ -1232,7 +1232,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                     return (
                       <div key={id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.5 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img src={emp.avatar} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '18px', filter: 'grayscale(100%)' }} />
+                          <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '18px', filter: 'grayscale(100%)' }}  />
                           <div style={{ color: '#F8FAFC', fontSize: '14px', fontWeight: 600 }}>{emp.name}</div>
                         </div>
                         <div style={{ color: '#94A3B8', fontSize: '12px', fontWeight: 600 }}>Offline</div>
@@ -1314,7 +1314,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                           }
                         }}
                       />
-                      <img src={emp.avatar} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '12px' }} />
+                      <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '12px' }}  />
                       <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>{emp.name}</span>
                     </label>
                   ))}
@@ -1387,7 +1387,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                 return (
                   <div key={emp.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--ceo-border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <img src={emp.avatar} alt={emp.name} style={{ width: '32px', height: '32px', borderRadius: '16px' }} />
+                      <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo ? `http://localhost:8000${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '32px', height: '32px', borderRadius: '16px' }}  />
                       <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>{emp.name} {emp.isMe && '(You)'}</div>
                     </div>
                     <button 
@@ -1520,7 +1520,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
             <Download size={32} />
           </a>
           {lightboxMedia.type === 'image' ? (
-            <img src={lightboxMedia.url} alt="fullscreen" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+            <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={lightboxMedia.url} alt="fullscreen" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }}  />
           ) : (
             <video src={lightboxMedia.url} style={{ maxWidth: '90%', maxHeight: '90%' }} controls autoPlay />
           )}
@@ -1543,7 +1543,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                 return (
                   <div key={empId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <img src={avatar} alt={name} style={{ width: '40px', height: '40px', borderRadius: '20px', objectFit: 'cover', border: '1px solid var(--ceo-border)' }} />
+                      <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={avatar} alt={name} style={{ width: '40px', height: '40px', borderRadius: '20px', objectFit: 'cover', border: '1px solid var(--ceo-border)' }}  />
                       <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--ceo-text-primary)' }}>{name}</div>
                     </div>
                     {empId !== 'ceo' && (

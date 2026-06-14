@@ -9,6 +9,8 @@ const TeamDirectory = () => {
 
   const [teamMembers, setTeamMembers] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
@@ -16,27 +18,25 @@ const TeamDirectory = () => {
       try {
         const token = localStorage.getItem('nsg_jwt_token');
         const headers = { 'Authorization': `Bearer ${token}` };
-        const [empRes, tasksRes] = await Promise.all([
+        const [empRes, tasksRes, leavesRes, skillsRes] = await Promise.all([
           fetch('/api/team-lead/team-members', { headers }),
-          fetch('/api/team-lead/tasks', { headers })
+          fetch('/api/team-lead/tasks', { headers }),
+          fetch('/api/team-lead/team-availability', { headers }),
+          fetch('/api/team-lead/team-skills', { headers })
         ]);
         
         if (empRes.ok) {
           const rawEmps = await empRes.json();
-          const formattedEmps = rawEmps.map(emp => ({
+          setTeamMembers(rawEmps.map(emp => ({
             id: emp.id,
             name: emp.name,
             role: emp.designation || emp.role || 'Team Member',
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`,
-            currentTask: 'Loading...',
-            utilization: 0,
-            skills: ['General', 'Agile']
-          }));
-          setTeamMembers(formattedEmps);
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`
+          })));
         }
-        if (tasksRes.ok) {
-          setTasks(await tasksRes.json());
-        }
+        if (tasksRes.ok) setTasks(await tasksRes.json());
+        if (leavesRes.ok) setLeaves(await leavesRes.json());
+        if (skillsRes.ok) setSkills(await skillsRes.json());
       } catch (err) {
         console.error(err);
       } finally {
@@ -57,7 +57,7 @@ const TeamDirectory = () => {
         tasks: empTasks.length,
         estHours,
         actHours,
-        util: util || Math.floor(Math.random() * 40 + 60) // Add some flavor if no tasks
+        util: util
       };
     });
   }, [teamMembers, tasks]);
@@ -65,15 +65,57 @@ const TeamDirectory = () => {
   const displayMembers = teamMembers.map(emp => {
     const activeTask = tasks.find(t => (t.assignee_id === emp.id || t.user_id === emp.id) && t.status !== 'Done');
     const empWl = workloadData.find(w => w.name === emp.name);
+    const empSkills = skills.filter(s => s.user_id === emp.id).map(s => s.skill_name);
     return {
       ...emp,
       currentTask: activeTask ? `${activeTask.title} (${activeTask.project})` : 'No active tasks',
-      utilization: empWl ? empWl.util : 0
+      utilization: empWl ? empWl.util : 0,
+      skills: empSkills.length > 0 ? empSkills : ['General']
     };
   });
 
   const calendarEvents = [];
-  const skillMatrix = teamMembers.map(emp => ({ name: emp.name, React: 3, Node: 3, AWS: 3, Python: 3, SQL: 3 }));
+  leaves.forEach(leave => {
+    const start = new Date(leave.from_date);
+    const end = new Date(leave.to_date);
+    let current = new Date(start);
+    while (current <= end) {
+      calendarEvents.push({
+        day: current.getDate(),
+        month: current.getMonth(),
+        year: current.getFullYear(),
+        type: leave.leave_type === 'WFH' ? 'wfh' : 'leave',
+        label: `${leave.leave_type} - Emp #${leave.user_id}`
+      });
+      current.setDate(current.getDate() + 1);
+    }
+  });
+
+  const currentDate = new Date();
+  const currentMonthEvents = calendarEvents.filter(e => e.month === currentDate.getMonth() && e.year === currentDate.getFullYear());
+
+  // Calculate if there are overlapping leaves on any given day this month
+  const hasOverlap = React.useMemo(() => {
+    const daysMap = {};
+    for (const ev of currentMonthEvents) {
+      if (!daysMap[ev.day]) daysMap[ev.day] = 0;
+      daysMap[ev.day]++;
+      if (daysMap[ev.day] > 1) return true;
+    }
+    return false;
+  }, [currentMonthEvents]);
+
+  const skillMatrix = teamMembers.map(emp => {
+    const empSkills = skills.filter(s => s.user_id === emp.id);
+    return {
+      name: emp.name,
+      React: empSkills.find(s => s.skill_name === 'React')?.proficiency_level || 0,
+      Node: empSkills.find(s => s.skill_name === 'Node.js')?.proficiency_level || 0,
+      AWS: empSkills.find(s => s.skill_name === 'AWS')?.proficiency_level || 0,
+      Python: empSkills.find(s => s.skill_name === 'Python')?.proficiency_level || 0,
+      SQL: empSkills.find(s => s.skill_name === 'SQL')?.proficiency_level || 0,
+    };
+  });
 
   // Helpers
   const getWorkloadColor = (util) => {
@@ -146,7 +188,7 @@ const TeamDirectory = () => {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div className={styles.sectionTitle} style={{ margin: 0 }}>Team Profile Overview</div>
-              {!searchQuery && (
+              {!searchQuery && displayMembers.length > 0 && (
                 <button 
                   onClick={() => setShowAllTeam(!showAllTeam)} 
                   style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
@@ -155,73 +197,85 @@ const TeamDirectory = () => {
                 </button>
               )}
             </div>
-            <div className={styles.cardGrid}>
-              {displayMembers
-                .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                .slice(0, (showAllTeam || searchQuery) ? displayMembers.length : 3)
-                .map(member => (
-                <div key={member.id} className={styles.teamCard}>
-                  <img src={member.avatar} alt={member.name} className={styles.avatar} />
-                  <div className={styles.empName}>{member.name}</div>
-                  <div className={styles.empRole}>{member.role}</div>
-                  
-                  <div className={styles.currentTask}>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Current Task</div>
-                    {member.currentTask}
-                  </div>
-
-                  <div className={styles.utilizationWrap}>
-                    <div className={styles.utilizationLabel}>
-                      <span>Utilization</span>
-                      <span>{member.utilization}%</span>
+            {displayMembers.length === 0 ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', background: 'white', borderRadius: '12px', border: '1px solid var(--border-card)', boxShadow: 'var(--shadow-sm)' }}>
+                <Users size={48} style={{ color: '#cbd5e1', marginBottom: '16px' }} />
+                <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)', fontSize: '18px' }}>No Team Members Assigned</h3>
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>
+                  It looks like HR hasn't assigned any employees to your team yet. Once they are assigned, their profiles, workload, and skills will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className={styles.cardGrid}>
+                {displayMembers
+                  .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .slice(0, (showAllTeam || searchQuery) ? displayMembers.length : 3)
+                  .map(member => (
+                  <div key={member.id} className={styles.teamCard}>
+                    <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={member.avatar} alt={member.name} className={styles.avatar}  />
+                    <div className={styles.empName}>{member.name}</div>
+                    <div className={styles.empRole}>{member.role}</div>
+                    
+                    <div className={styles.currentTask}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Current Task</div>
+                      {member.currentTask}
                     </div>
-                    <div className={styles.utilBarBg}>
-                      <div 
-                        className={styles.utilBarFill} 
-                        style={{ 
-                          width: `${Math.min(member.utilization, 100)}%`,
-                          background: getWorkloadColor(member.utilization)
-                        }} 
-                      />
+
+                    <div className={styles.utilizationWrap}>
+                      <div className={styles.utilizationLabel}>
+                        <span>Utilization</span>
+                        <span>{member.utilization}%</span>
+                      </div>
+                      <div className={styles.utilBarBg}>
+                        <div 
+                          className={styles.utilBarFill} 
+                          style={{ 
+                            width: `${Math.min(member.utilization, 100)}%`,
+                            background: getWorkloadColor(member.utilization)
+                          }} 
+                        />
+                      </div>
+                    </div>
+
+                    <div className={styles.skillsWrap}>
+                      {member.skills.map((skill, idx) => (
+                        <span key={idx} className={styles.skillTag}>{skill}</span>
+                      ))}
                     </div>
                   </div>
-
-                  <div className={styles.skillsWrap}>
-                    {member.skills.map((skill, idx) => (
-                      <span key={idx} className={styles.skillTag}>{skill}</span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* View 2: Team Availability Calendar */}
         {activeView === 'calendar' && (
           <div>
-            <div className={styles.sectionTitle}>May 2026 Availability Tracker</div>
+            <div className={styles.sectionTitle}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })} Availability Tracker</div>
             
-            <div className={styles.overlapWarning}>
-              <AlertTriangle size={18} />
-              Warning: High overlap on May 20. 4 out of 10 team members (40%) are on leave.
-            </div>
+            {hasOverlap && (
+              <div className={styles.overlapWarning}>
+                <AlertTriangle size={18} />
+                Warning: Overlap detected. Multiple team members have approved leaves on the same day this month.
+              </div>
+            )}
 
             <div className={styles.calendarGrid}>
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
                 <div key={d} className={styles.calHeader}>{d}</div>
               ))}
-              {Array.from({ length: 31 }).map((_, i) => {
+              {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
                 const day = i + 1;
-                const events = calendarEvents.filter(e => e.day === day);
-                // May 2026 starts on Friday (idx 5)
-                const isOffset = i === 0 ? { gridColumnStart: 6 } : {};
+                const events = currentMonthEvents.filter(e => e.day === day);
+                const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+                const isOffset = i === 0 ? { gridColumnStart: firstDayOfMonth + 1 } : {};
                 
                 return (
                   <div key={day} className={styles.calCell} style={isOffset}>
                     <div className={styles.calDayNum}>{day}</div>
                     {events.map((ev, idx) => (
-                      <div key={idx} className={`${styles.calBadge} ${styles[ev.type]}`}>
+                      <div key={idx} className={`${styles.calBadge} ${styles[ev.type]}`} title={ev.label}>
                         {ev.label}
                       </div>
                     ))}

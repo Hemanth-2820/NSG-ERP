@@ -25,9 +25,17 @@ class User(Base):
     account_number = Column(String, nullable=True)
     ifsc_code = Column(String, nullable=True)
     grade = Column(Integer, default=1)
-    manager = Column(String, nullable=True)
+    manager = Column(String, nullable=True) # Deprecated string name, keep for backward compatibility
+    manager_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     photo = Column(String, nullable=True)
     documents = Column(Text, nullable=True)  # JSON-serialized list of docs
+    
+    # Missing Personal Details mapping
+    dob = Column(Date, nullable=True)
+    gender = Column(String, nullable=True)
+    address = Column(Text, nullable=True)
+    emergency_contact_name = Column(String, nullable=True)
+    emergency_contact_phone = Column(String, nullable=True)
 
     # Relationships
     attendance_records = relationship("Attendance", back_populates="user", cascade="all, delete-orphan")
@@ -208,10 +216,12 @@ class ExpenseClaim(Base):
     claim_date = Column(Date, nullable=False)
     amount = Column(Float, nullable=False)
     category = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
     receipt_url = Column(String, nullable=True)
     tl_approval = Column(String, default="pending")  # pending, approved, rejected
     hr_approval = Column(String, default="pending")
     status = Column(String, default="pending")  # pending, approved, rejected
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="expense_claims")
@@ -272,6 +282,7 @@ class Asset(Base):
     condition = Column(String, nullable=True)
     returnStatus = Column(String, default="Issued")  # Issued, Pending NOC, Returned
     signedDate = Column(Date, nullable=True)
+    signature_data = Column(Text, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="assets")
@@ -286,6 +297,9 @@ class Resignation(Base):
     LWD = Column(Date, nullable=False)
     status = Column(String, default="pending")  # pending, approved, rejected, withdrawn
     reason = Column(Text, nullable=False)
+    early_relief_status = Column(String, nullable=True) # requested, approved, rejected
+    exit_checklist = Column(Text, nullable=True) # JSON array of checklist items
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="resignations")
@@ -302,6 +316,7 @@ class SupportTicket(Base):
     priority = Column(String, default="medium")  # high, medium, low
     status = Column(String, default="open")  # open, in-progress, resolved, closed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="support_tickets")
@@ -324,6 +339,16 @@ class ChatMessage(Base):
     sender = Column(String, nullable=False)
     text = Column(Text, nullable=False)
     timestamp = Column(DateTime, server_default=func.now())
+    parent_id = Column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=True)
+    is_pinned = Column(Boolean, default=False)
+    mentions = Column(Text, nullable=True) # JSON array of usernames
+    attachment_url = Column(String, nullable=True)
+    attachment_type = Column(String, nullable=True)
+    seen_by = Column(Text, nullable=True) # JSON array
+    delivered_to = Column(Text, nullable=True) # JSON array
+    reactions = Column(Text, nullable=True) # JSON object
+    deleted_at = Column(DateTime, nullable=True)
+    is_edited = Column(Boolean, default=False)
 
 
 
@@ -663,3 +688,24 @@ class CustomSchema(Base):
     id = Column(Integer, primary_key=True, index=True)
     department = Column(String, nullable=False, index=True)
     schema_fields = Column(Text, nullable=False, default="[]")  # JSON-serialized list
+
+class EmployeeSkill(Base):
+    __tablename__ = "employee_skills"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    skill_name = Column(String, nullable=False)
+    proficiency_level = Column(Integer, default=3) # 1 to 5
+
+class Milestone(Base):
+    __tablename__ = "milestones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    name = Column(String, nullable=False)
+    due_date = Column(String, nullable=False)
+    status = Column(String, default="pending")
+    progress = Column(Integer, default=0)
+    tasks_count = Column(Integer, default=0)
+
+

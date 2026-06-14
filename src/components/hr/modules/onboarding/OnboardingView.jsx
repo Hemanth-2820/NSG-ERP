@@ -313,7 +313,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
             return (
               <div key={emp.id} className="card" style={{ borderLeft: '4px solid var(--accent-pink)' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
-                  <img src={emp.photo} alt={emp.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                  <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo} alt={emp.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}  />
                   <div>
                     <h4 style={{ margin: 0 }}>{emp.name}</h4>
                     <span className="code-span" style={{ fontSize: '10px' }}>{emp.emp_id}</span>
@@ -429,7 +429,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                   <tr key={t.id}>
                     <td style={{ padding: '16px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <img src={emp.photo} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
+                        <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}  />
                         <strong>{emp.name}</strong>
                       </div>
                     </td>
@@ -566,7 +566,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
             <div className="card" style={{ width: '550px', maxHeight: 'calc(100vh - 80px)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexShrink: 0 }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <img src={selectedInstance.photo} alt={selectedInstance.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                  <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={selectedInstance.photo} alt={selectedInstance.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }}  />
                   <div>
                     <h3 style={{ margin: 0, border: 'none', padding: 0 }}>Onboarding Checklist — {selectedInstance.name}</h3>
                     <span className="code-span" style={{ fontSize: '10px' }}>{selectedInstance.emp_id}</span>

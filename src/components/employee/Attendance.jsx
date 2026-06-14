@@ -145,8 +145,8 @@ function ClockInOutPanel({ clockState, onClockIn, onClockOut, liveClock, elapsed
             </>
           ) : clockState === 'already' ? (
             <>
-              <CheckCircle2 size={24} style={{ color: '#60a5fa' }} />
-              <span className="att-clock-btn__label" style={{ fontSize: 14 }}>Clocked In</span>
+              <CheckCircle2 size={24} style={{ color: '#10b981' }} />
+              <span className="att-clock-btn__label" style={{ fontSize: 14 }}>Done for Today</span>
             </>
           ) : (
             <>
@@ -180,8 +180,8 @@ function ClockInOutPanel({ clockState, onClockIn, onClockOut, liveClock, elapsed
       )}
 
       {clockState === 'already' && (
-        <div className="att-already-msg">
-          You already clocked in today. Clock-out available above.
+        <div className="att-already-msg" style={{ color: '#10b981', fontWeight: 600 }}>
+          You have successfully completed your attendance for today.
         </div>
       )}
     </div>
@@ -193,9 +193,15 @@ function ClockInOutPanel({ clockState, onClockIn, onClockOut, liveClock, elapsed
 // ════════════════════════════════════════════════════════
 
 function TodayStatusCard({ clockState, clockInTime, clockOutTime, elapsed }) {
-  const hoursWorked = elapsed !== null
-    ? (elapsed / 3_600_000).toFixed(1)
-    : clockState === 'idle' ? '—' : '0.0';
+  let hoursWorked = '—';
+  if (clockState === 'already' && clockInTime && clockOutTime) {
+    const diffMs = clockOutTime.getTime() - clockInTime.getTime();
+    hoursWorked = (diffMs / 3_600_000).toFixed(1);
+  } else if (elapsed !== null) {
+    hoursWorked = (elapsed / 3_600_000).toFixed(1);
+  } else if (clockState === 'clocked-in') {
+    hoursWorked = '0.0';
+  }
 
   const workMode = clockState === 'clocked-in' || clockInTime
     ? 'Office'

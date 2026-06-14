@@ -47,14 +47,18 @@ export default function Help({ currentUser }) {
       });
       
       if (res.ok) {
+        const data = await res.json();
         showToast('Support ticket logged successfully.');
         fetchTickets();
+        return `TKT-${data.id}`;
       } else {
         alert('Failed to log ticket');
+        return null;
       }
     } catch (e) {
       console.error(e);
       alert('Network error');
+      return null;
     }
   };
 
@@ -194,7 +198,7 @@ export default function Help({ currentUser }) {
 
         {/* HR Grievance Chat area */}
         <div className="area-chat">
-          <GrievanceChat />
+          <GrievanceChat currentUser={currentUser} />
         </div>
 
         {/* FAQ base area */}

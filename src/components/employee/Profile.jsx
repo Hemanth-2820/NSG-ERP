@@ -270,7 +270,7 @@ export default function Profile({ currentUser }) {
             accept="image/*" 
             style={{ display: 'none' }} 
           />
-          <img src={avatar} alt="Avatar" className="avatar-img" />
+          <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={avatar} alt="Avatar" className="avatar-img"  />
           <div className="avatar-overlay">
             <Camera size={20} />
           </div>
@@ -680,7 +680,7 @@ export default function Profile({ currentUser }) {
               justifyContent: 'center',
               alignItems: 'center'
             }}>
-              <img 
+              <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} 
                 src={croppedImageSrc} 
                 alt="Cropped Preview" 
                 style={{
@@ -688,7 +688,7 @@ export default function Profile({ currentUser }) {
                   height: '100%',
                   objectFit: 'cover'
                 }}
-              />
+               />
             </div>
 
             <div style={{ display: 'flex', gap: '12px', width: '100%', justifyContent: 'center' }}>

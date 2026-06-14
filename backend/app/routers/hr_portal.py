@@ -95,12 +95,15 @@ class EmployeeCreateRequest(BaseModel):
     join_date: date
     status: Optional[str] = "probation"
     photo: Optional[str] = None
+    manager_id: Optional[int] = None
+    role: Optional[str] = "employee"
 
 class EmployeeResponse(BaseModel):
     id: int
     emp_id: Optional[str]
     name: str
     email: str
+    role: str
     phone: Optional[str]
     department: Optional[str]
     designation: Optional[str]
@@ -112,6 +115,7 @@ class EmployeeResponse(BaseModel):
     ifsc_code: Optional[str]
     grade: Optional[int] = 1
     manager: Optional[str]
+    manager_id: Optional[int]
     photo: Optional[str]
     documents: Optional[str]
 
@@ -125,11 +129,13 @@ class EmployeeCreateResponse(BaseModel):
 class EmployeeUpdateRequest(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
+    role: Optional[str] = None
     department: Optional[str] = None
     designation: Optional[str] = None
     phone: Optional[str] = None
     grade: Optional[int] = None
     manager: Optional[str] = None
+    manager_id: Optional[int] = None
     photo: Optional[str] = None
     status: Optional[str] = None
 
@@ -721,7 +727,12 @@ def create_job_offer(req: JobOfferCreate, current_user: models.User = Depends(se
 @router.get("/employees", response_model=List[EmployeeResponse])
 def get_employees(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
-    return db.query(models.User).filter(models.User.role == "employee").all()
+    return db.query(models.User).filter(models.User.role.in_(["employee", "tl"])).all()
+
+@router.get("/team-leads", response_model=List[EmployeeResponse])
+def get_team_leads(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_hr_role(current_user)
+    return db.query(models.User).filter(models.User.role == "tl").all()
 
 @router.post("/employees", response_model=EmployeeCreateResponse, status_code=status.HTTP_201_CREATED)
 def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -754,7 +765,7 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
         name=req.name,
         email=req.email,
         hashed_password=default_pwd,
-        role="employee",
+        role=req.role or "employee",
         department=req.department,
         designation=req.designation,
         status=req.status,
@@ -766,6 +777,7 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
         ifsc_code="HDFC0000012",
         grade=3,
         manager="John Doe",
+        manager_id=req.manager_id,
         photo=req.photo or "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80",
         documents=json.dumps(initial_docs)
     )
@@ -844,7 +856,7 @@ def confirm_probation(id: int, current_user: models.User = Depends(security.get_
 @router.post("/employees/{id}/extend-probation", response_model=EmployeeResponse)
 def extend_probation(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
-    emp = db.query(models.User).filter(models.User.id == id, models.User.role == "employee").first()
+    emp = db.query(models.User).filter(models.User.id == id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
         
@@ -866,7 +878,7 @@ def extend_probation(id: int, current_user: models.User = Depends(security.get_c
 @router.post("/employees/{id}/terminate", response_model=EmployeeResponse)
 def terminate_employee(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
-    emp = db.query(models.User).filter(models.User.id == id, models.User.role == "employee").first()
+    emp = db.query(models.User).filter(models.User.id == id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
         
@@ -925,7 +937,7 @@ def delete_employee(id: int, current_user: models.User = Depends(security.get_cu
 @router.put("/employees/{id}", response_model=EmployeeResponse)
 def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
-    emp = db.query(models.User).filter(models.User.id == id, models.User.role == "employee").first()
+    emp = db.query(models.User).filter(models.User.id == id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
 
@@ -938,6 +950,8 @@ def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.Us
             if exists:
                 raise HTTPException(status_code=400, detail="Another employee already uses this email.")
         emp.email = req.email
+    if req.role is not None:
+        emp.role = req.role
     if req.department is not None:
         emp.department = req.department
     if req.designation is not None:
@@ -948,6 +962,8 @@ def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.Us
         emp.grade = req.grade
     if req.manager is not None:
         emp.manager = req.manager
+    if req.manager_id is not None:
+        emp.manager_id = req.manager_id
     if req.photo is not None:
         emp.photo = req.photo
     if req.status is not None:
@@ -968,7 +984,7 @@ def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.Us
 @router.post("/employees/{id}/reset-password", status_code=status.HTTP_200_OK)
 def reset_employee_password(id: int, req: PasswordResetRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
-    emp = db.query(models.User).filter(models.User.id == id, models.User.role == "employee").first()
+    emp = db.query(models.User).filter(models.User.id == id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
     

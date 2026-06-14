@@ -63,37 +63,35 @@ export default function TicketForm({ onSubmitTicket }) {
     }
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!description.trim()) return;
 
     setIsSubmitting(true);
     setLastSubmittedId(null);
 
-    // Simulate 1s button spinner
-    setTimeout(() => {
-      const generatedId = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-      
-      const newTicket = {
-        id: generatedId,
-        issueType,
-        description: description.trim(),
-        priority,
-        screenshotName: screenshotName || null,
-        status: 'Open',
-        createdAt: new Date().toLocaleDateString()
-      };
+    const newTicket = {
+      issueType,
+      description: description.trim(),
+      priority,
+      screenshotName: screenshotName || null
+    };
 
-      onSubmitTicket(newTicket);
+    try {
+      const realTicketId = await onSubmitTicket(newTicket);
+      if (realTicketId) {
+        setLastSubmittedId(realTicketId);
+        // Clear form on success
+        setDescription('');
+        setScreenshotName('');
+        setScreenshotPreview('');
+        setUploadProgressScr(0);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
       setIsSubmitting(false);
-      setLastSubmittedId(generatedId);
-      
-      // Clear form
-      setDescription('');
-      setScreenshotName('');
-      setScreenshotPreview('');
-      setUploadProgressScr(0);
-    }, 1000);
+    }
   };
 
   const getPriorityColor = (lvl) => {
@@ -282,7 +280,7 @@ export default function TicketForm({ onSubmitTicket }) {
                   </span>
                 </div>
               ) : (
-                <img 
+                <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} 
                   src={screenshotPreview} 
                   alt="Attached Screenshot Preview"
                   style={{
@@ -294,7 +292,7 @@ export default function TicketForm({ onSubmitTicket }) {
                     backgroundColor: 'var(--bg-secondary)',
                     flexShrink: 0
                   }}
-                />
+                 />
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
                 <span 

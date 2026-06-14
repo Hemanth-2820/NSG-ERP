@@ -2,25 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Download, CheckCircle, AlertTriangle, Upload, X, FileText, Calculator, CreditCard, Loader } from 'lucide-react';
 import './Payroll.css';
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
 
-
-
-const CTC_EARNINGS = [
-  { label: 'Basic Salary',        amount: 42000 },
-  { label: 'HRA',                 amount: 16800 },
-  { label: 'Special Allowance',   amount: 14450 },
-  { label: 'Medical Allowance',   amount: 1250  },
-  { label: 'Transport Allowance', amount: 800   },
-  { label: 'Performance Bonus',   amount: 9950  },
-];
-
-const CTC_DEDUCTIONS = [
-  { label: 'PF (Employee)',    amount: 5040 },
-  { label: 'Professional Tax', amount: 200  },
-  { label: 'TDS',              amount: 5640 },
-  { label: 'Health Insurance', amount: 1500 },
-];
 
 const TAX_SLABS = [
   { from: 0,       to: 300000,   rate: 0  },
@@ -129,11 +111,18 @@ function PayslipsTab({ employeeId }) {
       <div class="row bold" style="background:#fff5f5;padding:8px;"><span>Total Deductions</span><span class="red">-${INR_fmt(deductions)}</span></div>
       <div class="net"><span>Net Take-Home Pay</span><span>${INR_fmt(p.net)}</span></div>
       </body></html>`;
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    win.onload = () => { win.print(); win.close(); };
-    setTimeout(() => setDownloading(null), 1000);
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      iframe.contentDocument.write(html);
+      iframe.contentDocument.close();
+      iframe.onload = () => {
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          setDownloading(null);
+        }, 1000);
+      };
   }
 
   return (
@@ -683,7 +672,7 @@ function TaxCalculatorTab() {
 // ─── Root Payroll ─────────────────────────────────────────────────────────────
 
 export default function Payroll({ currentUser }) {
-  const employeeId = currentUser?.id || 102;
+  const employeeId = currentUser?.id;
   const [activeTab, setActiveTab] = useState('payslips');
 
   return (
