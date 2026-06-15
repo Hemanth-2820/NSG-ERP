@@ -958,6 +958,31 @@ def get_announcements(db: Session = Depends(database.get_db), current_user: mode
         ))
     return res
 
+@router.post("/announcements/{id}/read")
+def mark_announcement_read(id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    ann = db.query(models.Announcement).filter(models.Announcement.id == id).first()
+    if not ann:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+        
+    already_read = db.query(models.AnnouncementRead).filter(
+        models.AnnouncementRead.announcement_id == id,
+        models.AnnouncementRead.user_id == current_user.id
+    ).first()
+    
+    if not already_read:
+        # Create read record
+        new_read = models.AnnouncementRead(announcement_id=id, user_id=current_user.id)
+        db.add(new_read)
+        
+        # Update aggregate counts
+        total_users = db.query(models.User).filter(models.User.is_active == True).count() or 1
+        ann.read_count += 1
+        ann.read_pct = round((ann.read_count / total_users) * 100, 1)
+        
+        db.commit()
+    
+    return {"status": "success"}
+
 @router.get("/dashboard/pending-approvals")
 def get_pending_approvals_count(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_manager_role(current_user)

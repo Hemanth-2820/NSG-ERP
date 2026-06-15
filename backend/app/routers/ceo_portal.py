@@ -77,8 +77,8 @@ class PasswordResetRequest(BaseModel):
 class AnnouncementCreate(BaseModel):
     title: str
     body: str
-    priority: Optional[str] = "Normal"  # Urgent, Normal, Low
-    audience: Optional[str] = "All Employees"
+    priority: Optional[str] = "Normal"
+    audience: Optional[str] = "All Portals"
 
 class AnnouncementResponse(BaseModel):
     id: int
@@ -86,10 +86,10 @@ class AnnouncementResponse(BaseModel):
     body: str
     priority: str
     audience: str
-    created_at: datetime
-    author: str
-    read_count: int
-    read_pct: float
+    created_at: Optional[datetime] = None
+    author: Optional[str] = "CEO Office"
+    read_count: Optional[int] = 0
+    read_pct: Optional[float] = 0.0
 
     class Config:
         from_attributes = True
@@ -479,16 +479,30 @@ def delete_user_by_ceo(user_id: int, current_user: models.User = Depends(securit
     db.commit()
     return {"status": "success", "message": "User deleted."}
 
-# 2. Corporate Announcements
+# ─── 2. Corporate Announcements ───────────────────────────────────────────────
+
 @router.get("/announcements", response_model=List[AnnouncementResponse])
-def get_announcements(current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    # Open to all authenticated users so employees can see announcements
-    return db.query(models.Announcement).order_by(models.Announcement.created_at.desc()).offset(skip).limit(limit).all()
+def get_announcements(
+    current_user: models.User = Depends(security.get_current_user),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(database.get_db)
+):
+    """List all announcements (newest first). Open to all authenticated users."""
+    return db.query(models.Announcement).order_by(
+        models.Announcement.created_at.desc()
+    ).offset(skip).limit(limit).all()
+
 
 @router.post("/announcements", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
-def create_announcement(req: AnnouncementCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+def create_announcement(
+    req: AnnouncementCreate,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Create a new announcement. CEO/Admin only."""
     verify_ceo_role(current_user)
-    
+
     ann = models.Announcement(
         title=req.title,
         body=req.body,
@@ -499,16 +513,6 @@ def create_announcement(req: AnnouncementCreate, current_user: models.User = Dep
         read_pct=0.0
     )
     db.add(ann)
-    
-    # Auto register audit trail
-    db_log = models.AuditLog(
-        initiator_id=current_user.name,
-        module="Announcements",
-        action_type="create",
-        change_diff=json.dumps({"announcement_title": req.title})
-    )
-    db.add(db_log)
-    
     db.commit()
     db.refresh(ann)
     return ann
@@ -588,37 +592,54 @@ def delete_project_by_ceo(project_id: int, current_user: models.User = Depends(s
     db.commit()
     return {"status": "success", "message": "Project deleted."}
 
-@router.delete("/announcements/{id}")
-def delete_announcement(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+@router.delete("/announcements/{ann_id}")
+def delete_announcement(
+    ann_id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Delete an announcement. CEO/Admin only."""
     verify_ceo_role(current_user)
-    ann = db.query(models.Announcement).filter(models.Announcement.id == id).first()
+    ann = db.query(models.Announcement).filter(models.Announcement.id == ann_id).first()
     if not ann:
         raise HTTPException(status_code=404, detail="Announcement not found.")
+    
+    # Delete related reads first to avoid foreign key constraint violations
+    db.query(models.AnnouncementRead).filter(models.AnnouncementRead.announcement_id == ann_id).delete(synchronize_session=False)
     
     db.delete(ann)
     db.commit()
     return {"status": "success", "message": "Announcement removed."}
 
+
 class UnreadUserResponse(BaseModel):
     id: int
     name: str
-    department: Optional[str]
+    department: Optional[str] = None
 
-@router.get("/announcements/{id}/unread-users", response_model=List[UnreadUserResponse])
-def get_unread_users(id: int, current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
+
+@router.get("/announcements/{ann_id}/unread-users", response_model=List[UnreadUserResponse])
+def get_unread_users(
+    ann_id: int,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """List users who haven't read a specific announcement. CEO/Admin only."""
     verify_ceo_role(current_user)
-    ann = db.query(models.Announcement).filter(models.Announcement.id == id).first()
+    ann = db.query(models.Announcement).filter(models.Announcement.id == ann_id).first()
     if not ann:
         raise HTTPException(status_code=404, detail="Announcement not found.")
 
-    read_user_ids = [r.user_id for r in db.query(models.AnnouncementRead).filter(models.AnnouncementRead.announcement_id == id).offset(skip).limit(limit).all()]
+    read_user_ids = [
+        r.user_id for r in db.query(models.AnnouncementRead).filter(
+            models.AnnouncementRead.announcement_id == ann_id
+        ).all()
+    ]
+
+    query = db.query(models.User).filter(models.User.is_active == True)
+    if read_user_ids:
+        query = query.filter(models.User.id.notin_(read_user_ids))
     
-    query = db.query(models.User).filter(models.User.is_active == True, models.User.id.notin_(read_user_ids))
-    if ann.audience and ann.audience != "All Employees":
-        dept_name = ann.audience.replace(" Department", "").strip()
-        if dept_name in ["IT", "Sales & Marketing", "Operations", "Finance"]:
-            query = query.filter(models.User.department == dept_name)
-            
     unread_users = query.all()
     return unread_users
 

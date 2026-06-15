@@ -42,7 +42,8 @@ export function HrDashboardView() {
         // Fetch announcements
         const annRes = await fetch('/api/hr-portal/announcements', { headers });
         if (annRes.ok) {
-          const anns = await annRes.json();
+          let anns = await annRes.json();
+          anns = anns.filter(ann => ann.audience === 'All Portals' || ann.audience === 'HR Portal');
           setAnnouncements(anns);
         }
       } catch (err) {
@@ -61,29 +62,10 @@ export function HrDashboardView() {
         </div>
       </div>
 
-      {/* CEO Announcements Section */}
-      {announcements.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>CEO Announcements</span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-            {announcements.slice(0, 3).map(ann => (
-              <div key={ann.id} style={{
-                background: '#FFF', border: '1px solid #E2E8F0', borderLeft: ann.priority === 'Urgent' ? '4px solid #ef4444' : '4px solid #3b82f6',
-                borderRadius: '8px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>{ann.author} • {ann.date}</span>
-                  {ann.priority === 'Urgent' && <span style={{ background: '#FEF2F2', color: '#ef4444', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800 }}>URGENT</span>}
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: '#0F172A' }}>{ann.title}</div>
-                <div dangerouslySetInnerHTML={{ __html: ann.body }} style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, maxHeight: '3.6em', overflow: 'hidden' }}></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '24px', alignItems: 'start' }}>
+        
+        {/* Main Content Area */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
       {/* Metrics Row */}
       <div className="metrics-grid">
@@ -183,7 +165,49 @@ export function HrDashboardView() {
               );
             })}
           </div>
+          </div>
         </div>
+      </div>
+      
+      {/* Right Sidebar: CEO Announcements */}
+        {announcements.length > 0 && (
+          <div className="content-card" style={{ background: '#F8FAFC', padding: '16px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '16px' }}>📢</span>
+              <span style={{ fontSize: '15px', fontWeight: '700', color: '#1E293B' }}>CEO Announcements</span>
+              <span style={{ background: 'rgba(245,158,11,0.1)', color: '#fbbf24', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '12px', marginLeft: 'auto' }}>
+                {announcements.length}
+              </span>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {announcements.slice(0, 3).map(ann => (
+                <div key={ann.id} style={{
+                  padding: '14px',
+                  background: '#FFF',
+                  border: '1px solid #E2E8F0',
+                  borderLeft: ann.priority === 'Urgent' ? '4px solid #ef4444' : '4px solid #3b82f6',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
+                      {ann.date || 'Today'}
+                    </span>
+                    {ann.priority === 'Urgent' && (
+                      <span style={{ background: '#FEF2F2', color: '#ef4444', border: '1px solid #FCA5A5', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800 }}>URGENT</span>
+                    )}
+                  </div>
+                  <strong style={{ fontSize: '13px', color: '#0F172A' }}>{ann.title}</strong>
+                  <div dangerouslySetInnerHTML={{ __html: ann.body }} style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: 1.4, maxHeight: '3.6em', overflow: 'hidden' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

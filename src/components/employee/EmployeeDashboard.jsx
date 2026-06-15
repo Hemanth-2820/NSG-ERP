@@ -158,13 +158,24 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
           fetch('/api/employee-portal/chat/my-channels', { headers })
         ]);
 
-        const tasks = tasksRes.ok ? await tasksRes.json() : [];
+        const tasksData = tasksRes.ok ? await tasksRes.json() : [];
         const leaveBalances = leaveRes.ok ? await leaveRes.json() : null;
-        const payslips = payslipRes.ok ? await payslipRes.json() : [];
+        const payslipsData = payslipRes.ok ? await payslipRes.json() : [];
         const assets = assetsRes.ok ? await assetsRes.json() : [];
-        const announcements = annRes.ok ? await annRes.json() : [];
-        const notifications = notifRes.ok ? await notifRes.json() : [];
-        const channels = chanRes.ok ? await chanRes.json() : [];
+        const announcementsData = annRes.ok ? await annRes.json() : [];
+        const notificationsData = notifRes.ok ? await notifRes.json() : [];
+        const channelsData = chanRes.ok ? await chanRes.json() : [];
+
+        const tasks = Array.isArray(tasksData) ? tasksData : (tasksData.items || []);
+        const payslips = Array.isArray(payslipsData) ? payslipsData : (payslipsData.items || []);
+        let announcements = Array.isArray(announcementsData) ? announcementsData : (announcementsData.items || []);
+        const notifications = Array.isArray(notificationsData) ? notificationsData : (notificationsData.items || []);
+        const channels = Array.isArray(channelsData) ? channelsData : (channelsData.items || []);
+
+        // Filter announcements based on audience
+        announcements = announcements.filter(ann => 
+          ann.audience === 'All Portals' || ann.audience === 'Employee Portal'
+        );
 
         announcements.forEach(ann => {
           fetch(`/api/employee-portal/announcements/${ann.id}/read`, { method: 'POST', headers }).catch(() => {});

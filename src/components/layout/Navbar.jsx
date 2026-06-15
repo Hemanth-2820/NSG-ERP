@@ -359,7 +359,12 @@ export default function Navbar({ activeRole, setActiveRole, navigateTo, hrDb = {
               </div>
               <div className="dropdown-list">
                 {roles
-                  .filter(r => r.id.toLowerCase() === (currentUser.role || 'employee').toLowerCase() || r.id === 'Employee')
+                  .filter(r => {
+                    const primaryRole = (currentUser.role || 'employee').toLowerCase();
+                    if (r.id.toLowerCase() === primaryRole) return true;
+                    if (primaryRole === 'ceo' && r.id === 'Employee') return false;
+                    return r.id === 'Employee';
+                  })
                   .map(roleOption => {
                     const Icon = roleOption.icon;
                     const isSelected = roleOption.id.toLowerCase() === activeRole.toLowerCase();
