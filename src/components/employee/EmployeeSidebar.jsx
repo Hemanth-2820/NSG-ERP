@@ -20,6 +20,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }
   const isMessagingActive = activeTab === 'messaging';
   const isOrgChartActive = activeTab === 'orgChart';
   const isPerformanceActive = activeTab === 'performance';
+  const isHolidaysActive = activeTab === 'holidays';
 
   const activeStyle = {
     color: '#10b981',
@@ -84,6 +85,16 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentUser }
       >
         <Calendar size={18} />
         <span>Leave</span>
+      </button>
+
+      {/* Holidays Tab */}
+      <button
+        className={`nav-link ${isHolidaysActive ? 'active' : ''}`}
+        onClick={() => setActiveTab('holidays')}
+        style={isHolidaysActive ? activeStyle : {}}
+      >
+        <Calendar size={18} />
+        <span>Holidays</span>
       </button>
 
       {/* Payroll Tab */}

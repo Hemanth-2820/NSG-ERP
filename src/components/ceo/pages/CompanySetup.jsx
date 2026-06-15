@@ -50,7 +50,12 @@ const CustomModal = ({ isOpen, title, fields, onSave, onClose }) => {
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--ceo-text-secondary)' }}>{f.label}</label>
               {f.type === 'select' ? (
                 <select name={f.name} defaultValue={f.defaultValue || ''} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', outline: 'none' }} required>
-                  {f.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  {f.options.map(opt => {
+                    if (typeof opt === 'object') {
+                      return <option key={opt.value} value={opt.value}>{opt.label}</option>;
+                    }
+                    return <option key={opt} value={opt}>{opt}</option>;
+                  })}
                 </select>
               ) : (
                 <input name={f.name} type={f.type || 'text'} defaultValue={f.defaultValue || ''} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', outline: 'none' }} required />
@@ -108,7 +113,6 @@ const DeptTreeNode = ({ dept, level = 0, onAdd, onEdit, onDelete }) => {
         </div>
         
         <span style={{ fontWeight: 600, flex: 1, fontSize: '15px', color: 'var(--ceo-text-primary)' }}>{dept.name}</span>
-        <span className="ceo-badge neutral" style={{ marginRight: '16px', fontSize: '11px' }}><Users size={12} style={{marginRight:4}}/>{dept.headcount} EMP</span>
         
         <div style={{ 
           display: 'flex', 
@@ -355,7 +359,7 @@ export default function CompanySetup() {
       title: item ? 'Edit Designation' : 'Create Designation',
       fields: [
         { name: 'name', label: 'Designation Name', defaultValue: item?.name },
-        { name: 'department_id', label: 'Department', type: 'select', options: flatDepts.map(d => `${d.id}:${d.name}`), defaultValue: item ? `${item.department_id}:${item.dept}` : undefined },
+        { name: 'department_id', label: 'Department', type: 'select', options: flatDepts.map(d => ({ value: `${d.id}:${d.name}`, label: d.name })), defaultValue: item ? `${item.department_id}:${item.dept}` : undefined },
         { name: 'level', label: 'Band Level', defaultValue: item?.level }
       ],
       onSave: async (data) => {

@@ -13,6 +13,7 @@ export default function TlSidebar({ activeTab, setActiveTab }) {
   const isReportsActive = activeTab === 'reports';
   const isEscalationsActive = activeTab === 'escalations';
   const isMessagingActive = activeTab === 'messaging';
+  const isHolidaysActive = activeTab === 'holidays';
 
   return (
     <div className="nav-group">
@@ -106,6 +107,19 @@ export default function TlSidebar({ activeTab, setActiveTab }) {
       >
         <Calendar size={18} />
         <span>Attendance</span>
+      </button>
+
+      <button
+        className={`nav-link ${isHolidaysActive ? 'active' : ''}`}
+        onClick={() => setActiveTab('holidays')}
+        style={isHolidaysActive ? { 
+          color: '#3b82f6',
+          borderLeftColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.05)' 
+        } : {}}
+      >
+        <Calendar size={18} />
+        <span>Holidays</span>
       </button>
 
       <button

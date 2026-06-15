@@ -31,13 +31,19 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   // New Employee Form States
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [newDept, setNewDept] = useState('Engineering');
-  const [newRole, setNewRole] = useState('Developer');
+  const [newDept, setNewDept] = useState('');
+  const [newRole, setNewRole] = useState('');
+  const [newShift, setNewShift] = useState('');
+  const [newPhotoFile, setNewPhotoFile] = useState(null);
   const [newPhoto, setNewPhoto] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80');
   const [newJoinDate, setNewJoinDate] = useState(new Date().toISOString().split('T')[0]);
   const [newStatus, setNewStatus] = useState('probation');
   const [newManagerId, setNewManagerId] = useState('');
   const [newSystemRole, setNewSystemRole] = useState('employee');
+
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
+  const [shifts, setShifts] = useState([]);
 
   // Edit Employee Modal States
   const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +58,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [editManager, setEditManager] = useState('');
   const [editSystemRole, setEditSystemRole] = useState('employee');
   const [editPhoto, setEditPhoto] = useState('');
+  const [editPhotoFile, setEditPhotoFile] = useState(null);
 
   // Reset Password States
   const [showResetModal, setShowResetModal] = useState(false);
@@ -90,6 +97,16 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
         if (tlRes.ok) {
           setTeamLeads(await tlRes.json());
         }
+
+        // Fetch dynamic data
+        const deptRes = await fetch('/api/hr-portal/departments', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (deptRes.ok) setDepartments(await deptRes.json());
+
+        const desigRes = await fetch('/api/hr-portal/designations', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (desigRes.ok) setDesignations(await desigRes.json());
+
+        const shiftRes = await fetch('/api/hr-portal/shifts', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (shiftRes.ok) setShifts(await shiftRes.json());
       }
     } catch (err) {
       console.error('Failed to fetch employees:', err);
@@ -142,6 +159,25 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
     e.preventDefault();
     const token = localStorage.getItem('nsg_jwt_token');
     try {
+      let finalPhotoUrl = newPhoto;
+      
+      // If a file was selected, upload it first
+      if (newPhotoFile) {
+        const formData = new FormData();
+        formData.append('file', newPhotoFile);
+        const uploadRes = await fetch('/api/hr-portal/employees/upload-photo', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          finalPhotoUrl = uploadData.url;
+        }
+      }
+
       const response = await fetch('/api/hr-portal/employees', {
         method: 'POST',
         headers: {
@@ -155,9 +191,10 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           designation: newRole,
           status: newStatus,
           join_date: newJoinDate,
-          photo: newPhoto,
+          photo: finalPhotoUrl,
           manager_id: newManagerId ? parseInt(newManagerId) : null,
-          role: newSystemRole
+          role: newSystemRole,
+          shift_timing: newShift
         })
       });
 
@@ -225,9 +262,13 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
 
       setNewName('');
       setNewEmail('');
+      setNewPhotoFile(null);
       setNewPhoto('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80');
       setNewJoinDate(new Date().toISOString().split('T')[0]);
       setNewStatus('probation');
+      setNewDept('');
+      setNewRole('');
+      setNewShift('');
       setShowAddWizard(false);
       await fetchEmployees();
       notify(`Employee ${newEmp.name} successfully added!\n\nTemporary Login Credentials:\nUsername (Email): ${newEmp.email}\nPassword: ${tempPassword}\n\nPlease share these credentials with the employee so they can log in.`);
@@ -297,6 +338,25 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
     e.preventDefault();
     const token = localStorage.getItem('nsg_jwt_token');
     try {
+      let finalPhotoUrl = editPhoto;
+      
+      // If a file was selected, upload it first
+      if (editPhotoFile) {
+        const formData = new FormData();
+        formData.append('file', editPhotoFile);
+        const uploadRes = await fetch('/api/hr-portal/employees/upload-photo', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          finalPhotoUrl = uploadData.url;
+        }
+      }
+
       const res = await fetch(`/api/hr-portal/employees/${editEmp.id}`, {
         method: 'PUT',
         headers: {
@@ -313,7 +373,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           manager: editManager ? teamLeads.find(tl => String(tl.id) === String(editManager))?.name : null,
           manager_id: editManager ? parseInt(editManager) : null,
           role: editSystemRole,
-          photo: editPhoto
+          photo: finalPhotoUrl
         })
       });
       if (!res.ok) {
@@ -396,6 +456,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
     setEditManager(emp.manager_id || '');
     setEditSystemRole(emp.role || 'employee');
     setEditPhoto(emp.photo || '');
+    setEditPhotoFile(null);
     setShowEditModal(true);
   };
 
@@ -504,13 +565,9 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
         </div>
         <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px 16px', borderRadius: '8px', outline: 'none' }}>
           <option value="All">All Departments</option>
-          <option value="Executive">Executive</option>
-          <option value="Engineering">Engineering</option>
-          <option value="IT">IT</option>
-          <option value="Marketing">Marketing</option>
-          <option value="Sales">Sales</option>
-          <option value="Human Resources">Human Resources</option>
-          <option value="Finance">Finance</option>
+          {departments.map(d => (
+            <option key={d.id} value={d.name}>{d.name}</option>
+          ))}
         </select>
       </div>
 
@@ -887,56 +944,86 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
       {/* Popups Adding */}
       {showAddWizard && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleAddEmployee} className="card" style={{ width: '450px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '12px' }}>
-            <h3>🧑‍💼 Add New Employee Wizard</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', margin: '16px 0' }}>
-              <label style={{ fontSize: '12px' }}>Employee Full Name</label>
-              <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} required placeholder="Jane Doe" style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+          <form onSubmit={handleAddEmployee} className="card" style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '32px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>🧑‍💼 Add New Employee Wizard</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE FULL NAME *</label>
+                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} required placeholder="e.g. Jane Doe" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
               
-              <label style={{ fontSize: '12px' }}>Email Address</label>
-              <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required placeholder="jane@hnms.com" style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMAIL ADDRESS *</label>
+                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required placeholder="jane@hmns.com" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Department</label>
-              <select value={newDept} onChange={(e) => setNewDept(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
-                <option value="Executive">Executive</option>
-                <option value="Engineering">Engineering</option>
-                <option value="IT">IT</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Sales">Sales</option>
-                <option value="Human Resources">Human Resources</option>
-                <option value="Finance">Finance</option>
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DEPARTMENT *</label>
+                <select value={newDept} onChange={(e) => setNewDept(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
+                  <option value="">Select Department</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Designation / Title</label>
-              <input type="text" value={newRole} onChange={(e) => setNewRole(e.target.value)} required placeholder="Staff Developer" style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DESIGNATION / TITLE *</label>
+                <select disabled={!newDept} title={!newDept ? "First choose a department" : ""} value={newRole} onChange={(e) => setNewRole(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: !newDept ? 'not-allowed' : 'pointer', opacity: !newDept ? 0.6 : 1 }}>
+                  <option value="">Select Designation</option>
+                  {designations.filter(d => !newDept || d.dept === newDept).map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Profile Photo URL</label>
-              <input type="text" value={newPhoto} onChange={(e) => setNewPhoto(e.target.value)} placeholder="https://images.unsplash.com/..." style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>SYSTEM ROLE</label>
+                <select value={newSystemRole} onChange={(e) => setNewSystemRole(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
+                  <option value="employee">Employee</option>
+                  <option value="tl">Team Lead (TL)</option>
+                  <option value="hr">HR Admin</option>
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Joining Date</label>
-              <input type="date" value={newJoinDate} onChange={(e) => setNewJoinDate(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>JOINING DATE *</label>
+                <input type="date" value={newJoinDate} onChange={(e) => setNewJoinDate(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Employment Status</label>
-              <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
-                <option value="probation">Probation</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>REPORTS TO (TEAM LEAD)</label>
+                <select disabled={newSystemRole !== 'employee'} title={newSystemRole !== 'employee' ? "Only employees report to a team lead" : ""} value={newManagerId} onChange={(e) => setNewManagerId(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: newSystemRole !== 'employee' ? 'not-allowed' : 'pointer', opacity: newSystemRole !== 'employee' ? 0.6 : 1 }}>
+                  <option value="">None / Executive</option>
+                  {teamLeads.map(tl => (
+                    <option key={tl.id} value={tl.id}>{tl.name}</option>
+                  ))}
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>System Role</label>
-              <select value={newSystemRole} onChange={(e) => setNewSystemRole(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
-                <option value="employee">Employee</option>
-                <option value="tl">Team Lead (TL)</option>
-                <option value="hr">HR Admin</option>
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYMENT STATUS</label>
+                <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
+                  <option value="probation">Probation</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Reports To (Team Lead)</label>
-              <select value={newManagerId} onChange={(e) => setNewManagerId(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
-                <option value="">None / Executive</option>
-                {teamLeads.map(tl => (
-                  <option key={tl.id} value={tl.id}>{tl.name}</option>
-                ))}
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>SHIFT TIMING</label>
+                <select value={newShift} onChange={(e) => setNewShift(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
+                  <option value="">Standard 9 to 5</option>
+                  {shifts.map(s => (
+                    <option key={s.id} value={s.name}>{s.name} ({s.start_time} - {s.end_time})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PROFILE PHOTO</label>
+                <input type="file" accept="image/*" onChange={(e) => setNewPhotoFile(e.target.files[0])} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button type="button" style={{ background: 'none', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }} onClick={() => setShowAddWizard(false)}>Cancel</button>
@@ -949,52 +1036,77 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
       {/* Edit Employee Modal */}
       {showEditModal && editEmp && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleEditEmployee} className="card" style={{ width: '450px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '12px' }}>
-            <h3>✏️ Edit Employee Profile</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', margin: '16px 0' }}>
-              <label style={{ fontSize: '12px' }}>Employee Full Name</label>
-              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+          <form onSubmit={handleEditEmployee} className="card" style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '32px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>✏️ Edit Employee Profile</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE FULL NAME *</label>
+                <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Email Address</label>
-              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMAIL ADDRESS *</label>
+                <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Department</label>
-              <select value={editDept} onChange={(e) => setEditDept(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
-                <option value="Executive">Executive</option>
-                <option value="Engineering">Engineering</option>
-                <option value="IT">IT</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Sales">Sales</option>
-                <option value="Human Resources">Human Resources</option>
-                <option value="Finance">Finance</option>
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DEPARTMENT *</label>
+                <select value={editDept} onChange={(e) => setEditDept(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
+                  <option value="">Select Department</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Designation / Title</label>
-              <input type="text" value={editRole} onChange={(e) => setEditRole(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DESIGNATION / TITLE *</label>
+                <select disabled={!editDept} title={!editDept ? "First choose a department" : ""} value={editRole} onChange={(e) => setEditRole(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: !editDept ? 'not-allowed' : 'pointer', opacity: !editDept ? 0.6 : 1 }}>
+                  <option value="">Select Designation</option>
+                  {designations.filter(d => !editDept || d.dept === editDept).map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Phone Number</label>
-              <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+91 99000 11000" style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PHONE NUMBER</label>
+                <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+91 99000 11000" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Structural Grade</label>
-              <input type="number" value={editGrade} onChange={(e) => setEditGrade(Number(e.target.value))} min={1} max={10} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>STRUCTURAL GRADE</label>
+                <input type="number" value={editGrade} onChange={(e) => setEditGrade(Number(e.target.value))} min={1} max={10} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+              </div>
 
-              <label style={{ fontSize: '12px' }}>System Role</label>
-              <select value={editSystemRole} onChange={(e) => setEditSystemRole(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
-                <option value="employee">Employee</option>
-                <option value="tl">Team Lead (TL)</option>
-                <option value="hr">HR Admin</option>
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>SYSTEM ROLE</label>
+                <select value={editSystemRole} onChange={(e) => setEditSystemRole(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
+                  <option value="employee">Employee</option>
+                  <option value="tl">Team Lead (TL)</option>
+                  <option value="hr">HR Admin</option>
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Reports To (Team Lead)</label>
-              <select value={editManager} onChange={(e) => setEditManager(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }}>
-                <option value="">None / Executive</option>
-                {teamLeads.map(tl => (
-                  <option key={tl.id} value={tl.id}>{tl.name}</option>
-                ))}
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>REPORTS TO (TEAM LEAD)</label>
+                <select disabled={editSystemRole !== 'employee'} title={editSystemRole !== 'employee' ? "Only employees report to a team lead" : ""} value={editManager} onChange={(e) => setEditManager(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: editSystemRole !== 'employee' ? 'not-allowed' : 'pointer', opacity: editSystemRole !== 'employee' ? 0.6 : 1 }}>
+                  <option value="">None / Executive</option>
+                  {teamLeads.map(tl => (
+                    <option key={tl.id} value={tl.id}>{tl.name}</option>
+                  ))}
+                </select>
+              </div>
 
-              <label style={{ fontSize: '12px' }}>Profile Photo URL</label>
-              <input type="text" value={editPhoto} onChange={(e) => setEditPhoto(e.target.value)} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px' }} />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PROFILE PHOTO</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  {editPhoto && (
+                    <img src={typeof editPhoto === 'string' ? editPhoto : URL.createObjectURL(editPhotoFile)} alt="Current profile" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }} />
+                  )}
+                  <input type="file" accept="image/*" onChange={(e) => setEditPhotoFile(e.target.files[0])} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
+                </div>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => { setShowEditModal(false); setEditEmp(null); }} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#fff', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>

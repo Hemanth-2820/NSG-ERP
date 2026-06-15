@@ -12,6 +12,7 @@ const Escalations = lazy(() => import('./Escalations/index'));
 const Approvals = lazy(() => import('./Approvals/index'));
 const MessagingAndMeet = lazy(() => import('./Messaging & Meet/messages.module.index'));
 const Performance = lazy(() => import('./Performance/index'));
+const HolidayCalendar = lazy(() => import('../common/HolidayCalendar'));
 
 export default function Tl({ activeTab, setActiveTab, currentUser }) {
   const [selectedChatUser, setSelectedChatUser] = useState(null);
@@ -58,9 +59,12 @@ export default function Tl({ activeTab, setActiveTab, currentUser }) {
         {activeTab === 'performance' && (
           <ErrorBoundary><Performance currentUser={currentUser} /></ErrorBoundary>
         )}
+        {activeTab === 'holidays' && (
+          <ErrorBoundary><HolidayCalendar /></ErrorBoundary>
+        )}
       </Suspense>
       
-      {activeTab !== 'dashboard' && activeTab !== 'team' && activeTab !== 'projects' && activeTab !== 'tasks' && activeTab !== 'attendance' && activeTab !== 'timesheets' && activeTab !== 'approvals' && activeTab !== 'reports' && activeTab !== 'escalations' && activeTab !== 'messaging' && activeTab !== 'performance' && (
+      {activeTab !== 'dashboard' && activeTab !== 'team' && activeTab !== 'projects' && activeTab !== 'tasks' && activeTab !== 'attendance' && activeTab !== 'timesheets' && activeTab !== 'approvals' && activeTab !== 'reports' && activeTab !== 'escalations' && activeTab !== 'messaging' && activeTab !== 'performance' && activeTab !== 'holidays' && (
         <>
           <div className="component-header">
             <div>

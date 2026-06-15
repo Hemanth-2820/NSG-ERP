@@ -16,6 +16,7 @@ const Learning = lazy(() => import('./Learning'));
 const EmployeeDashboard = lazy(() => import('./EmployeeDashboard'));
 const OrgChart = lazy(() => import('./OrgChart'));
 const Performance = lazy(() => import('./Performance'));
+const HolidayCalendar = lazy(() => import('../common/HolidayCalendar'));
 
 // A simple fallback loader
 const Loader = () => (
@@ -63,6 +64,8 @@ export default function Employee({ activeTab, navigateTo, currentUser }) {
         return <OrgChart currentUser={currentUser} />;
       case 'performance':
         return <Performance currentUser={currentUser} />;
+      case 'holidays':
+        return <HolidayCalendar />;
       default:
         // Fallback: show dashboard
         return <EmployeeDashboard setActiveTab={setActiveTab} currentUser={currentUser} />;

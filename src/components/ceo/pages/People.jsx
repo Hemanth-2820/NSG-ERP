@@ -12,7 +12,7 @@ export default function People() {
   
   // Add Employee Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newEmp, setNewEmp] = useState({ name: '', dept: 'Engineering', role: '', email: '', phone: '', status: 'Active', sysRole: 'employee' });
+  const [newEmp, setNewEmp] = useState({ name: '', dept: '', role: '', email: '', phone: '', status: 'Active', sysRole: 'employee', shift: '' });
 
   // Full Profile & Messaging State
   const [isFullProfileOpen, setIsFullProfileOpen] = useState(false);
@@ -32,6 +32,9 @@ export default function People() {
   const [selectedStatus, setSelectedStatus] = useState('');
 
   const [teamLeads, setTeamLeads] = useState([]);
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [designationsList, setDesignationsList] = useState([]);
+  const [shiftsList, setShiftsList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEmployees = async () => {
@@ -51,13 +54,29 @@ export default function People() {
           avatar: emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`,
           sysRole: emp.role,
           email: emp.email,
-          manager_id: emp.manager_id
+          manager_id: emp.manager_id,
+          shift: emp.shift_timing || ''
         }));
         setEmployees(formatted);
       }
       const tlRes = await fetch('/api/hr-portal/team-leads', { headers: { 'Authorization': `Bearer ${token}` } });
       if (tlRes.ok) {
         setTeamLeads(await tlRes.json());
+      }
+      
+      const deptRes = await fetch('/api/ceo-portal/departments', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (deptRes.ok) {
+        setDepartmentsList(await deptRes.json());
+      }
+      
+      const desigRes = await fetch('/api/ceo-portal/designations', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (desigRes.ok) {
+        setDesignationsList(await desigRes.json());
+      }
+      
+      const shiftsRes = await fetch('/api/ceo-portal/shifts', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (shiftsRes.ok) {
+        setShiftsList(await shiftsRes.json());
       }
     } catch (e) {
       console.error(e);
@@ -90,7 +109,8 @@ export default function People() {
           role: newEmp.sysRole,
           phone: newEmp.phone,
           join_date: new Date().toISOString().split('T')[0],
-          status: 'active'
+          status: 'active',
+          shift_timing: newEmp.shift
         })
       });
 
@@ -104,7 +124,7 @@ export default function People() {
       alert(`User ${result.name} successfully added!\n\nRole: ${result.role}\nEmail: ${result.email}\nTemporary Password: ${result.temporary_password}\n\nPlease share these credentials.`);
       
       setIsAddModalOpen(false);
-      setNewEmp({ name: '', dept: 'Engineering', role: '', email: '', phone: '', status: 'Active', sysRole: 'employee' });
+      setNewEmp({ name: '', dept: '', role: '', email: '', phone: '', status: 'Active', sysRole: 'employee', shift: '' });
       
       // Reload employees
       const res = await fetch('/api/ceo-portal/users', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -149,6 +169,7 @@ export default function People() {
           designation: editEmpData.role,
           role: editEmpData.sysRole,
           status: editEmpData.status.toLowerCase(),
+          shift_timing: editEmpData.shift,
           manager_id: editEmpData.manager_id ? parseInt(editEmpData.manager_id) : null,
           manager: editEmpData.manager_id ? teamLeads.find(tl => tl.id === parseInt(editEmpData.manager_id))?.name : null
         })
@@ -335,12 +356,9 @@ export default function People() {
               style={{ width: '160px', height: '40px', background: '#FFF', fontSize: '13px', fontWeight: 600 }}
             >
               <option value="">All Departments</option>
-              <option value="Executive">Executive</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Sales">Sales</option>
-              <option value="Marketing">Marketing</option>
-              <option value="HR">HR</option>
-              <option value="Finance">Finance</option>
+              {departmentsList.map(d => (
+                <option key={d.id} value={d.name}>{d.name}</option>
+              ))}
             </select>
 
             <select 
@@ -557,19 +575,22 @@ export default function People() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DESIGNATION *</label>
-                  <input required value={newEmp.role} onChange={e => setNewEmp({...newEmp, role: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="e.g. Senior Dev" />
+                  <select disabled={!newEmp.dept} title={!newEmp.dept ? "First choose a department" : ""} required value={newEmp.role} onChange={e => setNewEmp({...newEmp, role: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px', cursor: !newEmp.dept ? 'not-allowed' : 'pointer', opacity: !newEmp.dept ? 0.6 : 1 }}>
+                    <option value="">Select Designation</option>
+                    {designationsList.filter(d => !newEmp.dept || d.dept === newEmp.dept).map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DEPARTMENT</label>
                   <select value={newEmp.dept} onChange={e => setNewEmp({...newEmp, dept: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
-                    <option value="Executive">Executive</option>
-                    <option value="Engineering">Engineering</option>
-                    <option value="Sales">Sales</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="HR">HR</option>
-                    <option value="Finance">Finance</option>
+                    <option value="">Select Department</option>
+                    {departmentsList.map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -581,6 +602,15 @@ export default function People() {
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>PHONE NUMBER</label>
                   <input value={newEmp.phone} onChange={e => setNewEmp({...newEmp, phone: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="+91 98765..." />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>SHIFT TIMING</label>
+                  <select value={newEmp.shift} onChange={e => setNewEmp({...newEmp, shift: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
+                    <option value="">Select Shift</option>
+                    {shiftsList.map(s => (
+                      <option key={s.id} value={s.name}>{s.name} ({s.start_time} - {s.end_time})</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div style={{ marginTop: '12px', display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--ceo-divider)', paddingTop: '24px' }}>
@@ -720,17 +750,20 @@ export default function People() {
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DEPARTMENT</label>
                   <select value={editEmpData.dept} onChange={e => setEditEmpData({...editEmpData, dept: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
-                    <option value="Executive">Executive</option>
-                    <option value="Engineering">Engineering</option>
-                    <option value="Sales">Sales</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="HR">HR</option>
-                    <option value="Finance">Finance</option>
+                    <option value="">Select Department</option>
+                    {departmentsList.map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DESIGNATION</label>
-                  <input required value={editEmpData.role} onChange={e => setEditEmpData({...editEmpData, role: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} />
+                  <select required value={editEmpData.role} onChange={e => setEditEmpData({...editEmpData, role: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
+                    <option value="">Select Designation</option>
+                    {designationsList.map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -749,6 +782,17 @@ export default function People() {
                     <option value="">None (Direct to CEO/HR)</option>
                     {teamLeads.map(tl => (
                       <option key={tl.id} value={tl.id}>{tl.name} ({tl.department})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>SHIFT TIMING</label>
+                  <select value={editEmpData.shift || ''} onChange={e => setEditEmpData({...editEmpData, shift: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
+                    <option value="">Select Shift</option>
+                    {shiftsList.map(s => (
+                      <option key={s.id} value={s.name}>{s.name} ({s.start_time} - {s.end_time})</option>
                     ))}
                   </select>
                 </div>

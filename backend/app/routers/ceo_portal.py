@@ -36,6 +36,7 @@ class UserCreateRequest(BaseModel):
     phone: Optional[str] = None
     join_date: date
     status: Optional[str] = "probation"
+    shift_timing: Optional[str] = None
 
 class UserCreateResponse(BaseModel):
     user_id: int
@@ -56,6 +57,7 @@ class UserDetailResponse(BaseModel):
     join_date: Optional[date]
     photo: Optional[str]
     last_active: Optional[datetime] = None
+    shift_timing: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -67,6 +69,7 @@ class UserUpdateRequest(BaseModel):
     designation: Optional[str] = None
     role: Optional[str] = None
     status: Optional[str] = None
+    shift_timing: Optional[str] = None
 
 class PasswordResetRequest(BaseModel):
     new_password: str
@@ -402,7 +405,8 @@ def create_user_by_ceo(req: UserCreateRequest, current_user: models.User = Depen
         join_date=req.join_date,
         status=req.status,
         emp_id=emp_id,
-        is_active=True
+        is_active=True,
+        shift_timing=req.shift_timing
     )
     db.add(db_user)
     db.commit()
@@ -439,6 +443,8 @@ def update_user_by_ceo(user_id: int, req: UserUpdateRequest, current_user: model
         db_user.role = req.role.lower()
     if req.status is not None:
         db_user.status = req.status
+    if req.shift_timing is not None:
+        db_user.shift_timing = req.shift_timing
         
     db.commit()
     db.refresh(db_user)
@@ -962,6 +968,50 @@ def update_system_setting(req: ConfigValueRequest, current_user: models.User = D
     db.add(db_log)
     db.commit()
     return {"status": "success", "key": req.key, "value": req.value}
+
+# --- Holidays ---
+
+class HolidayRequest(BaseModel):
+    name: str
+    date: str
+    type: str = "Mandatory"
+
+@router.get("/holidays")
+def get_holidays(db: Session = Depends(database.get_db)):
+    holidays = db.query(models.Holiday).all()
+    return [{"id": h.id, "name": h.name, "date": h.date, "type": h.type} for h in holidays]
+
+@router.post("/holidays")
+def add_holiday(req: HolidayRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+    new_holiday = models.Holiday(name=req.name, date=req.date, type=req.type)
+    db.add(new_holiday)
+    db.commit()
+    db.refresh(new_holiday)
+    return {"id": new_holiday.id, "name": new_holiday.name, "date": new_holiday.date, "type": new_holiday.type}
+
+@router.put("/holidays/{holiday_id}")
+def update_holiday(holiday_id: int, req: HolidayRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+    holiday = db.query(models.Holiday).filter(models.Holiday.id == holiday_id).first()
+    if not holiday:
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    holiday.name = req.name
+    holiday.date = req.date
+    holiday.type = req.type
+    db.commit()
+    db.refresh(holiday)
+    return {"id": holiday.id, "name": holiday.name, "date": holiday.date, "type": holiday.type}
+
+@router.delete("/holidays/{holiday_id}")
+def delete_holiday(holiday_id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+    holiday = db.query(models.Holiday).filter(models.Holiday.id == holiday_id).first()
+    if not holiday:
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    db.delete(holiday)
+    db.commit()
+    return {"status": "success"}
 
 # ─── 6. Finance Portal Data & Commands ────────────────────@router.post("/finance/salary-components")
 def update_salary_components(req: SalaryStructureListRequest, db: Session = Depends(database.get_db)):

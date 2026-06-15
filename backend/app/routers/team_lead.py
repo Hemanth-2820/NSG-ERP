@@ -31,6 +31,11 @@ class UserProfileResponse(BaseModel):
     department: Optional[str] = None
     designation: Optional[str] = None
     is_active: Optional[bool] = True
+    join_date: Optional[date] = None
+    phone: Optional[str] = None
+    photo: Optional[str] = None
+    status: Optional[str] = None
+    manager: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -205,8 +210,10 @@ class TaskStatusUpdateRequest(BaseModel):
 @router.get("/team-members", response_model=List[UserProfileResponse])
 def get_team_members(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_manager_role(current_user)
-    query = db.query(models.User).filter(models.User.manager_id == current_user.id)
-    return query.all()
+    users = db.query(models.User).filter(models.User.manager_id == current_user.id).all()
+    for u in users:
+        u.manager = current_user.name
+    return users
 
 @router.get("/team-availability", response_model=List[LeaveRequestResponse])
 def get_team_availability(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):

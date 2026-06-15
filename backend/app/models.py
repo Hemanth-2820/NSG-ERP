@@ -36,6 +36,7 @@ class User(Base):
     address = Column(Text, nullable=True)
     emergency_contact_name = Column(String, nullable=True)
     emergency_contact_phone = Column(String, nullable=True)
+    shift_timing = Column(String, nullable=True)
 
     # Relationships
     attendance_records = relationship("Attendance", back_populates="user", cascade="all, delete-orphan")
@@ -783,6 +784,8 @@ class Department(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, unique=True)
     head_id = Column(Integer, nullable=True)
+    parent_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
+    headcount = Column(Integer, default=0)
 
 class SalaryComponent(Base):
     __tablename__ = "salary_components"
@@ -796,8 +799,9 @@ class SalaryComponent(Base):
 class Designation(Base):
     __tablename__ = "designations"
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False, unique=True)
     department_id = Column(Integer, nullable=True)
+    level = Column(String, nullable=True)
 
 class Shift(Base):
     __tablename__ = "shifts"
@@ -805,6 +809,7 @@ class Shift(Base):
     name = Column(String, nullable=False)
     start_time = Column(String, nullable=False)
     end_time = Column(String, nullable=False)
+    days = Column(String, nullable=True)
 
 class VaultDocument(Base):
     __tablename__ = "vault_documents"

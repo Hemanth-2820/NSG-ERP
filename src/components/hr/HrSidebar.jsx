@@ -19,6 +19,7 @@ export default function HrSidebar({ activeTab, setActiveTab }) {
     { id: 'exits', label: 'Exits & FnF', icon: LogOut },
     { id: 'reports', label: 'Reports Engine', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Sliders },
+    { id: 'holidays', label: 'Holidays', icon: Calendar },
     { id: 'messaging', label: 'Messaging & Meet', icon: MessageSquare },
   ];
 

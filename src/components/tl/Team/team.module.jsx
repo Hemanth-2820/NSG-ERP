@@ -7,6 +7,7 @@ const TeamDirectory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllTeam, setShowAllTeam] = useState(false);
 
+  const [selectedMember, setSelectedMember] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [leaves, setLeaves] = useState([]);
@@ -30,8 +31,14 @@ const TeamDirectory = () => {
           setTeamMembers(rawEmps.map(emp => ({
             id: emp.id,
             name: emp.name,
+            email: emp.email,
+            phone: emp.phone || '+91 99000 00000',
+            department: emp.department || 'General',
+            joinDate: emp.join_date || 'N/A',
+            status: emp.status || 'Active',
+            manager: emp.manager || 'Not Assigned',
             role: emp.designation || emp.role || 'Team Member',
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`
+            avatar: emp.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`
           })));
         }
         if (tasksRes.ok) setTasks(await tasksRes.json());
@@ -211,7 +218,7 @@ const TeamDirectory = () => {
                   .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
                   .slice(0, (showAllTeam || searchQuery) ? displayMembers.length : 3)
                   .map(member => (
-                  <div key={member.id} className={styles.teamCard}>
+                  <div key={member.id} className={styles.teamCard} onClick={() => setSelectedMember(member)} style={{ cursor: 'pointer' }}>
                     <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={member.avatar} alt={member.name} className={styles.avatar}  />
                     <div className={styles.empName}>{member.name}</div>
                     <div className={styles.empRole}>{member.role}</div>
@@ -349,6 +356,64 @@ const TeamDirectory = () => {
         )}
 
       </div>
+
+      {/* Member Details Modal */}
+      {selectedMember && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '500px', backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <img src={selectedMember.avatar} alt={selectedMember.name} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--accent-pink)' }} />
+              <div style={{ flex: 1 }}>
+                <h2 style={{ margin: '0 0 4px 0', fontSize: '22px', color: 'var(--text-primary)' }}>{selectedMember.name}</h2>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>{selectedMember.role} • {selectedMember.department}</div>
+                <div style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: selectedMember.status.toLowerCase() === 'active' ? 'var(--success-bg, rgba(16,185,129,0.1))' : 'var(--warning-bg, rgba(245,158,11,0.1))', color: selectedMember.status.toLowerCase() === 'active' ? 'var(--success)' : 'var(--warning)', borderRadius: '12px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
+                  {selectedMember.status}
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>Email Address</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{selectedMember.email}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>Phone Number</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{selectedMember.phone}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>Join Date</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{selectedMember.joinDate}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>Reporting To (TL)</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{selectedMember.manager}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>Current Utilization</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{selectedMember.utilization}%</div>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>Skills & Expertise</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedMember.skills.map((skill, idx) => (
+                    <span key={idx} style={{ padding: '4px 10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setSelectedMember(null)} style={{ padding: '8px 20px', backgroundColor: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px' }}>
+                Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

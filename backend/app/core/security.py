@@ -84,7 +84,7 @@ def check_rbac_permission(db: Session, user: models.User, action: str):
     }
     ui_role = role_map.get(user.role, "Employee")
 
-    setting = db.query(models.SystemSettings).filter(models.SystemSettings.key == "security_rbac_matrix").first()
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "security_rbac_matrix").first()
     if setting and setting.value:
         try:
             matrix = json.loads(setting.value)
