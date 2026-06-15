@@ -165,6 +165,7 @@ export default function CompanySetup() {
     currency: 'inr'
   });
   const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
   
   // UI States
   const [loading, setLoading] = useState(true);
@@ -195,7 +196,10 @@ export default function CompanySetup() {
           fy: configs.company_fy || 'apr',
           currency: configs.company_currency || 'inr'
         });
-        if (configs.company_logo) setLogoFile(configs.company_logo);
+        if (configs.company_logo) {
+          setLogoFile(configs.company_logo.split('/').pop());
+          setLogoPreview("http://localhost:8000" + configs.company_logo);
+        }
       }
     } catch (err) {}
   };
@@ -283,15 +287,34 @@ export default function CompanySetup() {
 
   const handleLogoUpload = async (e) => {
     if(e.target.files && e.target.files[0]){
-      const fileName = e.target.files[0].name;
+      const file = e.target.files[0];
+      const fileName = file.name;
       setIsSaving(true);
-      const success = await saveSetting('company_logo', fileName);
-      setIsSaving(false);
-      if (success) {
-        setLogoFile(fileName);
-        showToast('Logo file selected and saved: ' + fileName);
-      } else {
-        showToast('Error uploading logo');
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        const res = await fetch('/api/ceo-portal/configs/upload-logo', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        setIsSaving(false);
+        if (res.ok) {
+          const data = await res.json();
+          setLogoFile(fileName);
+          setLogoPreview("http://localhost:8000" + data.file_url);
+          showToast('Logo file securely uploaded and saved.');
+        } else {
+          showToast('Error uploading logo to server.');
+        }
+      } catch (err) {
+        setIsSaving(false);
+        showToast('Error connecting to server for upload.');
       }
     }
   };
@@ -569,8 +592,12 @@ export default function CompanySetup() {
                   
                   {/* Logo Upload */}
                   <div style={{ gridColumn: '1 / -1', marginBottom: '8px', display: 'flex', gap: '32px', alignItems: 'center', padding: '24px', background: 'var(--ceo-bg)', borderRadius: '12px', border: '1px dashed var(--ceo-border)' }}>
-                    <div style={{ width: 90, height: 90, borderRadius: 12, background: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                      <Building2 size={40} color="var(--ceo-primary)" opacity={0.8} />
+                    <div style={{ width: 90, height: 90, borderRadius: 12, background: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Company Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <Building2 size={40} color="var(--ceo-primary)" opacity={0.8} />
+                      )}
                     </div>
                     <div>
                       <div className="ceo-typography-section-title" style={{ fontSize: '16px', marginBottom: '8px' }}>Company Logo</div>

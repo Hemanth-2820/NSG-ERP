@@ -282,7 +282,7 @@ class ConfigValueRequest(BaseModel):
 def get_dashboard_summary(current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)
 
-    total_headcount = db.query(models.User).filter(models.User.role == "employee", models.User.status == "active").count()
+    total_headcount = db.query(models.User).filter(models.User.role != "admin").count()
     active_blockers = db.query(models.Escalation).filter(models.Escalation.resolved == False).count()
     
     # Pendings count (PayrollRun table not yet seeded; graceful fallback)
@@ -994,6 +994,42 @@ def update_system_setting(req: ConfigValueRequest, current_user: models.User = D
     db.add(db_log)
     db.commit()
     return {"status": "success", "key": req.key, "value": req.value}
+
+@router.post("/configs/upload-logo")
+def upload_company_logo(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+    import os
+    import time
+    upload_dir = os.path.join("uploads", "logo")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    unique_filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    with open(file_path, "wb") as buffer:
+        import shutil
+        shutil.copyfileobj(file.file, buffer)
+        
+    file_url = f"/{file_path.replace(os.sep, '/')}"
+    
+    # Save to configs
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "company_logo").first()
+    if not setting:
+        setting = models.SystemSetting(key="company_logo", value=file_url)
+        db.add(setting)
+    else:
+        setting.value = file_url
+        
+    db_log = models.AuditLog(
+        initiator_id=current_user.name,
+        module="Settings",
+        action_type="CHANGED",
+        change_diff=json.dumps({"config_key": "company_logo", "new_value": file_url})
+    )
+    db.add(db_log)
+    db.commit()
+    
+    return {"status": "success", "file_url": file_url}
 
 # --- Holidays ---
 

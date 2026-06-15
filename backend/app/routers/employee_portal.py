@@ -1515,3 +1515,18 @@ def acknowledge_scorecard(id: int, current_user: models.User = Depends(security.
         db.add(db_notify)
         db.commit()
     return {"status": "success", "message": "Scorecard acknowledged."}
+
+# 10. Global Information
+class HolidayResponse(BaseModel):
+    id: int
+    name: str
+    date: str
+    type: str
+
+    class Config:
+        from_attributes = True
+
+@router.get("/holidays", response_model=List[HolidayResponse])
+def get_company_holidays(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    """Returns company holidays for all authenticated users without role restrictions."""
+    return db.query(models.Holiday).order_by(models.Holiday.date.asc()).all()

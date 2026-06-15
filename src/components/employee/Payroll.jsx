@@ -3,7 +3,7 @@ import useSWR from 'swr';
 
 const fetcher = url => fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem('nsg_jwt_token')}` } }).then(res => res.json());
 import { Download, CheckCircle, AlertTriangle, Upload, X, FileText, Calculator, CreditCard, Loader } from 'lucide-react';
-import { generatePayslipPDF } from '../../../utils/pdfGenerator';
+import { generatePayslipPDF } from '../../utils/pdfGenerator';
 import './Payroll.css';
 
 const TAX_SLABS = [

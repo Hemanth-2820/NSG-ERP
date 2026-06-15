@@ -14,7 +14,7 @@ export default function HolidayCalendar() {
   const fetchHolidays = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('/api/hr-portal/holidays', {
+      const res = await fetch('/api/employee-portal/holidays', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

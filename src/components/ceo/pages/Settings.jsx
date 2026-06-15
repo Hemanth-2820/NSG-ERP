@@ -9,9 +9,7 @@ import '../CEO.css';
 // MOCK DATA
 // ==========================================
 const SETTINGS_CATEGORIES = [
-  { id: 'config', label: 'Global Governance', icon: Globe },
   { id: 'security', label: 'Security & Access', icon: ShieldAlert },
-  { id: 'automation', label: 'AI & Automation', icon: Zap },
   { id: 'audit', label: 'Audit Logs', icon: History }
 ];
 
@@ -32,7 +30,7 @@ const initialRbac = {
 // COMPONENT
 // ==========================================
 export default function Settings() {
-  const [activeCategory, setActiveCategory] = useState('config');
+  const [activeCategory, setActiveCategory] = useState('security');
   
   // RBAC State
   const [rbacMatrix, setRbacMatrix] = useState(initialRbac);
@@ -414,77 +412,6 @@ export default function Settings() {
             </div>
           )}
 
-          {/* 1. GLOBAL GOVERNANCE */}
-          {activeCategory === 'config' && (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div className="ceo-command-header">
-                <div className="ceo-typography-card-title"><Globe size={18} color="var(--ceo-primary)" /> Global Governance Parameters</div>
-                <button className="ceo-btn ceo-btn-primary" onClick={handleSaveChanges} disabled={!hasUnsavedChanges || isSaving} style={{ padding: '6px 16px' }}>
-                  {isSaving ? 'Saving...' : <><Save size={16}/> Save Changes</>}
-                </button>
-              </div>
-              <div className="ceo-command-content" style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                
-                <div>
-                  <div className="ceo-typography-section-title" style={{ fontSize: '13px', marginBottom: '16px' }}>FISCAL & REGIONAL</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <div className="ceo-form-group" style={{ marginBottom: 0 }}>
-                      <label>Base Currency</label>
-                      <select className="ceo-form-input" value={company_currency} onChange={(e) => { setCompanyCurrency(e.target.value); setHasUnsavedChanges(true); }}>
-                        <option value="INR">INR (₹) - Indian Rupee</option>
-                        <option value="USD">USD ($) - US Dollar</option>
-                        <option value="EUR">EUR (€) - Euro</option>
-                      </select>
-                    </div>
-                    <div className="ceo-form-group" style={{ marginBottom: 0 }}>
-                      <label>Financial Year Start</label>
-                      <select className="ceo-form-input" value={company_fy} onChange={(e) => { setCompanyFy(e.target.value); setHasUnsavedChanges(true); }}>
-                        <option value="Jan">January 1st</option>
-                        <option value="Apr">April 1st</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--ceo-border)', paddingTop: '24px' }}>
-                  <div className="ceo-typography-section-title" style={{ fontSize: '13px', marginBottom: '16px' }}>EXECUTIVE APPROVAL THRESHOLDS</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <div className="ceo-form-group" style={{ marginBottom: 0 }}>
-                      <label>Capex CEO Approval Limit (&gt;)</label>
-                      <input type="number" className="ceo-form-input" value={capex_ceo_limit} onChange={(e) => { setCapexCeoLimit(Number(e.target.value)); setHasUnsavedChanges(true); }} />
-                      <div style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', marginTop: '4px' }}>Any expense above this amount requires CEO approval.</div>
-                    </div>
-                    <div className="ceo-form-group" style={{ marginBottom: 0 }}>
-                      <label>Mandatory Executive Hiring Review</label>
-                      <select className="ceo-form-input" value={hiring_review_threshold} onChange={(e) => { setHiringReviewThreshold(e.target.value); setHasUnsavedChanges(true); }}>
-                        <option value="Dir">Director & Above</option>
-                        <option value="VP">VP & Above</option>
-                        <option value="C-Level">C-Level Only</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--ceo-border)', paddingTop: '24px' }}>
-                  <div className="ceo-typography-section-title" style={{ fontSize: '13px', marginBottom: '16px' }}>AUTHORITY DELEGATION (OOF)</div>
-                  <div style={{ background: '#F8FAFC', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '14px' }}>Delegate CEO Approvals</div>
-                      <div style={{ fontSize: '13px', color: 'var(--ceo-text-secondary)', marginTop: '4px' }}>Automatically route all CEO approvals to the selected executive while you are away.</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <select className="ceo-form-input" value={authority_delegation} onChange={(e) => { setAuthorityDelegation(e.target.value); setHasUnsavedChanges(true); }} style={{ width: '200px' }}>
-                        <option value="">Select Delegate...</option>
-                        <option value="CFO">CFO (A. Patel)</option>
-                        <option value="COO">COO (R. Sharma)</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
 
           {/* 2. SECURITY & ACCESS (RBAC) */}
           {activeCategory === 'security' && (
@@ -575,56 +502,7 @@ export default function Settings() {
             </div>
           )}
 
-          {/* 3. AI & AUTOMATION */}
-          {activeCategory === 'automation' && (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div className="ceo-command-header">
-                <div className="ceo-typography-card-title"><Zap size={18} color="var(--ceo-primary)" /> AI & Automation Engine</div>
-                <button className="ceo-btn ceo-btn-primary" onClick={handleSaveChanges} disabled={!hasUnsavedChanges || isSaving} style={{ padding: '6px 16px' }}>
-                  {isSaving ? 'Saving...' : <><Save size={16}/> Save Changes</>}
-                </button>
-              </div>
-              <div className="ceo-command-content" style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                
-                <div style={{ border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--ceo-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Zap size={16} /> Automated Insights & Summaries
-                    </div>
-                    <div style={{ fontSize: '13px', color: 'var(--ceo-text-muted)', marginTop: '4px', maxWidth: '600px', lineHeight: 1.5 }}>
-                      Allow the AI engine to generate daily operational summaries, extract action items from Executive Chat, and highlight critical anomalies in Finance reports.
-                    </div>
-                  </div>
-                  <input type="checkbox" checked={automation_ai_insights} onChange={(e) => { setAutomationAiInsights(e.target.checked); setHasUnsavedChanges(true); }} style={{ width: '20px', height: '20px', accentColor: 'var(--ceo-primary)' }} />
-                </div>
 
-                <div style={{ border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      Predictive Attrition Modeling (HR)
-                    </div>
-                    <div style={{ fontSize: '13px', color: 'var(--ceo-text-muted)', marginTop: '4px', maxWidth: '600px', lineHeight: 1.5 }}>
-                      Analyze employee engagement and leave patterns to flag 'Flight Risk' employees to the CEO and HR managers before they resign.
-                    </div>
-                  </div>
-                  <input type="checkbox" checked={automation_attrition_modeling} onChange={(e) => { setAutomationAttritionModeling(e.target.checked); setHasUnsavedChanges(true); }} style={{ width: '20px', height: '20px', accentColor: 'var(--ceo-primary)' }} />
-                </div>
-
-                <div style={{ border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      Auto-Escalate Stale Approvals
-                    </div>
-                    <div style={{ fontSize: '13px', color: 'var(--ceo-text-muted)', marginTop: '4px', maxWidth: '600px', lineHeight: 1.5 }}>
-                      Automatically forward approvals to the next tier of leadership if untouched by the manager for more than 48 hours.
-                    </div>
-                  </div>
-                  <input type="checkbox" checked={automation_auto_escalate} onChange={(e) => { setAutomationAutoEscalate(e.target.checked); setHasUnsavedChanges(true); }} style={{ width: '20px', height: '20px', accentColor: 'var(--ceo-primary)' }} />
-                </div>
-
-              </div>
-            </div>
-          )}
 
         </div>
       </div>
