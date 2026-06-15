@@ -125,22 +125,8 @@ export default function Announcements() {
     }
   };
 
-  // Fetch unread users for analytics
-  const openAnalytics = async (id) => {
-    setSelectedAnnId(id);
-    try {
-      const res = await fetch(`/api/ceo-portal/announcements/${id}/unread-users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setUnreadUsers(await res.json());
-      } else {
-        setUnreadUsers([]);
-      }
-    } catch { setUnreadUsers([]); }
-  };
+  // No longer using Engagement Analytics per user request
 
-  const selectedAnn = announcements.find(a => a.id === selectedAnnId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '32px' }}>
@@ -191,16 +177,14 @@ export default function Announcements() {
             {announcements.map(ann => (
               <div 
                 key={ann.id} 
-                onClick={() => openAnalytics(ann.id)}
                 style={{ 
-                  background: selectedAnnId === ann.id ? '#EFF6FF' : '#FFF',
+                  background: '#FFF',
                   border: '1px solid',
-                  borderColor: selectedAnnId === ann.id ? 'var(--ceo-primary)' : 'var(--ceo-border)',
+                  borderColor: 'var(--ceo-border)',
                   borderLeft: ann.priority === 'Urgent' ? '4px solid var(--ceo-danger)' : '4px solid var(--ceo-primary)',
                   borderRadius: '8px',
                   padding: '20px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}
               >
@@ -214,9 +198,18 @@ export default function Announcements() {
                       <div style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', marginTop: '2px' }}>{formatAnnDate(ann.created_at)}</div>
                     </div>
                   </div>
-                  {ann.priority === 'Urgent' && (
-                    <span style={{ background: '#FEF2F2', color: 'var(--ceo-danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800, border: '1px solid #FCA5A5' }}>URGENT</span>
-                  )}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {ann.priority === 'Urgent' && (
+                      <span style={{ background: '#FEF2F2', color: 'var(--ceo-danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800, border: '1px solid #FCA5A5' }}>URGENT</span>
+                    )}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDelete(ann.id); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-danger)', padding: '4px', display: 'flex', alignItems: 'center' }}
+                      title="Delete Announcement"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
                 <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: 'var(--ceo-text-primary)' }}>{ann.title}</div>
                 <div style={{ fontSize: '13px', color: 'var(--ceo-text-secondary)', marginBottom: '16px', lineHeight: 1.5, maxHeight: '3em', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ann.body}</div>
@@ -234,12 +227,9 @@ export default function Announcements() {
           </div>
         </div>
 
-        {/* RIGHT: Composer or Analytics */}
+        {/* RIGHT: Composer */}
         <div className="ceo-command-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          
-          {!selectedAnnId ? (
-            /* ── COMPOSER ── */
-            <>
+          {/* ── COMPOSER ── */}
               <div className="ceo-command-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--ceo-border)' }}>
                 <div className="ceo-typography-card-title">Compose Corporate Broadcast</div>
               </div>
@@ -315,76 +305,6 @@ export default function Announcements() {
                   </button>
                 </div>
               </div>
-            </>
-          ) : (
-            /* ── ANALYTICS DRAWER ── */
-            <>
-              <div className="ceo-command-header" style={{ padding: '20px 32px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <button className="ceo-btn" onClick={() => setSelectedAnnId(null)} style={{ padding: '8px', border: '1px solid var(--ceo-border)', background: '#F8FAFC' }}><ArrowLeft size={16}/></button>
-                  <div>
-                    <div className="ceo-typography-card-title">Engagement Analytics</div>
-                    <div style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', marginTop: '2px' }}>{selectedAnn?.title}</div>
-                  </div>
-                </div>
-                <button 
-                  className="ceo-btn" 
-                  onClick={() => handleDelete(selectedAnn?.id)} 
-                  style={{ padding: '8px 16px', background: 'var(--ceo-danger)', color: '#FFF', fontWeight: 600, border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Trash2 size={14}/> Delete
-                </button>
-              </div>
-              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto', flex: 1 }}>
-                
-                {/* Stats Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                  <div style={{ padding: '32px', background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)', borderRadius: '12px', border: '1px solid var(--ceo-border)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--ceo-primary)', lineHeight: 1 }}>
-                      {selectedAnn?.read_pct || 0}%
-                    </div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginTop: '12px', letterSpacing: '1px' }}>GLOBAL READ RATE</div>
-                  </div>
-                  <div style={{ padding: '32px', background: '#FFF', borderRadius: '12px', border: '1px solid var(--ceo-border)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--ceo-text-primary)', lineHeight: 1 }}>
-                      {selectedAnn?.read_count || 0}
-                    </div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginTop: '12px', letterSpacing: '1px' }}>UNIQUE VIEWS</div>
-                  </div>
-                </div>
-                
-                {/* Unread Users Table */}
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ceo-text-primary)', marginBottom: '4px' }}>Unread Employees</div>
-                  <div style={{ fontSize: '12px', color: 'var(--ceo-text-muted)', marginBottom: '16px' }}>Targeted audience members who have not opened this broadcast.</div>
-                  <div style={{ border: '1px solid var(--ceo-border)', borderRadius: '8px', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', background: '#FFF' }}>
-                      <thead style={{ background: '#F8FAFC', borderBottom: '1px solid var(--ceo-border)' }}>
-                        <tr>
-                          <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: 600, color: 'var(--ceo-text-secondary)', fontSize: '12px' }}>EMPLOYEE NAME</th>
-                          <th style={{ padding: '12px 24px', textAlign: 'right', fontWeight: 600, color: 'var(--ceo-text-secondary)', fontSize: '12px' }}>DEPARTMENT</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {unreadUsers.length > 0 ? unreadUsers.map(u => (
-                          <tr key={u.id} style={{ borderBottom: '1px solid var(--ceo-divider)' }}>
-                            <td style={{ padding: '16px 24px', fontWeight: 600 }}>{u.name}</td>
-                            <td style={{ padding: '16px 24px', color: 'var(--ceo-text-secondary)', textAlign: 'right' }}>{u.department || 'N/A'}</td>
-                          </tr>
-                        )) : (
-                          <tr>
-                            <td colSpan="2" style={{ padding: '16px 24px', textAlign: 'center', color: 'var(--ceo-text-muted)' }}>
-                              Everyone has read this broadcast!
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
         </div>
       </div>
     </div>
