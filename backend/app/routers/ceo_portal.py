@@ -101,6 +101,7 @@ class ProjectCreate(BaseModel):
     used: Optional[float] = 0.0
     status: Optional[str] = "Active"
     deadline: str
+    checklist: Optional[str] = None
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -109,6 +110,7 @@ class ProjectUpdate(BaseModel):
     used: Optional[float] = None
     status: Optional[str] = None
     deadline: Optional[str] = None
+    checklist: Optional[str] = None
 
 class VendorCreate(BaseModel):
     vendor_id: str
@@ -154,6 +156,7 @@ class ProjectResponse(BaseModel):
     used: float
     status: str
     deadline: Optional[str]
+    checklist: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -279,7 +282,7 @@ class ConfigValueRequest(BaseModel):
 def get_dashboard_summary(current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)
 
-    total_headcount = db.query(models.User).filter(models.User.role == "employee", models.User.status == "active").count()
+    total_headcount = db.query(models.User).filter(models.User.status == "active").count()
     active_blockers = db.query(models.Escalation).filter(models.Escalation.resolved == False).count()
     
     # Pendings count (PayrollRun table not yet seeded; graceful fallback)
@@ -529,7 +532,8 @@ def create_project(req: ProjectCreate, current_user: models.User = Depends(secur
         budget=req.budget,
         used=req.used,
         status=req.status,
-        deadline=req.deadline
+        deadline=req.deadline,
+        checklist=req.checklist
     )
     db.add(proj)
     db.commit()
@@ -549,6 +553,7 @@ def update_project(project_id: int, req: ProjectUpdate, current_user: models.Use
     if req.used is not None: proj.used = req.used
     if req.status is not None: proj.status = req.status
     if req.deadline is not None: proj.deadline = req.deadline
+    if req.checklist is not None: proj.checklist = req.checklist
         
     db.commit()
     db.refresh(proj)
@@ -1422,6 +1427,10 @@ class ProcessPayrollRequest(BaseModel):
     epf: float
     tds: float
     lop: float
+    worked_days: Optional[float] = None
+    arrear_days: Optional[float] = 0.0
+    lop_days: Optional[float] = 0.0
+    lop_days_reversed: Optional[float] = 0.0
     payment_method: str
     transaction_ref: str
 
@@ -1507,6 +1516,10 @@ def process_manual_payroll(user_id: int, req: ProcessPayrollRequest, current_use
     payslip.payment_method = req.payment_method
     payslip.transaction_ref = req.transaction_ref
     payslip.payment_date = datetime.now()
+    payslip.worked_days = req.worked_days
+    payslip.arrear_days = req.arrear_days
+    payslip.lop_days = req.lop_days
+    payslip.lop_days_reversed = req.lop_days_reversed
     payslip.processed_by_id = current_user.id
     
     # Log Action
@@ -1544,12 +1557,36 @@ def get_payroll_history(month: Optional[int] = None, year: Optional[int] = None,
     result = []
     for p in payslips:
         emp = p.user
+        
+        doj = getattr(emp, 'doj', None)
+        if hasattr(doj, 'isoformat'):
+            doj = doj.isoformat()
+
         result.append({
             "id": p.id,
             "employee_name": emp.name if emp else "Unknown",
             "department": emp.department if emp else "Unknown",
+            "designation": emp.role if emp else "Unknown",
+            "location": getattr(emp, "location", "Unknown"),
+            "doj": doj,
+            "bank_name": emp.bank_name if emp else "Unknown",
+            "account_number": emp.account_number if emp else "Unknown",
+            "pan_number": getattr(emp, "pan_number", "Unknown"),
+            "pf_number": getattr(emp, "pf_number", "Unknown"),
+            "uan": getattr(emp, "uan", "Unknown"),
+            "esi_number": getattr(emp, "esi_number", "Unknown"),
             "month": p.month,
             "year": p.year,
+            "basic": p.basic,
+            "hra": p.hra,
+            "allowances": p.allowances,
+            "epf": p.epf,
+            "tds": p.tds,
+            "lop": p.lop,
+            "worked_days": p.worked_days,
+            "arrear_days": p.arrear_days,
+            "lop_days": p.lop_days,
+            "lop_days_reversed": p.lop_days_reversed,
             "net": p.net,
             "payment_method": p.payment_method,
             "transaction_ref": p.transaction_ref,
@@ -1687,6 +1724,10 @@ def process_manual_payroll(user_id: int, req: ProcessPayrollRequest, current_use
     payslip.payment_method = req.payment_method
     payslip.transaction_ref = req.transaction_ref
     payslip.payment_date = datetime.now()
+    payslip.worked_days = req.worked_days
+    payslip.arrear_days = req.arrear_days
+    payslip.lop_days = req.lop_days
+    payslip.lop_days_reversed = req.lop_days_reversed
     payslip.processed_by_id = current_user.id
     
     # Log Action
@@ -1724,12 +1765,36 @@ def get_payroll_history(month: Optional[int] = None, year: Optional[int] = None,
     result = []
     for p in payslips:
         emp = p.user
+        
+        doj = getattr(emp, 'doj', None)
+        if hasattr(doj, 'isoformat'):
+            doj = doj.isoformat()
+
         result.append({
             "id": p.id,
             "employee_name": emp.name if emp else "Unknown",
             "department": emp.department if emp else "Unknown",
+            "designation": emp.role if emp else "Unknown",
+            "location": getattr(emp, "location", "Unknown"),
+            "doj": doj,
+            "bank_name": emp.bank_name if emp else "Unknown",
+            "account_number": emp.account_number if emp else "Unknown",
+            "pan_number": getattr(emp, "pan_number", "Unknown"),
+            "pf_number": getattr(emp, "pf_number", "Unknown"),
+            "uan": getattr(emp, "uan", "Unknown"),
+            "esi_number": getattr(emp, "esi_number", "Unknown"),
             "month": p.month,
             "year": p.year,
+            "basic": p.basic,
+            "hra": p.hra,
+            "allowances": p.allowances,
+            "epf": p.epf,
+            "tds": p.tds,
+            "lop": p.lop,
+            "worked_days": p.worked_days,
+            "arrear_days": p.arrear_days,
+            "lop_days": p.lop_days,
+            "lop_days_reversed": p.lop_days_reversed,
             "net": p.net,
             "payment_method": p.payment_method,
             "transaction_ref": p.transaction_ref,

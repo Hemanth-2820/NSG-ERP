@@ -16,6 +16,7 @@ export default function Sidebar({ activeRole, activeTab, setActiveTab, currentUs
     Employee: '#10b981',
   }[activeRole];
 
+
   const roleLabel = {
     CEO: 'CEO Suite',
     HR: 'HR Portal',
