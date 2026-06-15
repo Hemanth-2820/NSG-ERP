@@ -1,0 +1,1 @@
+import sys; sys.path.append('backend'); from app import database; from sqlalchemy import text; conn = database.engine.connect(); users = conn.execute(text('SELECT id, name, email, role, status FROM users')).fetchall(); print('All Users:', users); conn.close()

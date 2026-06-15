@@ -534,6 +534,11 @@ def get_candidates(current_user: models.User = Depends(security.get_current_user
 @router.post("/candidates", response_model=CandidateResponse, status_code=status.HTTP_201_CREATED)
 def create_candidate(req: CandidateCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
+    
+    exists = db.query(models.Candidate).filter(models.Candidate.email == req.email).first()
+    if exists:
+        raise HTTPException(status_code=400, detail=f"A candidate with the email {req.email} already exists in the ATS.")
+        
     db_cand = models.Candidate(
         name=req.name,
         email=req.email,

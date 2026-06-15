@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -22,11 +22,11 @@ app = FastAPI(
 )
 
 @app.exception_handler(SQLAlchemyError)
-async def sqlalchemy_exception_handler(request, exc):
+async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     print(f"Database Error: {exc}") # Log it internally
     return JSONResponse(
         status_code=500,
-        content={"detail": "A secure database error occurred. Please try again later."},
+        content={"detail": f"DB Error: {str(exc)}"},
     )
 
 # Configure CORS (Cross-Origin Resource Sharing) to allow requests from the React frontend

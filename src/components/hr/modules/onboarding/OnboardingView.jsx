@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { notify } from '../../utils/notify';
+import { generateOfferLetterPDF } from '../../../../utils/offerLetterGenerator';
 
 export function OnboardingView({ queryParams, setQueryParams }) {
   const [db, setDb] = useState({
@@ -77,7 +78,35 @@ export function OnboardingView({ queryParams, setQueryParams }) {
   const [editSentAt, setEditSentAt] = useState('');
   const [editStatus, setEditStatus] = useState('');
 
+  // Offer Letter Generation State
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerEmp, setOfferEmp] = useState(null);
+  const [offerRefStr, setOfferRefStr] = useState(`SS${new Date().getMonth()+1}${new Date().getFullYear().toString().slice(-2)}HYD${Math.floor(100 + Math.random() * 900)}`);
+  const [offerReportingTime, setOfferReportingTime] = useState('11:00 AM');
+  const [offerCtcLpa, setOfferCtcLpa] = useState('4 LPA');
+  const [offerMonthlyTakeHome, setOfferMonthlyTakeHome] = useState('32,000');
 
+  const handleGenerateOfferLetter = async (e) => {
+    e.preventDefault();
+    if (!offerEmp) return;
+    try {
+      const data = {
+        refNumber: offerRefStr,
+        offerDate: new Date().toLocaleDateString('en-GB'),
+        candidateName: offerEmp.name,
+        role: offerEmp.designation || 'EMPLOYEE',
+        joiningDate: new Date(offerEmp.join_date || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+        reportingTime: offerReportingTime,
+        ctcLpa: offerCtcLpa,
+        monthlySalary: offerMonthlyTakeHome
+      };
+      await generateOfferLetterPDF(data);
+      notify(`Offer Letter PDF for ${offerEmp.name} generated successfully.`, 'success');
+      setShowOfferModal(false);
+    } catch (err) {
+      notify(`Error generating PDF: ${err.message}`, 'error');
+    }
+  };
 
   const activeProbationers = (db?.employees || []).filter(e => e.status === 'probation');
   const onboardingTasks = db.onboardingTasks || [];
@@ -346,13 +375,26 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                     </div>
                   </div>
 
-                  <button
-                    className="print-btn"
-                    style={{ marginTop: '12px', width: '100%', justifyContent: 'center' }}
-                    onClick={() => setSelectedInstance(emp)}
-                  >
-                    View Checklist Details
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      className="print-btn"
+                      style={{ width: '50%', justifyContent: 'center' }}
+                      onClick={() => setSelectedInstance(emp)}
+                    >
+                      View Checklist
+                    </button>
+                    <button
+                      className="print-btn"
+                      style={{ width: '50%', justifyContent: 'center', backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none' }}
+                      onClick={() => {
+                        setOfferEmp(emp);
+                        setOfferRefStr(`SS${new Date().getMonth()+1}${new Date().getFullYear().toString().slice(-2)}HYD${Math.floor(100 + Math.random() * 900)}`);
+                        setShowOfferModal(true);
+                      }}
+                    >
+                      Offer Letter
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -647,6 +689,59 @@ export function OnboardingView({ queryParams, setQueryParams }) {
           </div>
         );
       })()}
+
+      {/* 📄 OFFER LETTER GENERATION OVERLAY */}
+      {showOfferModal && offerEmp && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+          <div className="card" style={{ width: '460px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, border: 'none', padding: 0, color: 'var(--accent-pink)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📄 Issue Offer Letter PDF
+              </h3>
+              <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }} onClick={() => setShowOfferModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleGenerateOfferLetter} style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
+              <div>
+                <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Target Employee</span>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{offerEmp.name} ({offerEmp.designation})</div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Reference Number</label>
+                  <input type="text" value={offerRefStr} onChange={(e) => setOfferRefStr(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px', outline: 'none' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Reporting Time</label>
+                  <input type="text" value={offerReportingTime} onChange={(e) => setOfferReportingTime(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px', outline: 'none' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Annual CTC (LPA)</label>
+                  <input type="text" value={offerCtcLpa} onChange={(e) => setOfferCtcLpa(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px', outline: 'none' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Monthly Take-Home</label>
+                  <input type="text" value={offerMonthlyTakeHome} onChange={(e) => setOfferMonthlyTakeHome(e.target.value)} required style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '8px', borderRadius: '6px', outline: 'none' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '14px', marginTop: '4px' }}>
+                <button type="button" style={{ background: 'none', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }} onClick={() => setShowOfferModal(false)}>Cancel</button>
+                <button 
+                  type="submit"
+                  style={{ backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                >
+                  Generate &amp; Download PDF
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 💻 IT ASSET CUSTODY ALLOCATOR OVERLAY */}
       {allocatingAsset && (() => {

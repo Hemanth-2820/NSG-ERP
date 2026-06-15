@@ -1,0 +1,1 @@
+import sys; sys.path.append('backend'); from app import database; from sqlalchemy import text; conn = database.engine.connect(); cands = conn.execute(text('SELECT id, name, stage FROM candidates')).fetchall(); print('All Candidates:', cands); conn.close()
