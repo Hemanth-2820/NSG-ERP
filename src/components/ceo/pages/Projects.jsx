@@ -293,11 +293,23 @@ export default function Projects({ currentUser }) {
 
               <div style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div className="ceo-typography-section-title" style={{ fontSize: '14px' }}>Project Checklist</div>
-                {(signoffProject.checklist ? signoffProject.checklist.split(',').map(s=>s.trim()).filter(Boolean) : ['Deliverables verified by QA', 'Client accepted UAT', 'Invoice generated']).map((item, idx) => (
-                  <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                    <input type="checkbox" defaultChecked /> {item}
-                  </label>
-                ))}
+                {(() => {
+                  const baseItems = signoffProject.checklist 
+                    ? signoffProject.checklist.split(',').map(s => s.trim()).filter(Boolean) 
+                    : ['Deliverables verified by QA', 'Client accepted UAT', 'Invoice generated'];
+                  const completedMilestones = (signoffProject.milestones || [])
+                    .filter(m => m.progress === 100)
+                    .map(m => `Milestone: ${m.name} (100% Completed)`);
+                  const fullChecklist = [...baseItems, ...completedMilestones];
+                  return fullChecklist.map((item, idx) => (
+                    <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                      <input type="checkbox" defaultChecked />
+                      <span style={item.startsWith('Milestone:') ? { color: 'var(--ceo-success)', fontWeight: 500 } : {}}>
+                        {item}
+                      </span>
+                    </label>
+                  ));
+                })()}
               </div>
 
               <div style={{ marginBottom: '32px' }}>

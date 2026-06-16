@@ -148,6 +148,15 @@ class VaultDocumentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ProjectMilestoneResponse(BaseModel):
+    id: int
+    name: str
+    progress: int
+    status: str
+
+    class Config:
+        from_attributes = True
+
 class ProjectResponse(BaseModel):
     id: int
     name: str
@@ -157,6 +166,7 @@ class ProjectResponse(BaseModel):
     status: str
     deadline: Optional[str]
     checklist: Optional[str] = None
+    milestones: Optional[List[ProjectMilestoneResponse]] = []
 
     class Config:
         from_attributes = True
@@ -521,7 +531,10 @@ def create_announcement(
 @router.get("/projects", response_model=List[ProjectResponse])
 def get_projects(current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)
-    return db.query(models.Project).order_by(models.Project.created_at.desc()).offset(skip).limit(limit).all()
+    projects = db.query(models.Project).order_by(models.Project.created_at.desc()).offset(skip).limit(limit).all()
+    for proj in projects:
+        proj.milestones = db.query(models.Milestone).filter(models.Milestone.project_id == proj.id).all()
+    return projects
 
 @router.post("/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(req: ProjectCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -538,6 +551,7 @@ def create_project(req: ProjectCreate, current_user: models.User = Depends(secur
     db.add(proj)
     db.commit()
     db.refresh(proj)
+    proj.milestones = []
     return proj
 
 @router.patch("/projects/{project_id}", response_model=ProjectResponse)
@@ -557,6 +571,7 @@ def update_project(project_id: int, req: ProjectUpdate, current_user: models.Use
         
     db.commit()
     db.refresh(proj)
+    proj.milestones = db.query(models.Milestone).filter(models.Milestone.project_id == proj.id).all()
     return proj
 
 @router.post("/projects/{project_id}/signoff", response_model=ProjectResponse)
@@ -579,6 +594,7 @@ def signoff_project(project_id: int, current_user: models.User = Depends(securit
     
     db.commit()
     db.refresh(proj)
+    proj.milestones = db.query(models.Milestone).filter(models.Milestone.project_id == proj.id).all()
     return proj
 
 @router.delete("/projects/{project_id}")

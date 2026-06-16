@@ -9,13 +9,28 @@ export default function Tasks({ currentUser }) {
   const [subtasks, setSubtasks] = useState(['']);
   const [groupBy, setGroupBy] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
-  
+
   const token = localStorage.getItem('nsg_jwt_token');
   const fetcher = (url) => fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json());
 
   const { data: teamMembers = [], mutate: mutateTeam } = useSWR('/api/team-lead/team-members', fetcher);
   const { data: tasks = [], mutate: mutateTasks } = useSWR('/api/team-lead/tasks', fetcher);
   const { data: projectsData = [], mutate: mutateProjects } = useSWR('/api/team-lead/projects', fetcher);
+  const { data: backendSprints } = useSWR('/api/team-lead/sprints', fetcher);
+
+  const savedSprints = (() => {
+    if (backendSprints && backendSprints.length > 0) {
+      return backendSprints;
+    }
+    const local = localStorage.getItem('nsg_saved_sprints');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (parsed.length > 0) return parsed;
+    }
+    return [
+      { id: 1, sprintId: 'SPR-43', name: 'Sprint 43', goal: 'Alpha Release', start: '', end: '', sp: 40, status: 'Planning' }
+    ];
+  })();
 
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPoints, setTaskPoints] = useState('');
@@ -129,7 +144,8 @@ export default function Tasks({ currentUser }) {
       priority: t.priority ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1) : 'Medium',
       status: getStatusLabel(t.status),
       points: t.sp || 1,
-      due: t.due || 'TBD'
+      due: t.due || 'TBD',
+      sprint: t.sprint || 'Backlog'
     }));
   
   const handleCreateTask = async (e) => {
@@ -271,7 +287,7 @@ export default function Tasks({ currentUser }) {
       let key = 'Other';
       if (groupBy === 'Assignee') key = task.assignee;
       if (groupBy === 'Priority') key = task.priority;
-      if (groupBy === 'Sprint') key = 'Sprint 42'; 
+      if (groupBy === 'Sprint') key = task.sprint || 'Backlog'; 
       if (!acc[key]) acc[key] = [];
       acc[key].push(task);
       return acc;
@@ -351,10 +367,12 @@ export default function Tasks({ currentUser }) {
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Sprint ID</label>
                 <select className={styles.formSelect} value={taskSprint} onChange={(e) => setTaskSprint(e.target.value)}>
-                  {[...new Set(((tasks || []).map(t => t.sprint).filter(Boolean)))].map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
                   <option value="Backlog">Backlog</option>
+                  {savedSprints.map(s => (
+                    <option key={s.id} value={s.sprintId || s.name}>
+                      {s.name} ({s.sprintId || `SPR-${s.id}`})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className={`${styles.formGroup} ${styles.fullWidth}`}>

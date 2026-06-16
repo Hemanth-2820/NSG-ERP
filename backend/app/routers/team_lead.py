@@ -302,6 +302,8 @@ def update_task_status(task_id: int, req: TaskStatusUpdateRequest, current_user:
         raise HTTPException(status_code=404, detail="Task not found.")
     task.status = req.status
     db.commit()
+    if task.milestone_id:
+        update_milestone_progress(db, task.milestone_id)
     db.refresh(task)
     return task
 
@@ -317,11 +319,45 @@ def get_project_backlog(project_id: int, current_user: models.User = Depends(sec
     ).all()
     return tasks
 
+def update_milestone_progress(db: Session, milestone_id: int) -> models.Milestone:
+    milestone = db.query(models.Milestone).filter(models.Milestone.id == milestone_id).first()
+    if not milestone:
+        return None
+    linked_tasks = db.query(models.Task).filter(models.Task.milestone_id == milestone.id).all()
+    milestone.tasks_count = len(linked_tasks)
+    if milestone.tasks_count > 0:
+        total_progress = 0
+        for t in linked_tasks:
+            s = (t.status or '').lower()
+            if s in ['done', 'completed']:
+                total_progress += 100
+            elif s == 'pr':
+                total_progress += 90
+            elif s == 'testing':
+                total_progress += 70
+            elif s in ['in-progress', 'inprogress']:
+                total_progress += 50
+        milestone.progress = int(total_progress / milestone.tasks_count)
+        if milestone.progress == 100:
+            milestone.status = "completed"
+        elif milestone.progress > 0:
+            milestone.status = "in-progress"
+        else:
+            milestone.status = "pending"
+    else:
+        milestone.progress = 0
+        milestone.status = "pending"
+    db.commit()
+    db.refresh(milestone)
+    return milestone
+
 @router.get("/projects/{project_id}/milestones", response_model=List[MilestoneResponse])
 def get_project_milestones(project_id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_manager_role(current_user)
     milestones = db.query(models.Milestone).filter(models.Milestone.project_id == project_id).all()
-    return milestones
+    for m in milestones:
+        update_milestone_progress(db, m.id)
+    return db.query(models.Milestone).filter(models.Milestone.project_id == project_id).all()
 
 
 @router.post("/tasks/{id}/approve-pr", response_model=TaskResponse)
@@ -344,6 +380,8 @@ def approve_task_pr(id: int, current_user: models.User = Depends(security.get_cu
     db.add(notification)
     
     db.commit()
+    if task.milestone_id:
+        update_milestone_progress(db, task.milestone_id)
     db.refresh(task)
     return task
 
@@ -367,6 +405,8 @@ def reject_task_pr(id: int, req: PRRejectRequest, current_user: models.User = De
     db.add(notification)
     
     db.commit()
+    if task.milestone_id:
+        update_milestone_progress(db, task.milestone_id)
     db.refresh(task)
     return task
 
@@ -399,6 +439,8 @@ def update_task(id: int, req: TaskCreateRequest, current_user: models.User = Dep
             db.add(db_sub)
             
     db.commit()
+    if task.milestone_id:
+        update_milestone_progress(db, task.milestone_id)
     db.refresh(task)
     return task
 
@@ -1096,3 +1138,91 @@ def send_notification_to_employee(req: NotificationCreateRequest, current_user: 
         read=notification.read,
         created_at=notification.created_at.isoformat() if notification.created_at else ""
     )
+
+
+class SprintCreateRequest(BaseModel):
+    name: str
+    goal: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    sp_target: Optional[int] = 40
+    project_id: Optional[int] = None
+
+
+class SprintResponse(BaseModel):
+    id: int
+    sprintId: str
+    name: str
+    goal: Optional[str] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+    sp: int
+    status: str
+    project_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/sprints", response_model=List[SprintResponse])
+def get_sprints(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_manager_role(current_user)
+    return db.query(models.Sprint).all()
+
+
+@router.post("/sprints", response_model=SprintResponse, status_code=status.HTTP_201_CREATED)
+def create_sprint(req: SprintCreateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_manager_role(current_user)
+    import time
+    generated_id = f"SPR-{str(int(time.time()))[-6:]}"
+    sprint = models.Sprint(
+        sprintId=generated_id,
+        name=req.name,
+        goal=req.goal,
+        start=req.start_date,
+        end=req.end_date,
+        sp=req.sp_target or 40,
+        status="Planning",
+        project_id=req.project_id
+    )
+    db.add(sprint)
+    db.commit()
+    db.refresh(sprint)
+    return sprint
+
+
+class MilestoneCreateRequest(BaseModel):
+    name: str
+    due_date: str
+    task_ids: List[int] = []
+
+
+@router.post("/projects/{project_id}/milestones", response_model=MilestoneResponse, status_code=status.HTTP_201_CREATED)
+def create_project_milestone(project_id: int, req: MilestoneCreateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_manager_role(current_user)
+    
+    # Create milestone in DB
+    milestone = models.Milestone(
+        project_id=project_id,
+        name=req.name,
+        due_date=req.due_date,
+        status="pending",
+        progress=0,
+        tasks_count=len(req.task_ids)
+    )
+    db.add(milestone)
+    db.commit()
+    db.refresh(milestone)
+    
+    # Link selected tasks to this milestone
+    if req.task_ids:
+        db.query(models.Task).filter(models.Task.id.in_(req.task_ids)).update(
+            {models.Task.milestone_id: milestone.id}, synchronize_session=False
+        )
+        db.commit()
+        
+    # Calculate status and progress dynamically
+    updated_milestone = update_milestone_progress(db, milestone.id)
+    return updated_milestone
+
+

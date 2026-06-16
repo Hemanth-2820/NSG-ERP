@@ -164,6 +164,7 @@ class Task(Base):
     rejected_reason = Column(String, nullable=True)
     custom_data = Column(Text, nullable=True)  # JSON-serialized custom fields
     acceptance = Column(Text, nullable=True)  # JSON-serialized array of strings
+    milestone_id = Column(Integer, ForeignKey("milestones.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="tasks")
@@ -637,6 +638,20 @@ class Project(Base):
     deadline = Column(String, nullable=True)  # stored as string e.g. "Dec 31, 2025"
     checklist = Column(Text, nullable=True)   # JSON-serialized array of checklist items
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Sprint(Base):
+    __tablename__ = "sprints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sprintId = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    goal = Column(String, nullable=True)
+    start = Column(String, nullable=True)
+    end = Column(String, nullable=True)
+    sp = Column(Integer, default=40)
+    status = Column(String, default="Planning")  # Planning, Active, Completed
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
 
 
 class Promotion(Base):
