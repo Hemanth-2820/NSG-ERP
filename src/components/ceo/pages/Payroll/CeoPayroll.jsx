@@ -346,7 +346,7 @@ export default function CeoPayroll() {
                           />
                         </div>
                       </td>
-                      <td className="amount-col text-red">-₹{Math.round(r.epf + r.tds).toLocaleString()}</td>
+                      <td className="amount-col text-red">-₹{Math.round(r.epf + r.tds + r.lop).toLocaleString()}</td>
                       <td className="amount-col net-pay">₹{Math.round(r.net).toLocaleString()}</td>
                       <td>
                         <button className="btn-process" onClick={() => openPaymentModal(r)}>
