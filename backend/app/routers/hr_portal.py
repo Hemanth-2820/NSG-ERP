@@ -753,7 +753,7 @@ def create_job_offer(req: JobOfferCreate, current_user: models.User = Depends(se
 @router.get("/employees", response_model=List[EmployeeResponse])
 def get_employees(current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
-    return db.query(models.User).filter(models.User.role.in_(["employee", "tl", "hr"])).offset(skip).limit(limit).all()
+    return db.query(models.User).offset(skip).limit(limit).all()
 
 @router.get("/departments")
 def get_departments(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -2949,7 +2949,10 @@ def get_resignations(skip: int = 0, limit: int = 100, db: Session = Depends(data
         {
             "id": r.id,
             "user_id": r.user_id,
+            "employee_id": r.user_id,
             "resignation_date": r.resignation_date.isoformat() if r.resignation_date else None,
+            "LWD": r.LWD.isoformat() if r.LWD else None,
+            "reason": r.reason,
             "status": r.status
         } for r in resigs
     ]

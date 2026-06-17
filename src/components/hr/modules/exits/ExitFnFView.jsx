@@ -42,8 +42,8 @@ export function ExitFnFView() {
     fetchData();
   }, []);
 
-  const activeResignation = resignations.find(r => r.id === selectedResignId) || resignations[0] || { id: 1, employee_id: 103, status: 'pending', reason: 'Higher studies.' };
-  const exitingEmp = employees.find(e => e.id === activeResignation.employee_id) || { name: 'Staff', bank_name: 'HDFC', account_number: '0000', email: 'staff@nsg.com' };
+  const activeResignation = resignations.find(r => r.id === selectedResignId) || resignations[0] || { id: 1, user_id: 103, status: 'pending', reason: 'Higher studies.' };
+  const exitingEmp = employees.find(e => e.id === (activeResignation.employee_id || activeResignation.user_id)) || { name: 'Staff', bank_name: 'HDFC', account_number: '0000', email: 'staff@nsg.com' };
 
   // Fetch employee specific exit details dynamically
   useEffect(() => {
@@ -204,28 +204,7 @@ export function ExitFnFView() {
           ))}
         </div>
 
-        {exitTab === 'resignations' && (
-          <button
-            onClick={() => setIsCalibrateOpen(true)}
-            className="print-btn"
-            style={{
-              backgroundColor: 'var(--accent-pink)',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '10px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: 'var(--shadow-sm)'
-            }}
-          >
-            🚪 Calibrate Notice Period
-          </button>
-        )}
+
       </div>
 
       {exitTab === 'resignations' && (
@@ -246,7 +225,7 @@ export function ExitFnFView() {
               </thead>
               <tbody>
                 {resignations?.map((r, idx) => {
-                  const employee = employees.find(e => e.id === r.employee_id) || { name: 'Unknown' };
+                  const employee = employees.find(e => e.id === (r.employee_id || r.user_id)) || { name: 'Unknown' };
                   return (
                     <tr key={idx} onClick={() => { setSelectedResignId(r.id); setRelievingDate(r.LWD); }} style={{ cursor: 'pointer', backgroundColor: selectedResignId === r.id ? 'rgba(236,72,153,0.05)' : 'transparent' }}>
                       <td style={{ padding: '16px 40px' }}>

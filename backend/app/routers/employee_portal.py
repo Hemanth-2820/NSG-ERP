@@ -833,7 +833,6 @@ def submit_resignation(req: ResignationCreate, current_user: models.User = Depen
     # Notify HR
     notif = models.Notification(
         user_id=current_user.id,
-        title="Resignation Submitted",
         message=f"You have submitted your resignation. HR will review and confirm your LWD.",
         type="warning"
     )
