@@ -461,7 +461,7 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
                   </span>
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }} className="emp-scrollable-area">
                 {pendingActions.map(action => {
                   const done = !!doneActions[action.id];
                   return (
@@ -510,7 +510,7 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
                   Mark all read
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }} className="emp-scrollable-area">
                 {notifications.map(n => {
                   const isUnread = n.unread && !notifRead[n.id];
                   return (

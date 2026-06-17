@@ -313,6 +313,7 @@
   gap: 10px;
   cursor: pointer;
   transition: all 200ms;
+  flex-shrink: 0;
 }
 .emp-action-row--active { background: var(--emp-bg-card-inner); }
 .emp-action-row--done   { background: var(--emp-emerald-dim);   }
@@ -361,6 +362,7 @@
   border: 1px solid;
   min-height: 52px;
   transition: all 180ms;
+  flex-shrink: 0;
 }
 .emp-notif-row--unread {
   background: var(--emp-emerald-dim);

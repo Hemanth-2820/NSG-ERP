@@ -664,12 +664,12 @@ export default function Finance() {
       {/* UPDATE KPIs MODAL */}
       {showKpiModal && (
         <div className="ceo-modal-overlay" onClick={() => setShowKpiModal(false)}>
-          <div className="ceo-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-            <div className="ceo-modal-header">
-              <h2>Update Financial KPIs</h2>
-              <button className="ceo-modal-close" onClick={() => setShowKpiModal(false)}><X size={20}/></button>
+          <div className="ceo-modal" onClick={e => e.stopPropagation()} style={{ width: '600px', maxWidth: '90vw' }}>
+            <div className="ceo-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', color: '#1e293b' }}>Update Financial KPIs</h2>
+              <button onClick={() => setShowKpiModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}><X size={20}/></button>
             </div>
-            <div className="ceo-modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="ceo-modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'white', padding: '24px' }}>
               <div>
                 <label className="ceo-form-label">Total Revenue (val)</label>
                 <input className="ceo-form-input" value={kpiForm.revenue} onChange={e => setKpiForm({...kpiForm, revenue: e.target.value})} placeholder="e.g. ₹12.5M" />
@@ -706,7 +706,7 @@ export default function Finance() {
                 <input className="ceo-form-input" value={kpiForm.burnTrend} onChange={e => setKpiForm({...kpiForm, burnTrend: e.target.value})} placeholder="e.g. Stable" />
               </div>
             </div>
-            <div className="ceo-modal-footer">
+            <div className="ceo-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', background: '#f8fafc' }}>
               <button className="ceo-btn" onClick={() => setShowKpiModal(false)}>Cancel</button>
               <button className="ceo-btn ceo-btn-primary" onClick={handleSaveKpi}>Save & Update</button>
             </div>
