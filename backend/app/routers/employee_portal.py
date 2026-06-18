@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator
 from typing import List, Optional, Dict, Any, TypeVar, Generic
@@ -778,6 +778,55 @@ def update_documents(req: dict, current_user: models.User = Depends(security.get
     
     db.commit()
     return {"status": "success"}
+
+@router.post("/profile/upload-document")
+async def upload_document(
+    name: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    import uuid
+    import os
+    from datetime import datetime
+
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    
+    os.makedirs("uploads", exist_ok=True)
+    file_ext = file.filename.split(".")[-1] if "." in file.filename else "pdf"
+    file_name = f"{uuid.uuid4()}.{file_ext}"
+    file_path = os.path.join("uploads", file_name)
+    
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+        
+    existing_docs = []
+    if user.documents:
+        existing_docs = json.loads(user.documents)
+    
+    new_doc = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "docType": name,
+        "link": f"/uploads/{file_name}",
+        "type": "Document",
+        "status": "Uploaded",
+        "original_filename": file.filename,
+        "uploaded_at": datetime.utcnow().isoformat()
+    }
+    existing_docs.append(new_doc)
+    user.documents = json.dumps(existing_docs)
+    
+    notif = models.Notification(
+        user_id=current_user.id,
+        message=f"You have uploaded {name}.",
+        type="info"
+    )
+    db.add(notif)
+    db.commit()
+    
+    return {"status": "success", "document": new_doc, "documents": existing_docs}
 
 
 # ─── 6. RESIGNATION & ASSETS SCHEMAS & ROUTES ─────────────────────────────────

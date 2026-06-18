@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Edit } from 'lucide-react';
+import { Trash2, Edit, Users } from 'lucide-react';
 import { notify } from '../../utils/notify';
 import { generateOfferLetterPDF } from '../../../../utils/offerLetterGenerator';
 
@@ -497,6 +497,20 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: '4px', marginTop: '12px' }}>
+                    <button
+                      className="print-btn"
+                      title="Open in Edit Employee Profile"
+                      style={{ flex: 'none', justifyContent: 'center', padding: '6px', fontSize: '11px', width: '32px' }}
+                      onClick={() => {
+                        const q = new URLSearchParams({
+                          empId: emp.id,
+                          subTab: 'editEmployee'
+                        });
+                        window.location.hash = `#/HR/employees?${q.toString()}`;
+                      }}
+                    >
+                      <Users size={14} />
+                    </button>
                     <button
                       className="print-btn"
                       style={{ flex: 1, justifyContent: 'center', padding: '6px', fontSize: '11px' }}

@@ -97,6 +97,7 @@ class EmployeeCreateRequest(BaseModel):
     photo: Optional[str] = None
     manager_id: Optional[int] = None
     role: Optional[str] = "employee"
+    emp_id: Optional[str] = None
     pf_number: Optional[str] = None
     uan: Optional[str] = None
     esi_number: Optional[str] = None
@@ -618,10 +619,7 @@ def transition_candidate_to_employee(id: int, current_user: models.User = Depend
     probation_end = date.fromordinal(today.toordinal() + 180) # 6 months
     
     # Initial documents list
-    initial_docs = [
-        {"type": "Aadhaar Card", "name": "aadhaar_verify.pdf", "status": "verified", "date": today.isoformat()},
-        {"type": "Degree Certificate", "name": "bachelors_degree.pdf", "status": "pending", "date": today.isoformat()}
-    ]
+    initial_docs = []
     
     # Hash default password (e.g. EmployeeName@123)
     default_pwd_plain = f"{cand.name.replace(' ', '')}@123"
@@ -789,16 +787,19 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
     if exists:
         raise HTTPException(status_code=400, detail="Employee already exists.")
         
-    max_serial = 100
-    for u in db.query(models.User).all():
-        if u.emp_id and u.emp_id.startswith("NSG-0"):
-            try:
-                num = int(u.emp_id.split("-0")[-1])
-                if num > max_serial:
-                    max_serial = num
-            except ValueError:
-                pass
-    emp_id = f"NSG-0{max_serial + 1}"
+    if req.emp_id:
+        emp_id = req.emp_id
+    else:
+        max_serial = 100
+        for u in db.query(models.User).all():
+            if u.emp_id and u.emp_id.startswith("NSG-0"):
+                try:
+                    num = int(u.emp_id.split("-0")[-1])
+                    if num > max_serial:
+                        max_serial = num
+                except ValueError:
+                    pass
+        emp_id = f"NSG-0{max_serial + 1}"
     probation_end = date.fromordinal(req.join_date.toordinal() + 180)
     
     initial_docs = []
