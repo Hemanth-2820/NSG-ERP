@@ -110,7 +110,13 @@ export function HrSettingsView() {
       const res = await fetch('/api/hr-portal/departments', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) setDepartments(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setDepartments(data);
+        if (data.length > 0 && !data.some(d => d.name === "IT")) {
+          setSelectedDept(data[0].name);
+        }
+      }
     } catch (err) { console.error(err); }
   };
 
