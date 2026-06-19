@@ -229,7 +229,18 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
   ];
 
   // ── Notifications ─────────────────────────────────────────────────
-  const [notifRead, setNotifRead] = useState({});
+  const [notifRead, setNotifRead] = useState(() => {
+    try {
+      const stored = localStorage.getItem('emp_notif_read');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('emp_notif_read', JSON.stringify(notifRead));
+  }, [notifRead]);
   const notifications = dbData.notifications.map(n => ({
     id: n.id,
     icon: n.type === 'warning' ? '⚠️' : n.type === 'success' ? '✅' : '🔔',
@@ -298,16 +309,6 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
             <button className="emp-quick-btn" onClick={() => setActiveTab('profile')}>👤 Profile</button>
             {!hideTimesheet && (
               <button className="emp-quick-btn" onClick={() => setActiveTab('timesheet')}>⏱️ Timesheet</button>
-            )}
-            <button className="emp-quick-btn" onClick={() => setActiveTab('leave')}>🌴 Request Leave</button>
-            {!hideHolidaysExpensesPerfMsg && (
-              <button className="emp-quick-btn" onClick={() => setActiveTab('messaging')}>💬 Messages
-                {myChannels.length > 0 && (
-                  <span style={{ background: '#ef4444', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '9px', fontWeight: '700' }}>
-                    {myChannels.length}
-                  </span>
-                )}
-              </button>
             )}
           </div>
         </div>
