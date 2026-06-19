@@ -238,7 +238,7 @@ export function ApprovedTimesheetsView() {
                 <span style={{fontSize: '13px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Filters</span>
               </div>
               
-              <div style={{display: 'flex', gap: '8px', flexWrap: 'nowrap', flex: 1}}>
+              <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap', flex: 1}}>
                 <input 
                   type="date"
                   className={styles.filterSelect}
