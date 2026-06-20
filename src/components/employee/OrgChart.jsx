@@ -15,49 +15,114 @@ export default function OrgChart({ currentUser }) {
 
   const { data: employees, error, isLoading } = useSWR('/api/employee-portal/org-chart', fetcher);
 
-  // Build the hierarchical tree
+  // Build the hierarchical tree based on Role Flow: CEO -> HRs -> TLs -> Employees
   const treeData = useMemo(() => {
     if (!employees || !Array.isArray(employees)) return null;
 
-    const map = {};
-    const roots = [];
+    // 1. Separate users by role
+    const ceos = employees.filter(e => e.role.toLowerCase() === 'ceo' || e.role.toLowerCase().includes('chief executive'));
+    const hrs = employees.filter(e => e.role.toLowerCase() === 'hr' || e.role.toLowerCase().includes('human resource'));
+    const tls = employees.filter(e => e.role.toLowerCase() === 'tl' || e.role.toLowerCase().includes('team lead'));
+    const others = employees.filter(e => !ceos.includes(e) && !hrs.includes(e) && !tls.includes(e));
 
-    // Initialize map
-    employees.forEach(emp => {
-      map[emp.id] = { ...emp, children: [] };
+    // 2. Map TLs and attach their employees
+    const tlMap = {};
+    tls.forEach(tl => {
+      tlMap[tl.id] = { ...tl, children: [] };
     });
 
-    // Populate children
-    employees.forEach(emp => {
-      if (emp.manager_id && map[emp.manager_id]) {
-        map[emp.manager_id].children.push(map[emp.id]);
+    const unassignedEmployees = [];
+
+    others.forEach(emp => {
+      if (emp.manager_id && tlMap[emp.manager_id]) {
+        tlMap[emp.manager_id].children.push({ ...emp, children: [] });
       } else {
-        roots.push(map[emp.id]);
+        // If an employee doesn't report to a TL (maybe newly added or reports to HR/CEO)
+        // Check if their manager is in the DB but not categorized as TL
+        const mgr = employees.find(e => e.id === emp.manager_id);
+        if (mgr && (mgr.role.toLowerCase() === 'tl' || mgr.role.toLowerCase().includes('team lead'))) {
+            if (!tlMap[mgr.id]) tlMap[mgr.id] = { ...mgr, children: [] };
+            tlMap[mgr.id].children.push({ ...emp, children: [] });
+        } else {
+            unassignedEmployees.push({ ...emp, children: [] });
+        }
       }
     });
 
-    return roots;
+    // 3. Construct the Role-based hierarchy
+    const tlNodes = Object.values(tlMap);
+
+    // If there are unassigned employees, we can group them under a "General Team" or just append them to TLs level.
+    // We'll append them as direct children of HR Group to match the flow.
+    const hrChildren = [...tlNodes, ...unassignedEmployees];
+
+    const hrGroupNode = {
+      id: 'hr_group_pseudo',
+      isGroup: true,
+      role: 'Human Resources Department',
+      members: hrs.map(hr => ({ ...hr, children: [] })),
+      children: hrChildren
+    };
+
+    // Enforce single root to avoid duplicate trees if there are multiple CEO accounts in test data
+    if (ceos.length > 0) {
+      // Pick the main CEO (first one)
+      const mainCeo = ceos[0];
+      return [{
+        ...mainCeo,
+        children: hrs.length > 0 ? [hrGroupNode] : hrChildren
+      }];
+    }
+
+    // Fallback if no CEO is found, HRs become roots
+    if (hrs.length > 0) return [hrGroupNode];
+    return hrChildren;
   }, [employees]);
 
-  if (isLoading) return <div className="org-loading">Loading Organization Chart...</div>;
+  if (isLoading) return <div className="org-loading"><div className="loader-spinner"></div> Loading Organization Chart...</div>;
   if (error) return <div className="org-error">Error: {error.message}</div>;
   if (!treeData || treeData.length === 0) return <div className="org-error">No organizational data available.</div>;
 
+  const renderSingleCard = (node) => (
+    <div className={`org-node ${node.role.toLowerCase().includes('ceo') ? 'ceo-node' : node.role.toLowerCase().includes('hr') ? 'hr-node' : node.role.toLowerCase().includes('tl') || node.role.toLowerCase().includes('team lead') ? 'tl-node' : 'emp-node'}`}>
+      {node.photo && !node.photo.includes('unsplash') ? (
+        <img src={`http://localhost:8000${node.photo}`} alt={node.name} className="org-avatar" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(node.name)}&background=random`; }} />
+      ) : (
+        <AvatarFallback src={node.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(node.name)}&background=random`} alt={node.name} className="org-avatar" />
+      )}
+      <div className="org-name">{node.name}</div>
+      <div className="org-role">{node.designation || node.role}</div>
+      {node.department && <div className="org-dept">{node.department}</div>}
+    </div>
+  );
+
   const renderNode = (node) => {
+    if (node.isGroup) {
+      return (
+        <li key={node.id}>
+          <div className="org-group-container">
+            <div className="org-group-label">Human Resources</div>
+            <div className="org-group-node">
+              {node.members.map(member => (
+                <div key={member.id} className="org-group-member">
+                  {renderSingleCard(member)}
+                </div>
+              ))}
+              {node.members.length === 0 && <div style={{padding: '20px', color: '#94a3b8'}}>No HRs assigned</div>}
+            </div>
+          </div>
+          {node.children && node.children.length > 0 && (
+            <ul>
+              {node.children.map(child => renderNode(child))}
+            </ul>
+          )}
+        </li>
+      );
+    }
+
     return (
       <li key={node.id}>
-        <div className="org-node">
-          {node.photo && !node.photo.includes('unsplash') ? (
-            <img src={node.photo} alt={node.name} className="org-avatar" />
-          ) : (
-            <div className="org-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e2e8f0', color: '#475569', fontSize: '20px', fontWeight: 'bold' }}>
-              {node.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="org-name">{node.name}</div>
-          <div className="org-role">{node.designation || node.role}</div>
-          {node.department && <div className="org-dept">{node.department}</div>}
-        </div>
+        {renderSingleCard(node)}
         {node.children && node.children.length > 0 && (
           <ul>
             {node.children.map(child => renderNode(child))}
@@ -69,15 +134,17 @@ export default function OrgChart({ currentUser }) {
 
   return (
     <div className="org-chart-container">
-      <div className="org-chart-header">
-        <h2>Organization Chart</h2>
-        <p>Explore the reporting structure and team hierarchies across the company.</p>
-      </div>
+      <div className="org-chart-wrapper">
+        <div className="org-chart-header">
+          <h2>Organization Chart</h2>
+          <p>Explore the reporting structure and team hierarchies across the company.</p>
+        </div>
 
-      <div className="tree">
-        <ul>
-          {treeData.map(root => renderNode(root))}
-        </ul>
+        <div className="tree">
+          <ul>
+            {treeData.map(root => renderNode(root))}
+          </ul>
+        </div>
       </div>
     </div>
   );
