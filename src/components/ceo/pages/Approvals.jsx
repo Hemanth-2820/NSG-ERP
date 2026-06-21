@@ -32,7 +32,7 @@ const ConfirmActionModal = ({ isOpen, actionType, item, onClose, onConfirm }) =>
   if (!isOpen) return null;
   const isApprove = actionType === 'Approve';
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={(e) => { if(e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: THEME.bgSurface, padding: '32px', borderRadius: '16px', width: '420px', border: `1px solid ${THEME.border}`, color: THEME.textMain, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
            {isApprove ? <CheckCircle size={24} color={THEME.primary} /> : <XCircle size={24} color={THEME.danger} />}

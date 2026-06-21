@@ -1081,7 +1081,7 @@ export default function Tasks({ currentUser }) {
         })()}
 
         {reassignModalOpen && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={(e) => { if(e.target === e.currentTarget) setReassignModalOpen(false); }}>
             <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '8px', width: '400px', border: '1px solid var(--border-color)' }}>
               <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Reassign Task</h3>
               <div className={styles.formGroup}>
@@ -1106,7 +1106,7 @@ export default function Tasks({ currentUser }) {
         )}
 
         {rejectModalOpen && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={(e) => { if(e.target === e.currentTarget) setRejectModalOpen(false); }}>
             <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '8px', width: '400px', border: '1px solid var(--border-color)' }}>
               <h3 style={{ marginTop: 0, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444' }}>
                 <XCircle size={20} /> Request Changes
@@ -1135,7 +1135,7 @@ export default function Tasks({ currentUser }) {
         )}
 
         {deleteModalOpen && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={(e) => { if(e.target === e.currentTarget) { setDeleteModalOpen(false); setTaskToDelete(null); } }}>
             <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '8px', width: '400px', border: '1px solid var(--border-color)' }}>
               <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#ef4444' }}>Confirm Deletion</h3>
               <p style={{ color: 'var(--text-secondary)' }}>Are you sure you want to delete this task? This action cannot be undone.</p>
@@ -1152,7 +1152,7 @@ export default function Tasks({ currentUser }) {
         )}
 
         {viewModalOpen && viewTaskData && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={(e) => { if(e.target === e.currentTarget) setViewModalOpen(false); }}>
             <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '8px', width: '600px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', border: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>Task Details</h2>

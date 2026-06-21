@@ -333,7 +333,7 @@ export default function Projects({ currentUser }) {
 
       {/* SIGNOFF MODAL */}
       {signoffProject && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if(e.target === e.currentTarget) { setSignoffProject(null); setSignature(false); } }}>
           <div className="ceo-command-panel" style={{ width: '500px', maxWidth: '90vw' }}>
             <div className="ceo-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="ceo-typography-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={20} color="var(--ceo-success)"/> Executive Sign-off</div>
@@ -407,7 +407,7 @@ export default function Projects({ currentUser }) {
 
       {/* EDIT MODAL */}
       {editProject && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if(e.target === e.currentTarget) setEditProject(null); }}>
           <div className="ceo-command-panel" style={{ width: '500px', maxWidth: '90vw' }}>
             <div className="ceo-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="ceo-typography-section-title">Modify Project Details</div>
@@ -491,7 +491,7 @@ export default function Projects({ currentUser }) {
 
       {/* CREATE PROJECT MODAL */}
       {showCreateModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if(e.target === e.currentTarget) setShowCreateModal(false); }}>
           <div className="ceo-command-panel" style={{ width: '500px', maxWidth: '90vw' }}>
             <div className="ceo-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="ceo-typography-section-title">Add New Project</div>
