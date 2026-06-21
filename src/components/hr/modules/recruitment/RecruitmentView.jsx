@@ -714,6 +714,10 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                             // Pre-fill candidate name based on file name if empty
                             const cleanName = file.name.split('.')[0]
                               .replace(/_|-/g, ' ')
+                              .replace(/\b(resume|cv|profile|copy|document|offer|letter|noc|certificate|grade\s*sheet|ssc|payslip|whatsapp|image)\b/ig, '')
+                              .replace(/[^a-zA-Z\s]/g, ' ')
+                              .replace(/\s+/g, ' ')
+                              .trim()
                               .replace(/\b\w/g, c => c.toUpperCase());
                             setUploadedCandidateName(cleanName);
                           }
