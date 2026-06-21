@@ -163,7 +163,8 @@ export default function CompanySetup() {
     address: 'Unit 401, Mindspace IT Park, Malad West, Mumbai, Maharashtra 400064',
     office_latitude: '',
     office_longitude: '',
-    allowed_radius: '300'
+    allowed_radius: '300',
+    emp_id_prefix: 'nsg'
   });
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
@@ -197,7 +198,8 @@ export default function CompanySetup() {
           address: configs.company_address || 'Unit 401, Mindspace IT Park, Malad West, Mumbai, Maharashtra 400064',
           office_latitude: configs.office_latitude || '',
           office_longitude: configs.office_longitude || '',
-          allowed_radius: configs.allowed_radius || '300'
+          allowed_radius: configs.allowed_radius || '300',
+          emp_id_prefix: configs.emp_id_prefix || 'nsg'
         });
         if (configs.company_logo) {
           setLogoFile(configs.company_logo.split('/').pop());
@@ -300,8 +302,9 @@ export default function CompanySetup() {
     const p5 = saveSetting('office_latitude', profileData.office_latitude);
     const p6 = saveSetting('office_longitude', profileData.office_longitude);
     const p7 = saveSetting('allowed_radius', profileData.allowed_radius);
+    const p8 = saveSetting('emp_id_prefix', profileData.emp_id_prefix);
     
-    const results = await Promise.all([p1, p2, p3, p4, p5, p6, p7]);
+    const results = await Promise.all([p1, p2, p3, p4, p5, p6, p7, p8]);
     setIsSaving(false);
     if (results.every(r => r)) {
       showToast('Profile configuration saved securely.');
@@ -651,6 +654,11 @@ export default function CompanySetup() {
                   <div className="ceo-form-group">
                     <label>CIN</label>
                     <input className="ceo-form-input" required disabled={!isEditingProfile} value={profileData.cin} onChange={(e) => setProfileData({...profileData, cin: e.target.value})} />
+                  </div>
+                  
+                  <div className="ceo-form-group">
+                    <label>Employee ID Prefix</label>
+                    <input className="ceo-form-input" required disabled={!isEditingProfile} value={profileData.emp_id_prefix} onChange={(e) => setProfileData({...profileData, emp_id_prefix: e.target.value})} />
                   </div>
                   
                   <div className="ceo-form-group" style={{ gridColumn: '1 / -1' }}>

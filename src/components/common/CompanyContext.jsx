@@ -13,6 +13,7 @@ export const useCompany = () => {
 export const CompanyProvider = ({ children }) => {
   const [companyName, setCompanyName] = useState('HMNS Software');
   const [companyLogo, setCompanyLogo] = useState('/hmns-logo.png');
+  const [empIdPrefix, setEmpIdPrefix] = useState('nsg');
   const [loadingConfig, setLoadingConfig] = useState(true);
 
   const fetchCompanyConfig = async () => {
@@ -32,6 +33,7 @@ export const CompanyProvider = ({ children }) => {
            }
         }
         setCompanyLogo(logoUrl);
+        if (data.emp_id_prefix) setEmpIdPrefix(data.emp_id_prefix);
       }
     } catch (err) {
       console.error('Failed to fetch company config', err);
@@ -45,7 +47,7 @@ export const CompanyProvider = ({ children }) => {
   }, []);
 
   return (
-    <CompanyContext.Provider value={{ companyName, companyLogo, refreshCompanyConfig: fetchCompanyConfig, loadingConfig }}>
+    <CompanyContext.Provider value={{ companyName, companyLogo, empIdPrefix, refreshCompanyConfig: fetchCompanyConfig, loadingConfig }}>
       {children}
     </CompanyContext.Provider>
   );
