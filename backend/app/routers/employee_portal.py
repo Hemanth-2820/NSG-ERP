@@ -1277,25 +1277,18 @@ async def upload_chat_file(file: UploadFile = File(...)):
         print(f"DEBUG UPLOAD FAILED: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class DpUploadRequest(BaseModel):
+    file: str
+
 @router.post("/profile/upload-dp")
-async def upload_dp(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+def upload_dp(req: DpUploadRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     try:
-        file_ext = os.path.splitext(file.filename)[1]
-        unique_filename = f"dp_{current_user.id}_{uuid.uuid4()}{file_ext}"
-        os.makedirs(os.path.join("uploads", "dps"), exist_ok=True)
-        filepath = os.path.join("uploads", "dps", unique_filename)
-        
-        with open(filepath, "wb") as f:
-            content = await file.read()
-            f.write(content)
-            
-        file_url = f"/uploads/dps/{unique_filename}"
-        
-        current_user.photo = file_url
+        # Save the base64 string directly to the user's photo column
+        current_user.photo = req.file
         db.commit()
         db.refresh(current_user)
         
-        return {"url": file_url}
+        return {"url": current_user.photo}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

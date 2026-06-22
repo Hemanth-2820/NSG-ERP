@@ -89,9 +89,12 @@ export default function App() {
         const profile = await response.json();
         setUser(profile);
 
-        // Auto navigate if just logged in
+        // Auto navigate if just logged in, but preserve current hash if it exists
         if (!user) {
-          navigateTo(roleToRoute(profile.role), 'dashboard');
+          const currentHash = window.location.hash;
+          if (!currentHash || currentHash === '#/' || currentHash === '#') {
+            navigateTo(roleToRoute(profile.role), 'dashboard');
+          }
         }
       } catch (err) {
         setUser(null);
@@ -103,6 +106,14 @@ export default function App() {
     fetchProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionTick]);
+
+  useEffect(() => {
+    const handleDpUpdate = (e) => {
+      setUser(prev => prev ? { ...prev, photo: e.detail } : prev);
+    };
+    window.addEventListener('dp_updated', handleDpUpdate);
+    return () => window.removeEventListener('dp_updated', handleDpUpdate);
+  }, []);
 
   const handleLoginSuccess = () => {
     setSessionTick((prev) => prev + 1);

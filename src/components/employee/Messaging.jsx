@@ -59,7 +59,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                     sender: m.sender,
                     text: m.text,
                     timestamp: new Date(tzFixed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isMe: m.sender === empName || m.sender === empName + ' (TL)' || m.sender === 'John Doe (TL)' || m.sender === 'John Doe',
+                    isMe: m.sender === empName || m.sender === empName + ' (TL)',
                     is_edited: m.is_edited,
                     is_pinned: m.is_pinned,
                     parent_id: m.parent_id,
@@ -133,22 +133,49 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     };
   }, []);
   const handleDPUpload = async (e) => {
-    const file = e.target.files[0];
+    const inputEl = e.target;
+    const file = inputEl.files[0];
     if (!file) return;
-    const token = localStorage.getItem('nsg_jwt_token');
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch('/api/employee-portal/profile/upload-dp', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-      if (res.ok) {
-        const data = await res.json();
-        window.dispatchEvent(new CustomEvent('dp_updated', { detail: data.url }));
-      }
-    } catch(e) {}
+    inputEl.value = '';
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = async () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 300;
+          const scaleSize = MAX_WIDTH / img.width;
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scaleSize;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const base64String = canvas.toDataURL('image/jpeg', 0.7);
+          console.log('[DP Upload] Base64 length:', base64String.length);
+          const token = localStorage.getItem('nsg_jwt_token');
+          const res = await fetch('/api/employee-portal/profile/upload-dp', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file: base64String })
+          });
+          console.log('[DP Upload] Response status:', res.status);
+          if (res.ok) {
+            const data = await res.json();
+            console.log('[DP Upload] Success, url length:', data.url?.length);
+            window.dispatchEvent(new CustomEvent('dp_updated', { detail: data.url }));
+            if (window.toast) window.toast.success("Profile picture updated!");
+          } else {
+            const errText = await res.text();
+            console.error('[DP Upload] Server error:', errText);
+            if (window.toast) window.toast.error("Upload failed: " + errText);
+          }
+        } catch(err) {
+          console.error('[DP Upload] Error:', err);
+          if (window.toast) window.toast.error("Upload error: " + err.message);
+        }
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   useEffect(() => {
@@ -211,6 +238,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   const [isSearching, setIsSearching] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const chatEndRef = useRef(null);
+  const [showDPMenu, setShowDPMenu] = useState(false);
 
   // === CHANNEL MANAGEMENT ===
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
@@ -318,7 +346,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                   avatar: employees.find(e => e.name === newMsg.sender || `dm-${e.id}` === newMsg.channel_id)?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(newMsg.sender),
                   text: newMsg.text,
                   timestamp: newMsg.timestamp ? new Date(newMsg.timestamp.endsWith('Z') ? newMsg.timestamp : newMsg.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-                  isMe: newMsg.sender === empName || newMsg.sender === empName + ' (TL)' || newMsg.sender === empName || newMsg.sender === 'Employee',
+                  isMe: newMsg.sender === empName || newMsg.sender === empName + ' (TL)',
                   is_edited: newMsg.is_edited,
                   deleted_at: newMsg.deleted_at,
                   reactions: newMsg.reactions,
@@ -901,7 +929,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
   // Get current members for header
   const isDM = selectedChannel.startsWith('dm-');
-  const currentMembersCount = isDM ? 2 : (channelMembers[selectedChannel]?.length || 1);
+  const currentMembersCount = isDM ? 2 : (currentChannel?.members?.length || 1);
 
   const getUnreadCount = (channelId) => {
     const msgs = messages[channelId] || [];
@@ -935,13 +963,29 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--ceo-text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MessageSquare size={20} color="var(--ceo-primary)" /> Team Chat
             </h2>
-            <label style={{ cursor: 'pointer', position: 'relative' }} title="Change Profile Picture">
-              <AvatarFallback  src={currentUser?.photo ? `${currentUser.photo}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(empName)}`} alt="You" style={{ width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover', border: '2px solid var(--ceo-border)' }}  />
-              <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--ceo-primary)', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #FFF' }}>
-                <Camera size={10} color="#FFF" />
+            <div style={{ position: 'relative' }}>
+              <div style={{ cursor: 'pointer', position: 'relative' }} title="Profile Menu" onClick={() => setShowDPMenu(!showDPMenu)}>
+                <AvatarFallback  src={currentUser?.photo ? `${currentUser.photo}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(empName)}`} alt="You" style={{ width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover', border: '2px solid var(--ceo-border)' }}  />
+                <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--ceo-primary)', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #FFF' }}>
+                  <Camera size={10} color="#FFF" />
+                </div>
               </div>
-              <input type="file" style={{ display: 'none' }} accept="image/*" onChange={handleDPUpload} />
-            </label>
+              {showDPMenu && (
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: '#FFF', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid var(--ceo-border)', zIndex: 100, width: '150px', overflow: 'hidden' }}>
+                  <button 
+                    onClick={() => {
+                      setLightboxMedia({ url: currentUser?.photo ? currentUser.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(empName)}`, type: 'image' });
+                      setShowDPMenu(false);
+                    }}
+                    style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+                  >Preview Picture</button>
+                  <label style={{ width: '100%', padding: '12px 16px', display: 'block', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)', borderTop: '1px solid var(--ceo-divider)' }}>
+                    Change Picture
+                    <input type="file" style={{ display: 'none' }} accept="image/*" onChange={(e) => { setShowDPMenu(false); handleDPUpload(e); }} />
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
           <div style={{ position: 'relative' }}>
             <Search size={14} color="var(--ceo-text-muted)" style={{ position: 'absolute', left: '12px', top: '10px' }} />
@@ -1148,7 +1192,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             </div>
           ) : (
             (messages[selectedChannel] || []).filter(m => !m.parent_id).map((msg, idx) => {
-              const isMsgMe = msg.isMe || (msg.sender && (msg.sender === empName || msg.sender.includes('CEO') || msg.sender.includes('HR') || msg.sender.toLowerCase() === 'hr' || msg.sender.includes('TL') || msg.sender.toLowerCase() === 'tl' || msg.sender.includes('Employee')));
+              const isMsgMe = msg.sender === empName || msg.sender === empName + ' (TL)';
               const isDeleted = !!msg.deleted_at;
               
               let parsedReactions = {};
