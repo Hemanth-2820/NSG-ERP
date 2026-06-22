@@ -89,7 +89,44 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [editIfscCode, setEditIfscCode] = useState('');
   const [editBankBranch, setEditBankBranch] = useState('');
 
+  // Reset Password Modal States
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmp, setResetEmp] = useState(null);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [updatedPasswords, setUpdatedPasswords] = useState({});
 
+  const openResetModal = (emp) => {
+    setResetEmp(emp);
+    setNewPassword('');
+    setShowOldPassword(false);
+    setShowResetModal(true);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('nsg_jwt_token');
+    try {
+      const res = await fetch(`/api/hr-portal/employees/${resetEmp.id}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ new_password: newPassword })
+      });
+      if (res.ok) {
+        setUpdatedPasswords(prev => ({ ...prev, [resetEmp.id]: newPassword }));
+        setShowResetModal(false);
+        setResetEmp(null);
+        notify('Password updated successfully!');
+      } else {
+        notify('Failed to reset password.', 'error');
+      }
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    }
+  };
 
   // Assets State
   const [employeeAssets, setEmployeeAssets] = useState([]);
@@ -177,8 +214,8 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
     .filter(Boolean))];
 
   const filtered = employeeList.filter(e => {
-    const searchLower = search.toLowerCase();
-    const matchesSearch = e.name.toLowerCase().includes(searchLower) || 
+    const searchLower = search?.toLowerCase() || '';
+    const matchesSearch = (e.name && e.name.toLowerCase().includes(searchLower)) || 
                           (e.emp_id && e.emp_id.toLowerCase().includes(searchLower)) ||
                           (e.department && e.department.toLowerCase().includes(searchLower)) ||
                           (e.designation && e.designation.toLowerCase().includes(searchLower)) ||

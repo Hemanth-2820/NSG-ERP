@@ -164,15 +164,10 @@ export default function Navbar({ activeRole, setActiveRole, navigateTo, hrDb = {
 
   return (
     <header className="app-navbar">
-      {/* Search Bar */}
       <div className="navbar-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button className="mobile-menu-btn" onClick={onToggleSidebar}>
           <Menu size={20} />
         </button>
-        <div className="search-container">
-          <Search size={18} className="search-icon" />
-          <input type="text" placeholder="Search resources, files, and users..." className="search-input" />
-        </div>
       </div>
 
       {/* Right Controls */}

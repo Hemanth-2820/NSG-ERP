@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, XCircle, Mail, Phone, Award, UserPlus, FileText, CalendarDays, Users, Building, ShieldCheck, TrendingUp, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Filter, Download, XCircle, Mail, Phone, Award, UserPlus, FileText, CalendarDays, Users, Building, ShieldCheck, TrendingUp, Eye, EyeOff, AlertCircle, ChevronDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import '../CEO.css';
@@ -7,6 +7,56 @@ import { useCompany } from '../../common/CompanyContext';
 
 
 
+
+const CustomSelect = ({ name, options, defaultValue, placeholder, error, onChange, onFocus, disabled, title, containerStyle, innerStyle }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue || '');
+  
+  useEffect(() => {
+    setValue(defaultValue || '');
+  }, [defaultValue]);
+  
+  const selectedOpt = options.find(o => typeof o === 'object' ? o.value === value : o === value);
+  const displayLabel = selectedOpt ? (typeof selectedOpt === 'object' ? selectedOpt.label : selectedOpt) : placeholder;
+
+  return (
+    <div style={{ position: 'relative', ...containerStyle }} tabIndex={disabled ? undefined : -1} title={title} onBlur={(e) => {
+      if (!disabled && !e.currentTarget.contains(e.relatedTarget)) {
+        setIsOpen(false);
+        if (onFocus) onFocus(value);
+      }
+    }}>
+      <input type="hidden" name={name} value={value} />
+      <div 
+        onClick={() => { if (!disabled) { setIsOpen(!isOpen); if (onFocus) onFocus(value); } }}
+        className="ceo-form-input"
+        style={{ width: '100%', padding: '10px 12px', height: '40px', background: '#FFF', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...innerStyle }}
+      >
+        <span style={{ color: value ? '#000' : '#9ca3af' }}>{displayLabel}</span>
+        <ChevronDown size={16} color="#64748b" />
+      </div>
+      {!disabled && isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: '#FFF', border: '1px solid #CBD5E1', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '150px', overflowY: 'auto' }}>
+          {options.map((opt, i) => {
+            const val = typeof opt === 'object' ? opt.value : opt;
+            const label = typeof opt === 'object' ? opt.label : opt;
+            return (
+              <div 
+                key={i}
+                onClick={() => { setValue(val); setIsOpen(false); if(onChange) onChange(val); }}
+                style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '14px', borderBottom: i < options.length - 1 ? '1px solid #f1f5f9' : 'none', background: value === val ? '#f8fafc' : '#FFF' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.background = value === val ? '#f8fafc' : '#FFF'}
+              >
+                {label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function People() {
   const { companyName, companyLogo, empIdPrefix } = useCompany();
@@ -16,7 +66,8 @@ export default function People() {
   
   // Add Employee Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newEmp, setNewEmp] = useState({ name: '', empIdInput: '', dept: '', role: '', email: '', phone: '', status: 'Active', sysRole: 'employee', shift: '' });
+  const [newEmp, setNewEmp] = useState({ name: '', empIdInput: '', dept: '', role: '', email: '', phone: '', status: 'Active', sysRole: '', shift: '' });
+  const [addEmpErrors, setAddEmpErrors] = useState({});
 
   // Full Profile & Messaging State
   const [isFullProfileOpen, setIsFullProfileOpen] = useState(false);
@@ -122,7 +173,33 @@ export default function People() {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
-    if (!newEmp.name || !newEmp.role || !newEmp.email) return;
+    const errors = {};
+    if (!newEmp.name.trim()) errors.name = 'Please enter Full Name.';
+    if (!newEmp.empIdInput.trim()) errors.empIdInput = 'Please enter Employee ID.';
+    if (!newEmp.dept) errors.dept = 'Please select Department.';
+    if (!newEmp.sysRole) errors.sysRole = 'Please select System Access Role.';
+    if (!newEmp.role) errors.role = 'Please select Designation.';
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!newEmp.email.trim()) {
+      errors.email = 'Please enter Email Address.';
+    } else if (!emailRegex.test(newEmp.email.trim())) {
+      errors.email = 'Please enter a valid Corporate Email format.';
+    }
+    
+    const phoneRegex = /^\+?[0-9\s\-()]{10,15}$/;
+    if (!newEmp.phone.trim()) {
+      errors.phone = 'Please enter Phone Number.';
+    } else if (!phoneRegex.test(newEmp.phone.trim())) {
+      errors.phone = 'Please enter a valid Phone Number.';
+    }
+    
+    if (!newEmp.shift) errors.shift = 'Please select Shift Timing.';
+    
+    if (Object.keys(errors).length > 0) {
+      setAddEmpErrors(errors);
+      return;
+    }
     setLoading(true);
     try {
       const token = localStorage.getItem('nsg_jwt_token');
@@ -361,7 +438,7 @@ export default function People() {
   }).length;
 
   const kpiStats = [
-    { label: 'Total Headcount', val: headcount.toLocaleString(), sub: 'Filtered Results', status: 'primary', icon: Users },
+    { label: 'Total Employees', val: headcount.toLocaleString(), sub: 'Filtered Results', status: 'primary', icon: Users },
     { label: 'Active Employees', val: activeCount.toLocaleString(), sub: 'Matching Active', status: 'success', icon: ShieldCheck },
     { label: 'Total Departments', val: uniqueDepartments.toString(), sub: 'Active Departments', status: 'warning', icon: Building },
     { label: 'Recent Joiners', val: recentJoiners.toString(), sub: 'Last 30 Days', status: 'success', icon: TrendingUp },
@@ -408,34 +485,43 @@ export default function People() {
                 style={{ paddingLeft: '36px', height: '40px', width: '100%', background: '#FFF', fontSize: '13px' }} 
               />
             </div>
-            
-            <select 
-              className="ceo-form-input" 
-              value={selectedDept}
-              onChange={e => setSelectedDept(e.target.value)}
-              style={{ width: '160px', height: '40px', background: '#FFF', fontSize: '13px', fontWeight: 600 }}
-            >
-              <option value="">All Departments</option>
-              {departmentsList.map(d => (
-                <option key={d.id} value={d.name}>{d.name}</option>
-              ))}
-            </select>
-
-            <select 
-              className="ceo-form-input" 
-              value={selectedStatus}
-              onChange={e => setSelectedStatus(e.target.value)}
-              style={{ width: '140px', height: '40px', background: '#FFF', fontSize: '13px', fontWeight: 600 }}
-            >
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="On Leave">On Leave</option>
-            </select>
+            <CustomSelect 
+              containerStyle={{ width: '180px' }}
+              defaultValue={selectedDept} 
+              placeholder="All Departments"
+              options={[
+                { value: 'All Departments', label: 'All Departments' },
+                ...departmentsList.map(d => ({ value: d.name, label: d.name }))
+              ]}
+              onChange={val => setSelectedDept(val)} 
+            />
+            <CustomSelect 
+              containerStyle={{ width: '150px' }}
+              defaultValue={selectedStatus} 
+              placeholder="All Statuses"
+              options={[
+                { value: 'All', label: 'All Statuses' },
+                { value: 'Active', label: 'Active' },
+                { value: 'probation', label: 'Probation' },
+                { value: 'On Leave', label: 'On Leave' },
+                { value: 'Inactive', label: 'Inactive' }
+              ]}
+              onChange={val => setSelectedStatus(val)} 
+            />
 
             <div style={{ flex: 1 }}></div>
             
             <button onClick={handleExportPDF} className="ceo-btn" style={{ height: '40px', fontSize: '13px', fontWeight: 600, background: '#FFF' }}><Download size={16} /> Export PDF</button>
-            <button onClick={() => setIsAddModalOpen(true)} className="ceo-btn ceo-btn-primary" style={{ height: '40px', fontSize: '13px', fontWeight: 600 }}><UserPlus size={16} /> Add Employee</button>
+            <button onClick={() => {
+              setNewEmp({ name: '', empIdInput: '', dept: '', role: '', email: '', phone: '', status: 'Active', sysRole: '', shift: '' });
+              setAddEmpErrors({
+                dept: 'Please select Department.',
+                sysRole: 'Please select System Access Role.',
+                role: 'Please select Designation.',
+                shift: 'Please select Shift Timing.'
+              });
+              setIsAddModalOpen(true);
+            }} className="ceo-btn ceo-btn-primary" style={{ height: '40px', fontSize: '13px', fontWeight: 600 }}><UserPlus size={16} /> Add Employee</button>
           </div>
 
           <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1, background: '#FFF' }}>
@@ -671,64 +757,81 @@ export default function People() {
             <form onSubmit={handleAddEmployee} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>FULL NAME *</label>
-                <input required value={newEmp.name} onChange={e => setNewEmp({...newEmp, name: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="e.g. Rahul Sharma" />
+                <input value={newEmp.name} onChange={e => { setNewEmp({...newEmp, name: e.target.value}); if(e.target.value.trim()) setAddEmpErrors(p => ({...p, name: ''})); }} onFocus={e => { if(!e.target.value.trim()) setAddEmpErrors(p => ({...p, name: 'Please enter Full Name.'})); }} onBlur={e => { if(!e.target.value.trim()) setAddEmpErrors(p => ({...p, name: 'Please enter Full Name.'})); else setAddEmpErrors(p => ({...p, name: ''})); }} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="e.g. Rahul Sharma" />
+                {addEmpErrors.name && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.name}</div>}
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>EMPLOYEE ID</label>
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fff', border: '1px solid var(--ceo-border)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 14px', backgroundColor: '#f8fafc', borderRight: '1px solid var(--ceo-border)', color: 'var(--ceo-text-muted)', fontWeight: 700 }}>
-                    {empIdPrefix}-
-                  </div>
-                  <input type="text" value={newEmp.empIdInput} onChange={(e) => setNewEmp({...newEmp, empIdInput: e.target.value})} placeholder="Auto-gen if blank" style={{ flex: 1, border: 'none', padding: '12px 14px', outline: 'none', fontSize: '14px' }} />
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>EMPLOYEE ID *</label>
+                <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--ceo-border)' }}>
+                  <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRight: '1px solid var(--ceo-border)', color: 'var(--ceo-text-secondary)', fontWeight: 600 }}>{empIdPrefix}</div>
+                  <input value={newEmp.empIdInput} onChange={e => { setNewEmp({...newEmp, empIdInput: e.target.value}); if(e.target.value.trim()) setAddEmpErrors(p => ({...p, empIdInput: ''})); }} onFocus={e => { if(!e.target.value.trim()) setAddEmpErrors(p => ({...p, empIdInput: 'Please enter Employee ID.'})); }} onBlur={e => { if(!e.target.value.trim()) setAddEmpErrors(p => ({...p, empIdInput: 'Please enter Employee ID.'})); else setAddEmpErrors(p => ({...p, empIdInput: ''})); }} style={{ flex: 1, padding: '12px', border: 'none', outline: 'none' }} placeholder="Enter ID" />
+                </div>
+                {addEmpErrors.empIdInput && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.empIdInput}</div>}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DEPARTMENT *</label>
+                  <CustomSelect 
+                    defaultValue={newEmp.dept} 
+                    placeholder="Select Department"
+                    options={departmentsList.map(d => ({ value: d.name, label: d.name }))}
+                    onChange={val => { setNewEmp({...newEmp, dept: val}); if(val) setAddEmpErrors(p => ({...p, dept: ''})); }}
+                    onFocus={val => { if(!val) setAddEmpErrors(p => ({...p, dept: 'Please select Department.'})); else setAddEmpErrors(p => ({...p, dept: ''})); }}
+                  />
+                  {addEmpErrors.dept && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.dept}</div>}
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DESIGNATION *</label>
+                  <CustomSelect 
+                    disabled={!newEmp.dept} 
+                    title={!newEmp.dept ? "First choose a department" : ""} 
+                    defaultValue={newEmp.role} 
+                    placeholder="Select Designation"
+                    options={designationsList.filter(d => !newEmp.dept || d.dept === newEmp.dept).map(d => ({ value: d.name, label: d.name }))}
+                    onChange={val => { setNewEmp({...newEmp, role: val}); if(val) setAddEmpErrors(p => ({...p, role: ''})); }}
+                    onFocus={val => { if(!val) setAddEmpErrors(p => ({...p, role: 'Please select Designation.'})); else setAddEmpErrors(p => ({...p, role: ''})); }}
+                  />
+                  {addEmpErrors.role && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.role}</div>}
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>SYSTEM ACCESS ROLE *</label>
-                  <select value={newEmp.sysRole} onChange={e => setNewEmp({...newEmp, sysRole: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
-                    <option value="employee">Employee</option>
-                    <option value="hr">Human Resources (HR)</option>
-                    <option value="tl">Team Lead (TL)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DESIGNATION *</label>
-                  <select disabled={!newEmp.dept} title={!newEmp.dept ? "First choose a department" : ""} required value={newEmp.role} onChange={e => setNewEmp({...newEmp, role: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px', cursor: !newEmp.dept ? 'not-allowed' : 'pointer', opacity: !newEmp.dept ? 0.6 : 1 }}>
-                    <option value="">Select Designation</option>
-                    {designationsList.filter(d => !newEmp.dept || d.dept === newEmp.dept).map(d => (
-                      <option key={d.id} value={d.name}>{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>DEPARTMENT</label>
-                  <select value={newEmp.dept} onChange={e => setNewEmp({...newEmp, dept: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
-                    <option value="">Select Department</option>
-                    {departmentsList.map(d => (
-                      <option key={d.id} value={d.name}>{d.name}</option>
-                    ))}
-                  </select>
+                  <CustomSelect 
+                    defaultValue={newEmp.sysRole} 
+                    placeholder="Select Access Role"
+                    options={[
+                      { value: 'employee', label: 'Employee' },
+                      { value: 'hr', label: 'Human Resources (HR)' },
+                      { value: 'tl', label: 'Team Lead (TL)' }
+                    ]}
+                    onChange={val => { setNewEmp({...newEmp, sysRole: val}); if(val) setAddEmpErrors(p => ({...p, sysRole: ''})); }}
+                    onFocus={val => { if(!val) setAddEmpErrors(p => ({...p, sysRole: 'Please select System Access Role.'})); else setAddEmpErrors(p => ({...p, sysRole: ''})); }}
+                  />
+                  {addEmpErrors.sysRole && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.sysRole}</div>}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>EMAIL ADDRESS *</label>
-                  <input required type="email" value={newEmp.email} onChange={e => setNewEmp({...newEmp, email: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="email@nsg.com" />
+                  <input type="email" value={newEmp.email} onChange={e => { setNewEmp({...newEmp, email: e.target.value}); if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.target.value.trim())) setAddEmpErrors(p => ({...p, email: ''})); }} onFocus={e => { if(!e.target.value.trim()) setAddEmpErrors(p => ({...p, email: 'Please enter Email Address.'})); }} onBlur={e => { const val = e.target.value.trim(); if(!val) setAddEmpErrors(p => ({...p, email: 'Please enter Email Address.'})); else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) setAddEmpErrors(p => ({...p, email: 'Please enter a valid Corporate Email format.'})); else setAddEmpErrors(p => ({...p, email: ''})); }} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="employee@example.com" />
+                  {addEmpErrors.email && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.email}</div>}
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>PHONE NUMBER</label>
-                  <input value={newEmp.phone} onChange={e => setNewEmp({...newEmp, phone: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="+91 98765..." />
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>PHONE NUMBER *</label>
+                  <input value={newEmp.phone} onChange={e => { setNewEmp({...newEmp, phone: e.target.value}); if(/^\+?[0-9\s\-()]{10,15}$/.test(e.target.value.trim())) setAddEmpErrors(p => ({...p, phone: ''})); }} onFocus={e => { if(!e.target.value.trim()) setAddEmpErrors(p => ({...p, phone: 'Please enter Phone Number.'})); }} onBlur={e => { const val = e.target.value.trim(); if(!val) setAddEmpErrors(p => ({...p, phone: 'Please enter Phone Number.'})); else if (!/^\+?[0-9\s\-()]{10,15}$/.test(val)) setAddEmpErrors(p => ({...p, phone: 'Please enter a valid Phone Number.'})); else setAddEmpErrors(p => ({...p, phone: ''})); }} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="+91 98765..." />
+                  {addEmpErrors.phone && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.phone}</div>}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>SHIFT TIMING</label>
-                  <select value={newEmp.shift} onChange={e => setNewEmp({...newEmp, shift: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }}>
-                    <option value="">Select Shift</option>
-                    {shiftsList.map(s => (
-                      <option key={s.id} value={s.name}>{s.name} ({s.start_time} - {s.end_time})</option>
-                    ))}
-                  </select>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>SHIFT TIMING *</label>
+                  <CustomSelect 
+                    defaultValue={newEmp.shift} 
+                    placeholder="Select Shift"
+                    options={shiftsList.map(s => ({ value: s.name, label: `${s.name} (${s.start_time} - ${s.end_time})` }))}
+                    onChange={val => { setNewEmp({...newEmp, shift: val}); if(val) setAddEmpErrors(p => ({...p, shift: ''})); }}
+                    onFocus={val => { if(!val) setAddEmpErrors(p => ({...p, shift: 'Please select Shift Timing.'})); else setAddEmpErrors(p => ({...p, shift: ''})); }}
+                  />
+                  {addEmpErrors.shift && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {addEmpErrors.shift}</div>}
                 </div>
               </div>
               <div style={{ marginTop: '12px', display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--ceo-divider)', paddingTop: '24px' }}>

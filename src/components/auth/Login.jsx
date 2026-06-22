@@ -8,12 +8,19 @@ export default function Login({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const { companyName, companyLogo } = useCompany();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       setError('Please fill in all fields.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid Corporate Email format.');
       return;
     }
 
@@ -44,7 +51,7 @@ export default function Login({ onLoginSuccess }) {
 
       const data = await response.json();
       if (data.access_token) {
-                onLoginSuccess();
+        onLoginSuccess();
       } else {
         throw new Error('Authentication token not received.');
       }
@@ -80,13 +87,13 @@ export default function Login({ onLoginSuccess }) {
       }}>
         {/* Brand Header */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center' }}>
-          <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=random`; }} src={companyLogo} alt={companyName} style={{ width: '240px', height: 'auto', maxHeight: '100px', objectFit: 'contain', background: '#fff', padding: '10px 16px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}  />
+          <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=random`; }} src={companyLogo} alt={companyName} style={{ width: '240px', height: 'auto', maxHeight: '100px', objectFit: 'contain', background: '#fff', padding: '10px 16px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }} />
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.4px' }}>
               {companyName} Portal
             </h1>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0', fontWeight: '400' }}>
-              Secure Single Sign-On Gateway
+              Sign In to Portal
             </p>
           </div>
         </div>
@@ -114,7 +121,7 @@ export default function Login({ onLoginSuccess }) {
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {/* Email Input */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
             <label style={{
@@ -131,12 +138,20 @@ export default function Login({ onLoginSuccess }) {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@hnms.com"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  if (e.target.value && !emailRegex.test(e.target.value)) {
+                    setEmailError('Please enter a valid Corporate Email format.');
+                  } else {
+                    setEmailError('');
+                  }
+                }}
+                placeholder="your@example.com"
                 style={{
                   width: '100%',
                   backgroundColor: '#f8fafc',
-                  border: '1.5px solid #e2e8f0',
+                  border: emailError ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
                   borderRadius: '12px',
                   padding: '12px 14px 12px 42px',
                   color: '#0f172a',
@@ -146,17 +161,22 @@ export default function Login({ onLoginSuccess }) {
                   boxSizing: 'border-box',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#ec4899';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(236,72,153,0.1)';
+                  e.target.style.borderColor = emailError ? '#dc2626' : '#ec4899';
+                  e.target.style.boxShadow = emailError ? '0 0 0 3px rgba(220,38,38,0.1)' : '0 0 0 3px rgba(236,72,153,0.1)';
                   e.target.style.backgroundColor = '#fff';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.borderColor = emailError ? '#dc2626' : '#e2e8f0';
                   e.target.style.boxShadow = 'none';
                   e.target.style.backgroundColor = '#f8fafc';
                 }}
               />
             </div>
+            {emailError && (
+              <span style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <AlertCircle size={14} /> {emailError}
+              </span>
+            )}
           </div>
 
           {/* Password Input */}
@@ -259,7 +279,7 @@ export default function Login({ onLoginSuccess }) {
           paddingTop: '20px',
           lineHeight: '1.6'
         }}>
-          🔒 Authorized access only. All logins are monitored.
+          🔒 Acceptable Company Policies and Conditions
         </div>
       </div>
     </div>

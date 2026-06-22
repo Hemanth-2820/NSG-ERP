@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Target, Users, TrendingUp, TrendingDown, CheckCircle2, Link as LinkIcon, Edit2, X, Filter, BarChart2, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { Target, Users, TrendingUp, TrendingDown, CheckCircle2, Link as LinkIcon, Edit2, X, Filter, BarChart2, AlertCircle, Plus, Trash2, ChevronDown } from 'lucide-react';
 import '../CEO.css';
 
 const ProgressRing = ({ progress, color, size = 48, strokeWidth = 4 }) => {
@@ -19,6 +19,54 @@ const ProgressRing = ({ progress, color, size = 48, strokeWidth = 4 }) => {
   );
 };
 
+const CustomSelect = ({ name, options, defaultValue, placeholder, error, onChange, onFocus, disabled, title, containerStyle, innerStyle }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue || '');
+  
+  const handleSelect = (optVal) => { setValue(optVal); setIsOpen(false); if(onChange) onChange(optVal); };
+  
+  const selectedOpt = options.find(o => (typeof o === 'object' ? o.value === value : o === value));
+  const displayLabel = selectedOpt ? (typeof selectedOpt === 'object' ? selectedOpt.label : selectedOpt) : placeholder;
+
+  return (
+    <div style={{ position: 'relative', ...containerStyle }} tabIndex={disabled ? undefined : -1} title={title} onBlur={(e) => {
+      if (!disabled && !e.currentTarget.contains(e.relatedTarget)) {
+        setIsOpen(false);
+        if (onFocus) onFocus(value);
+      }
+    }}>
+      <div 
+        onClick={() => { if (!disabled) { setIsOpen(!isOpen); if (onFocus) onFocus(value); } }}
+        className="ceo-form-input"
+        style={{ width: '100%', padding: '10px 12px', height: '40px', background: '#FFF', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...innerStyle }}
+      >
+        <span style={{ color: value ? '#000' : '#9ca3af' }}>{displayLabel}</span>
+        <ChevronDown size={16} color="#64748b" />
+      </div>
+      
+      {isOpen && !disabled && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#FFF', border: '1px solid var(--ceo-border)', borderRadius: '8px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto' }}>
+          {options.map((opt, i) => {
+            const optVal = typeof opt === 'object' ? opt.value : opt;
+            const optLabel = typeof opt === 'object' ? opt.label : opt;
+            return (
+              <div 
+                key={i} 
+                onClick={() => handleSelect(optVal)}
+                style={{ padding: '10px 14px', cursor: 'pointer', background: value === optVal ? '#F1F5F9' : '#FFF', borderBottom: i < options.length - 1 ? '1px solid var(--ceo-border)' : 'none', fontSize: '13px', fontWeight: 500 }}
+                onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                onMouseLeave={e => e.currentTarget.style.background = value === optVal ? '#F1F5F9' : '#FFF'}
+              >
+                {optLabel}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function StrategyOKRs() {
   const [okrs, setOkrs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +75,8 @@ export default function StrategyOKRs() {
 
   // Add/Edit State
   const [isAdding, setIsAdding] = useState(false);
-  const [newOkr, setNewOkr] = useState({ title: '', owner: 'CEO Office', quarter: 'Q2', year: '2026', krs: [{ title: '', target: 100, unit: '%' }] });
+  const [okrErrors, setOkrErrors] = useState({ krs: [] });
+  const [newOkr, setNewOkr] = useState({ title: '', owner: '', quarter: '', year: '', krs: [{ title: '', target: '', unit: '' }] });
 
   const fetchOkrs = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
@@ -122,6 +171,29 @@ export default function StrategyOKRs() {
   };
 
   const handleCreateOkr = async () => {
+    const errors = { krs: [] };
+    let hasErr = false;
+    
+    if (!newOkr.title.trim()) { errors.title = 'Please enter Objective Title.'; hasErr = true; }
+    if (!newOkr.owner.trim()) { errors.owner = 'Please enter Owner.'; hasErr = true; }
+    if (!newOkr.quarter) { errors.quarter = 'Please select Quarter.'; hasErr = true; }
+    if (!newOkr.year) { errors.year = 'Please select Year.'; hasErr = true; }
+    
+    newOkr.krs.forEach((kr, idx) => {
+      const krErr = {};
+      if (!kr.title.trim()) { krErr.title = 'Please enter Title.'; hasErr = true; }
+      if (!kr.target) { krErr.target = 'Enter Target.'; hasErr = true; }
+      if (!kr.unit.trim()) { krErr.unit = 'Enter Unit.'; hasErr = true; }
+      if (Object.keys(krErr).length > 0) {
+        errors.krs[idx] = krErr;
+      }
+    });
+
+    if (hasErr) {
+      setOkrErrors(errors);
+      return;
+    }
+
     const token = localStorage.getItem('nsg_jwt_token');
     try {
       const res = await fetch('/api/ceo-portal/okrs', {
@@ -130,12 +202,12 @@ export default function StrategyOKRs() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newOkr)
+        body: JSON.stringify({...newOkr, krs: newOkr.krs.map(kr => ({...kr, target: Number(kr.target)}))})
       });
       if (res.ok) {
         await fetchOkrs();
         setIsAdding(false);
-        setNewOkr({ title: '', owner: 'CEO Office', quarter: 'Q2', year: '2026', krs: [{ title: '', target: 100, unit: '%' }] });
+        setNewOkr({ title: '', owner: '', quarter: '', year: '', krs: [{ title: '', target: '', unit: '' }] });
         if (window.toast) window.toast.success('Strategy OKR successfully created!');
       } else {
         if (window.toast) window.toast.error('Failed to create OKR.');
@@ -174,19 +246,35 @@ export default function StrategyOKRs() {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: '12px', background: '#FFF', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--ceo-border)', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <Filter size={16} color="var(--ceo-text-muted)" />
-            <select value={quarter} onChange={(e) => setQuarter(e.target.value)} className="ceo-form-input" style={{ border: 'none', fontWeight: 700, fontSize: '14px', outline: 'none', background: 'transparent', cursor: 'pointer', padding: '0 8px', height: 'auto' }}>
-              <option value="Q1">Q1</option>
-              <option value="Q2">Q2</option>
-              <option value="Q3">Q3</option>
-              <option value="Q4">Q4</option>
-            </select>
+            <CustomSelect 
+              defaultValue={quarter} 
+              options={[{value:'Q1',label:'Q1'},{value:'Q2',label:'Q2'},{value:'Q3',label:'Q3'},{value:'Q4',label:'Q4'}]}
+              onChange={(val) => setQuarter(val)}
+              containerStyle={{ width: '60px' }}
+              innerStyle={{ border: 'none', background: 'transparent', padding: '0', height: 'auto', fontWeight: 700 }}
+            />
             <div style={{ width: '1px', height: '20px', background: 'var(--ceo-divider)' }}></div>
-            <select value={year} onChange={(e) => setYear(e.target.value)} className="ceo-form-input" style={{ border: 'none', fontWeight: 700, fontSize: '14px', outline: 'none', background: 'transparent', cursor: 'pointer', padding: '0 8px', height: 'auto' }}>
-              <option value="2026">2026</option>
-              <option value="2027">2027</option>
-            </select>
+            <CustomSelect 
+              defaultValue={year} 
+              options={[
+                {value:'2024',label:'2024'},{value:'2025',label:'2025'},{value:'2026',label:'2026'},{value:'2027',label:'2027'},
+                {value:'2028',label:'2028'},{value:'2029',label:'2029'},{value:'2030',label:'2030'},{value:'2031',label:'2031'},
+                {value:'2032',label:'2032'},{value:'2033',label:'2033'},{value:'2034',label:'2034'},{value:'2035',label:'2035'}
+              ]}
+              onChange={(val) => setYear(val)}
+              containerStyle={{ width: '80px' }}
+              innerStyle={{ border: 'none', background: 'transparent', padding: '0', height: 'auto', fontWeight: 700 }}
+            />
           </div>
-          <button className="ceo-btn" onClick={() => setIsAdding(true)}>
+          <button className="ceo-btn" onClick={() => {
+            setNewOkr({ title: '', owner: '', quarter: '', year: '', krs: [{ title: '', target: '', unit: '' }] });
+            setOkrErrors({
+              quarter: 'Please select Quarter.',
+              year: 'Please select Year.',
+              krs: []
+            });
+            setIsAdding(true);
+          }}>
             <Plus size={16} style={{ marginRight: '6px' }} /> New OKR
           </button>
         </div>
@@ -342,64 +430,161 @@ export default function StrategyOKRs() {
             <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Create New Objective</h2>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Objective Title</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Objective Title *</label>
               <input 
                 type="text" 
                 value={newOkr.title} 
-                onChange={e => setNewOkr({...newOkr, title: e.target.value})} 
+                onChange={e => { setNewOkr({...newOkr, title: e.target.value}); if(e.target.value.trim()) setOkrErrors(p => ({...p, title: ''})); }}
+                onFocus={e => { if(!e.target.value.trim()) setOkrErrors(p => ({...p, title: 'Please enter Objective Title.'})); }}
+                onBlur={e => { if(!e.target.value.trim()) setOkrErrors(p => ({...p, title: 'Please enter Objective Title.'})); else setOkrErrors(p => ({...p, title: ''})); }}
                 className="ceo-form-input" 
                 placeholder="e.g. Dominate Enterprise Market"
               />
+              {okrErrors.title && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {okrErrors.title}</div>}
             </div>
             
             <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Owner</label>
-                <input type="text" value={newOkr.owner} onChange={e => setNewOkr({...newOkr, owner: e.target.value})} className="ceo-form-input" />
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Owner *</label>
+                <input type="text" value={newOkr.owner} onChange={e => { setNewOkr({...newOkr, owner: e.target.value}); if(e.target.value.trim()) setOkrErrors(p => ({...p, owner: ''})); }} onFocus={e => { if(!e.target.value.trim()) setOkrErrors(p => ({...p, owner: 'Please enter Owner.'})); }} onBlur={e => { if(!e.target.value.trim()) setOkrErrors(p => ({...p, owner: 'Please enter Owner.'})); else setOkrErrors(p => ({...p, owner: ''})); }} className="ceo-form-input" placeholder="e.g. CEO Office" />
+                {okrErrors.owner && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {okrErrors.owner}</div>}
               </div>
-              <div style={{ width: '100px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Quarter</label>
-                <select value={newOkr.quarter} onChange={e => setNewOkr({...newOkr, quarter: e.target.value})} className="ceo-form-input">
-                  <option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option>
-                </select>
+              <div style={{ width: '120px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Quarter *</label>
+                <CustomSelect 
+                  defaultValue={newOkr.quarter} 
+                  placeholder="Select"
+                  options={[
+                    { value: 'Q1', label: 'Q1' },
+                    { value: 'Q2', label: 'Q2' },
+                    { value: 'Q3', label: 'Q3' },
+                    { value: 'Q4', label: 'Q4' }
+                  ]}
+                  onChange={val => { setNewOkr({...newOkr, quarter: val}); if(val) setOkrErrors(p => ({...p, quarter: ''})); }}
+                  onFocus={val => { if(!val) setOkrErrors(p => ({...p, quarter: 'Please select Quarter.'})); else setOkrErrors(p => ({...p, quarter: ''})); }}
+                />
+                {okrErrors.quarter && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {okrErrors.quarter}</div>}
               </div>
-              <div style={{ width: '100px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Year</label>
-                <select value={newOkr.year} onChange={e => setNewOkr({...newOkr, year: e.target.value})} className="ceo-form-input">
-                  <option value="2026">2026</option><option value="2027">2027</option>
-                </select>
+              <div style={{ width: '120px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '6px' }}>Year *</label>
+                <CustomSelect 
+                  defaultValue={newOkr.year} 
+                  placeholder="Select"
+                  options={[
+                    { value: '2024', label: '2024' },
+                    { value: '2025', label: '2025' },
+                    { value: '2026', label: '2026' },
+                    { value: '2027', label: '2027' },
+                    { value: '2028', label: '2028' },
+                    { value: '2029', label: '2029' },
+                    { value: '2030', label: '2030' },
+                    { value: '2031', label: '2031' },
+                    { value: '2032', label: '2032' },
+                    { value: '2033', label: '2033' },
+                    { value: '2034', label: '2034' },
+                    { value: '2035', label: '2035' }
+                  ]}
+                  onChange={val => { setNewOkr({...newOkr, year: val}); if(val) setOkrErrors(p => ({...p, year: ''})); }}
+                  onFocus={val => { if(!val) setOkrErrors(p => ({...p, year: 'Please select Year.'})); else setOkrErrors(p => ({...p, year: ''})); }}
+                />
+                {okrErrors.year && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {okrErrors.year}</div>}
               </div>
             </div>
 
-            <div style={{ marginBottom: '16px', fontWeight: 700, fontSize: '14px' }}>Key Results</div>
+            <div style={{ marginBottom: '16px', fontWeight: 700, fontSize: '14px' }}>Key Results *</div>
             
             {newOkr.krs.map((kr, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center' }}>
+              <div key={idx} style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <input type="text" placeholder="KR Title" value={kr.title} onChange={e => {
                     const updated = [...newOkr.krs];
                     updated[idx].title = e.target.value;
                     setNewOkr({...newOkr, krs: updated});
+                    if(e.target.value.trim()) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].title = '';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
+                  }} onFocus={e => {
+                    if(!e.target.value.trim()) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].title = 'Enter KR Title.';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
+                  }} onBlur={e => {
+                    if(!e.target.value.trim()) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].title = 'Enter KR Title.';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
                   }} className="ceo-form-input" />
+                  {okrErrors.krs?.[idx]?.title && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px' }}>{okrErrors.krs[idx].title}</div>}
                 </div>
                 <div style={{ width: '80px' }}>
                   <input type="number" placeholder="Target" value={kr.target} onChange={e => {
                     const updated = [...newOkr.krs];
-                    updated[idx].target = Number(e.target.value);
+                    updated[idx].target = e.target.value;
                     setNewOkr({...newOkr, krs: updated});
+                    if(e.target.value) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].target = '';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
+                  }} onFocus={e => {
+                    if(!e.target.value) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].target = 'Enter Target.';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
+                  }} onBlur={e => {
+                    if(!e.target.value) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].target = 'Enter Target.';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
                   }} className="ceo-form-input" />
+                  {okrErrors.krs?.[idx]?.target && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px' }}>{okrErrors.krs[idx].target}</div>}
                 </div>
                 <div style={{ width: '80px' }}>
                   <input type="text" placeholder="Unit" value={kr.unit} onChange={e => {
                     const updated = [...newOkr.krs];
                     updated[idx].unit = e.target.value;
                     setNewOkr({...newOkr, krs: updated});
+                    if(e.target.value.trim()) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].unit = '';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
+                  }} onFocus={e => {
+                    if(!e.target.value.trim()) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].unit = 'Enter Unit.';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
+                  }} onBlur={e => {
+                    if(!e.target.value.trim()) {
+                      const newErrs = [...(okrErrors.krs || [])];
+                      if(!newErrs[idx]) newErrs[idx] = {};
+                      newErrs[idx].unit = 'Enter Unit.';
+                      setOkrErrors({...okrErrors, krs: newErrs});
+                    }
                   }} className="ceo-form-input" />
+                  {okrErrors.krs?.[idx]?.unit && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px' }}>{okrErrors.krs[idx].unit}</div>}
                 </div>
                 <button onClick={() => {
                   const updated = newOkr.krs.filter((_, i) => i !== idx);
                   setNewOkr({...newOkr, krs: updated});
-                }} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}><X size={16} /></button>
+                  const updatedErrs = okrErrors.krs?.filter((_, i) => i !== idx);
+                  setOkrErrors({...okrErrors, krs: updatedErrs});
+                }} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', marginTop: '10px' }}><X size={16} /></button>
               </div>
             ))}
             

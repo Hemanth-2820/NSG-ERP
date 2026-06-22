@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Megaphone, Send, Users, CheckCircle, 
-  BarChart3, Clock, ArrowLeft, AlertTriangle, Trash2
+  BarChart3, Clock, ArrowLeft, AlertTriangle, Trash2, AlertCircle
 } from 'lucide-react';
 import '../CEO.css';
 
@@ -28,13 +28,17 @@ export default function Announcements() {
   const [announcements, setAnnouncements] = useState([]);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [priority, setPriority] = useState('Normal');
-  const [audience, setAudience] = useState('All Portals');
+  const [priority, setPriority] = useState('');
+  const [audience, setAudience] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedAnnId, setSelectedAnnId] = useState(null);
   const [unreadUsers, setUnreadUsers] = useState([]);
+  const [errors, setErrors] = useState({
+    audience: 'Please select Target Audience.',
+    priority: 'Please select Priority.'
+  });
 
   // Fetch all announcements
   const fetchAnnouncements = async () => {
@@ -56,13 +60,15 @@ export default function Announcements() {
   const handlePublish = async () => {
     setSuccessMsg('');
     setErrorMsg('');
+    const newErrors = {};
 
-    if (!title.trim()) {
-      setErrorMsg('Please enter a Subject Line.');
-      return;
-    }
-    if (!body.trim()) {
-      setErrorMsg('Please enter a Message Body.');
+    if (!audience) newErrors.audience = 'Please select Target Audience.';
+    if (!priority) newErrors.priority = 'Please select Priority.';
+    if (!title.trim()) newErrors.title = 'Please enter a Subject Line.';
+    if (!body.trim()) newErrors.body = 'Please enter a Message Body.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -85,8 +91,12 @@ export default function Announcements() {
       if (res.ok) {
         setTitle('');
         setBody('');
-        setPriority('Normal');
-        setAudience('All Portals');
+        setPriority('');
+        setAudience('');
+        setErrors({
+          audience: 'Please select Target Audience.',
+          priority: 'Please select Priority.'
+        });
         setSuccessMsg('Announcement published successfully!');
         setTimeout(() => setSuccessMsg(''), 4000);
         await fetchAnnouncements();
@@ -239,19 +249,37 @@ export default function Announcements() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '8px', display: 'block' }}>Target Audience</label>
-                    <select className="ceo-form-input" value={audience} onChange={e => setAudience(e.target.value)} style={{ height: '44px', background: '#F8FAFC' }}>
+                    <select 
+                      className="ceo-form-input" 
+                      value={audience} 
+                      onChange={e => { setAudience(e.target.value); if (e.target.value) setErrors(prev => ({...prev, audience: ''})); }} 
+                      onFocus={e => { if (!e.target.value) setErrors(prev => ({...prev, audience: 'Please select Target Audience.'})); }}
+                      onBlur={e => { if (!e.target.value) setErrors(prev => ({...prev, audience: 'Please select Target Audience.'})); else setErrors(prev => ({...prev, audience: ''})); }}
+                      style={{ height: '44px', background: '#F8FAFC', width: '100%' }}
+                    >
+                      <option value="" disabled hidden>Select Target Audience</option>
                       <option value="All Portals">All Portals</option>
                       <option value="HR Portal">HR Portal</option>
                       <option value="TL Portal">TL Portal</option>
                       <option value="Employee Portal">Employee Portal</option>
                     </select>
+                    {errors.audience && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.audience}</div>}
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '8px', display: 'block' }}>Priority</label>
-                    <select className="ceo-form-input" value={priority} onChange={e => setPriority(e.target.value)} style={{ height: '44px', background: '#F8FAFC' }}>
+                    <select 
+                      className="ceo-form-input" 
+                      value={priority} 
+                      onChange={e => { setPriority(e.target.value); if (e.target.value) setErrors(prev => ({...prev, priority: ''})); }} 
+                      onFocus={e => { if (!e.target.value) setErrors(prev => ({...prev, priority: 'Please select Priority.'})); }}
+                      onBlur={e => { if (!e.target.value) setErrors(prev => ({...prev, priority: 'Please select Priority.'})); else setErrors(prev => ({...prev, priority: ''})); }}
+                      style={{ height: '44px', background: '#F8FAFC', width: '100%' }}
+                    >
+                      <option value="" disabled hidden>Select Priority</option>
                       <option value="Normal">Normal</option>
                       <option value="Urgent">🔴 Urgent</option>
                     </select>
+                    {errors.priority && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.priority}</div>}
                   </div>
                 </div>
 
@@ -261,10 +289,13 @@ export default function Announcements() {
                   <input 
                     className="ceo-form-input" 
                     value={title} 
-                    onChange={e => setTitle(e.target.value)} 
+                    onChange={e => { setTitle(e.target.value); if (e.target.value.trim()) setErrors(prev => ({...prev, title: ''})); }} 
+                    onFocus={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, title: 'Please enter a Subject Line.'})); }}
+                    onBlur={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, title: 'Please enter a Subject Line.'})); else setErrors(prev => ({...prev, title: ''})); }}
                     placeholder="Enter a clear, actionable subject..." 
                     style={{ height: '44px', fontSize: '15px', fontWeight: 600 }} 
                   />
+                  {errors.title && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.title}</div>}
                 </div>
 
                 {/* Row 3: Message Body */}
@@ -273,11 +304,14 @@ export default function Announcements() {
                   <textarea 
                     className="ceo-form-input" 
                     value={body} 
-                    onChange={e => setBody(e.target.value)} 
+                    onChange={e => { setBody(e.target.value); if (e.target.value.trim()) setErrors(prev => ({...prev, body: ''})); }} 
+                    onFocus={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, body: 'Please enter a Message Body.'})); }}
+                    onBlur={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, body: 'Please enter a Message Body.'})); else setErrors(prev => ({...prev, body: ''})); }}
                     placeholder="Type your announcement message here..."
                     rows={8}
                     style={{ resize: 'vertical', fontSize: '14px', lineHeight: '1.6', minHeight: '180px', fontFamily: 'inherit' }}
                   />
+                  {errors.body && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.body}</div>}
                 </div>
 
                 {/* Row 4: Publish Button */}

@@ -324,7 +324,7 @@ export default function Dashboard() {
   };
 
   const kpiData = [
-    { id: 'hc', label: "Total Headcount", value: summaryData.headcount.toString(), trend: "up", trendValue: "+4%", icon: Users, color: "var(--ceo-primary)" },
+    { id: 'hc', label: "TOTAL EMPLOYEES", value: summaryData.headcount.toString(), trend: "up", trendValue: "+4%", icon: Users, color: "var(--ceo-primary)" },
     { id: 'pr', label: "Monthly Payroll", value: formatCurrency(summaryData.monthlyPayroll || 0), trend: "up", trendValue: "+2%", icon: IndianRupee, color: "var(--ceo-danger)" },
     { id: 'pj', label: "Active Projects", value: (summaryData.activeProjects || 0).toString(), trend: "flat", trendValue: "0", icon: Layers, color: "var(--ceo-purple)" },
     { id: 'es', label: "Escalations", value: summaryData.activeBlockers.toString(), trend: summaryData.activeBlockers > 0 ? "up" : "down", trendValue: summaryData.activeBlockers > 0 ? `+${summaryData.activeBlockers}` : "0", icon: AlertCircle, color: "var(--ceo-warning)" },
@@ -550,7 +550,7 @@ export default function Dashboard() {
         {/* ZONE: ATTENDANCE HEATMAP */}
         <div className="ceo-command-panel" style={{ gridArea: 'heat', overflow: 'hidden' }}>
           <div className="ceo-command-header" style={{ padding: '24px 32px', borderBottom: 'none' }}>
-            <div className="ceo-typography-card-title" style={{ fontSize: '18px' }}>Attendance Heatmap (Last 14 Days)</div>
+            <div className="ceo-typography-card-title" style={{ fontSize: '18px' }}>Department Wise Attendance (Last 14 Days)</div>
             <div style={{ display: 'flex', gap: '24px', alignItems: 'center', marginTop: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '16px', height: '16px', borderRadius: '4px', background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' }}></div>

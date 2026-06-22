@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Download, Calendar, Filter, FileSpreadsheet, Activity, RefreshCw, AlertCircle
+  Download, Calendar, Filter, FileSpreadsheet, Activity, RefreshCw, AlertCircle, ChevronDown
 } from 'lucide-react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -11,7 +11,50 @@ import '../CEO.css';
 const REPORT_TYPES = ['Headcount', 'Payroll Cost', 'Attendance', 'Leave Trends', 'Project Status', 'Attrition'];
 const COLORS = ['var(--ceo-primary)', 'var(--ceo-success)', 'var(--ceo-warning)', 'var(--ceo-purple)', 'var(--ceo-danger)'];
 
+const CustomSelect = ({ name, options, defaultValue, placeholder, onChange, icon }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue || '');
+  
+  const selectedOpt = options.find(o => typeof o === 'object' ? o.value === value : o === value);
+  const displayLabel = selectedOpt ? (typeof selectedOpt === 'object' ? selectedOpt.label : selectedOpt) : placeholder;
 
+  return (
+    <div style={{ position: 'relative' }} tabIndex={-1} onBlur={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) setIsOpen(false);
+    }}>
+      <input type="hidden" name={name} value={value} />
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ background: 'var(--ceo-card-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '6px 12px', alignItems: 'center', gap: '8px', boxShadow: 'var(--ceo-shadow)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', minWidth: '170px' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {icon}
+          <span style={{ color: '#000' }}>{displayLabel}</span>
+        </div>
+        <ChevronDown size={14} color="#64748b" />
+      </div>
+      {isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: '#FFF', border: '1px solid #CBD5E1', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto' }}>
+          {options.map((opt, i) => {
+            const val = typeof opt === 'object' ? opt.value : opt;
+            const label = typeof opt === 'object' ? opt.label : opt;
+            return (
+              <div 
+                key={i}
+                onClick={() => { setValue(val); setIsOpen(false); if(onChange) onChange(val); }}
+                style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', fontWeight: 500, borderBottom: i < options.length - 1 ? '1px solid #f1f5f9' : 'none', background: value === val ? '#f8fafc' : '#FFF' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.background = value === val ? '#f8fafc' : '#FFF'}
+              >
+                {label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Reports() {
   const [activeReport, setActiveReport] = useState('Headcount');
@@ -90,7 +133,7 @@ export default function Reports() {
       let filename = `${activeReport.replace(/ /g, '_')}_Report.csv`;
 
       if (activeReport === 'Headcount') {
-        rows = [['Month', 'Total Headcount', 'New Hires', 'Exits'], ...filteredHeadcount.map(d => [d.month, d.count, d.new, d.left])];
+        rows = [['Month', 'Total Employees', 'New Hires', 'Exits'], ...filteredHeadcount.map(d => [d.month, d.count, d.new, d.left])];
       } else if (activeReport === 'Payroll Cost') {
         rows = [['Month', 'Cost (₹M)'], ...filteredPayroll.map(d => [d.month, d.cost])];
       } else if (activeReport === 'Attendance') {
@@ -126,7 +169,7 @@ export default function Reports() {
             <YAxis stroke="var(--ceo-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip cursor={{ fill: 'var(--ceo-bg)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--ceo-border)' }} />
             <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-            <Line type="monotone" dataKey="count" name="Total Headcount" stroke="var(--ceo-primary)" strokeWidth={3} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="count" name="Total Employees" stroke="var(--ceo-primary)" strokeWidth={3} dot={{ r: 4 }} />
             <Line type="monotone" dataKey="new" name="New Hires" stroke="var(--ceo-success)" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 4" />
             <Line type="monotone" dataKey="left" name="Exits" stroke="var(--ceo-danger)" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 4" />
           </LineChart>
@@ -205,7 +248,7 @@ export default function Reports() {
   };
 
   const renderTableHeaders = () => {
-    if (activeReport === 'Headcount') return (<tr><th>Month</th><th>Total Headcount</th><th>New Hires</th><th>Exits</th></tr>);
+    if (activeReport === 'Headcount') return (<tr><th>Month</th><th>Total Employees</th><th>New Hires</th><th>Exits</th></tr>);
     if (activeReport === 'Payroll Cost') return (<tr><th>Month</th><th>Total Payroll Cost</th><th>Change (MoM)</th></tr>);
     if (activeReport === 'Attendance') return (<tr><th>Department</th><th>Present (%)</th><th>WFH (%)</th><th>Leave (%)</th></tr>);
     if (activeReport === 'Leave Trends') return (<tr><th>Month</th><th>Casual Leaves</th><th>Sick Leaves</th><th>Total</th></tr>);
@@ -345,24 +388,19 @@ export default function Reports() {
 
         {/* FILTERS TOOLBAR */}
         <div style={{ gridArea: 'filters', display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: 'var(--ceo-card-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '6px 12px', alignItems: 'center', gap: '8px', boxShadow: 'var(--ceo-shadow)' }}>
-            <Calendar size={16} color="var(--ceo-text-secondary)" />
-            <select value={dateRange} onChange={e => setDateRange(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontWeight: 500, cursor: 'pointer', paddingRight: '8px' }}>
-              <option value="Jan 1 - Jul 31, 2025">Jan 1 - Jul 31, 2025</option>
-              <option value="Last 30 Days">Last 30 Days</option>
-              <option value="Last Quarter">Last Quarter</option>
-              <option value="Year to Date">Year to Date</option>
-            </select>
-          </div>
+          <CustomSelect
+            icon={<Calendar size={16} color="var(--ceo-text-secondary)" />}
+            defaultValue={dateRange}
+            onChange={setDateRange}
+            options={["Jan 1 - Jul 31, 2025", "Last 30 Days", "Last Quarter", "Year to Date"]}
+          />
           
-          <div style={{ display: 'flex', background: 'var(--ceo-card-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '6px 12px', alignItems: 'center', gap: '8px', boxShadow: 'var(--ceo-shadow)' }}>
-            <Filter size={16} color="var(--ceo-text-secondary)" />
-            <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontWeight: 500, cursor: 'pointer', paddingRight: '8px' }}>
-              <option value="All Departments">All Departments</option>
-              {rawData.departments.map(d => <option key={d} value={d}>{d}</option>)}
-
-            </select>
-          </div>
+          <CustomSelect
+            icon={<Filter size={16} color="var(--ceo-text-secondary)" />}
+            defaultValue={selectedDept}
+            onChange={setSelectedDept}
+            options={[{label: 'All Departments', value: 'All Departments'}, ...rawData.departments.map(d => ({label: d, value: d}))]}
+          />
 
           <div style={{ flex: 1 }}></div>
 

@@ -1593,7 +1593,8 @@ def get_reports_analytics(current_user: models.User = Depends(security.get_curre
         attrition_data.append({"month": m, "rate": rate})
 
     # Department list for filter
-    departments = list(set(u.department for u in all_users if u.department))
+    all_depts = db.query(models.Department).all()
+    departments = sorted(list(set([d.name for d in all_depts if d.name])))
 
     return {
         "headcount": headcount_data,

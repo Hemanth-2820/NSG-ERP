@@ -465,6 +465,7 @@ export default function Finance() {
   const [executiveApprovals, setApprovals] = useState([]);
   
   const [showKpiModal, setShowKpiModal] = useState(false);
+  const [kpiErrors, setKpiErrors] = useState({});
   const [kpiForm, setKpiForm] = useState({
     revenue: '₹12.5M', revTrend: '+12%',
     grossProfit: '₹4.2M', gpTrend: '+5%',
@@ -559,6 +560,21 @@ export default function Finance() {
   };
 
   const handleSaveKpi = async () => {
+    const errors = {};
+    if (!kpiForm.revenue.trim()) errors.revenue = 'Please enter Total Revenue.';
+    if (!kpiForm.revTrend.trim()) errors.revTrend = 'Please enter Revenue Trend.';
+    if (!kpiForm.grossProfit.trim()) errors.grossProfit = 'Please enter Gross Profit.';
+    if (!kpiForm.gpTrend.trim()) errors.gpTrend = 'Please enter Gross Profit Trend.';
+    if (!kpiForm.netProfit.trim()) errors.netProfit = 'Please enter Net Profit.';
+    if (!kpiForm.npTrend.trim()) errors.npTrend = 'Please enter Net Profit Trend.';
+    if (!kpiForm.burnRate.trim()) errors.burnRate = 'Please enter Burn Rate.';
+    if (!kpiForm.burnTrend.trim()) errors.burnTrend = 'Please enter Burn Rate Trend.';
+
+    if (Object.keys(errors).length > 0) {
+      setKpiErrors(errors);
+      return;
+    }
+
     const newKpiData = {
       revenue: { val: kpiForm.revenue, trend: kpiForm.revTrend, up: true },
       grossProfit: { val: kpiForm.grossProfit, trend: kpiForm.gpTrend, up: true },
@@ -610,7 +626,7 @@ export default function Finance() {
           <h1 className="ceo-typography-page-title">Executive Finance Command Center</h1>
           <p className="ceo-typography-body" style={{ marginTop: '8px' }}>Monitor financial health, approve capital expenditures, and analyze cash flow intelligence.</p>
         </div>
-        <button className="ceo-btn" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--ceo-primary)', color: 'white', border: 'none' }} onClick={() => setShowKpiModal(true)}>
+        <button className="ceo-btn" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--ceo-primary)', color: 'white', border: 'none' }} onClick={() => { setKpiErrors({}); setShowKpiModal(true); }}>
           <Settings size={16} /> Update KPIs
         </button>
       </div>
@@ -671,39 +687,47 @@ export default function Finance() {
             </div>
             <div className="ceo-modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'white', padding: '24px' }}>
               <div>
-                <label className="ceo-form-label">Total Revenue (val)</label>
-                <input className="ceo-form-input" value={kpiForm.revenue} onChange={e => setKpiForm({...kpiForm, revenue: e.target.value})} placeholder="e.g. ₹12.5M" />
+                <label className="ceo-form-label">Total Revenue (val) *</label>
+                <input className="ceo-form-input" value={kpiForm.revenue} onChange={e => { setKpiForm({...kpiForm, revenue: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, revenue: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, revenue: 'Please enter Total Revenue.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, revenue: 'Please enter Total Revenue.'})); else setKpiErrors(p => ({...p, revenue: ''})); }} placeholder="e.g. ₹12.5M" />
+                {kpiErrors.revenue && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.revenue}</div>}
               </div>
               <div>
-                <label className="ceo-form-label">Revenue Trend</label>
-                <input className="ceo-form-input" value={kpiForm.revTrend} onChange={e => setKpiForm({...kpiForm, revTrend: e.target.value})} placeholder="e.g. +12%" />
-              </div>
-
-              <div>
-                <label className="ceo-form-label">Gross Profit (val)</label>
-                <input className="ceo-form-input" value={kpiForm.grossProfit} onChange={e => setKpiForm({...kpiForm, grossProfit: e.target.value})} placeholder="e.g. ₹4.2M" />
-              </div>
-              <div>
-                <label className="ceo-form-label">Gross Profit Trend</label>
-                <input className="ceo-form-input" value={kpiForm.gpTrend} onChange={e => setKpiForm({...kpiForm, gpTrend: e.target.value})} placeholder="e.g. +5%" />
+                <label className="ceo-form-label">Revenue Trend *</label>
+                <input className="ceo-form-input" value={kpiForm.revTrend} onChange={e => { setKpiForm({...kpiForm, revTrend: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, revTrend: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, revTrend: 'Please enter Revenue Trend.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, revTrend: 'Please enter Revenue Trend.'})); else setKpiErrors(p => ({...p, revTrend: ''})); }} placeholder="e.g. +12%" />
+                {kpiErrors.revTrend && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.revTrend}</div>}
               </div>
 
               <div>
-                <label className="ceo-form-label">Net Profit (val)</label>
-                <input className="ceo-form-input" value={kpiForm.netProfit} onChange={e => setKpiForm({...kpiForm, netProfit: e.target.value})} placeholder="e.g. ₹2.1M" />
+                <label className="ceo-form-label">Gross Profit (val) *</label>
+                <input className="ceo-form-input" value={kpiForm.grossProfit} onChange={e => { setKpiForm({...kpiForm, grossProfit: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, grossProfit: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, grossProfit: 'Please enter Gross Profit.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, grossProfit: 'Please enter Gross Profit.'})); else setKpiErrors(p => ({...p, grossProfit: ''})); }} placeholder="e.g. ₹4.2M" />
+                {kpiErrors.grossProfit && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.grossProfit}</div>}
               </div>
               <div>
-                <label className="ceo-form-label">Net Profit Trend</label>
-                <input className="ceo-form-input" value={kpiForm.npTrend} onChange={e => setKpiForm({...kpiForm, npTrend: e.target.value})} placeholder="e.g. +8%" />
+                <label className="ceo-form-label">Gross Profit Trend *</label>
+                <input className="ceo-form-input" value={kpiForm.gpTrend} onChange={e => { setKpiForm({...kpiForm, gpTrend: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, gpTrend: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, gpTrend: 'Please enter Gross Profit Trend.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, gpTrend: 'Please enter Gross Profit Trend.'})); else setKpiErrors(p => ({...p, gpTrend: ''})); }} placeholder="e.g. +5%" />
+                {kpiErrors.gpTrend && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.gpTrend}</div>}
               </div>
 
               <div>
-                <label className="ceo-form-label">Burn Rate (val)</label>
-                <input className="ceo-form-input" value={kpiForm.burnRate} onChange={e => setKpiForm({...kpiForm, burnRate: e.target.value})} placeholder="e.g. ₹400K/mo" />
+                <label className="ceo-form-label">Net Profit (val) *</label>
+                <input className="ceo-form-input" value={kpiForm.netProfit} onChange={e => { setKpiForm({...kpiForm, netProfit: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, netProfit: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, netProfit: 'Please enter Net Profit.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, netProfit: 'Please enter Net Profit.'})); else setKpiErrors(p => ({...p, netProfit: ''})); }} placeholder="e.g. ₹2.1M" />
+                {kpiErrors.netProfit && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.netProfit}</div>}
               </div>
               <div>
-                <label className="ceo-form-label">Burn Rate Trend</label>
-                <input className="ceo-form-input" value={kpiForm.burnTrend} onChange={e => setKpiForm({...kpiForm, burnTrend: e.target.value})} placeholder="e.g. Stable" />
+                <label className="ceo-form-label">Net Profit Trend *</label>
+                <input className="ceo-form-input" value={kpiForm.npTrend} onChange={e => { setKpiForm({...kpiForm, npTrend: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, npTrend: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, npTrend: 'Please enter Net Profit Trend.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, npTrend: 'Please enter Net Profit Trend.'})); else setKpiErrors(p => ({...p, npTrend: ''})); }} placeholder="e.g. +8%" />
+                {kpiErrors.npTrend && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.npTrend}</div>}
+              </div>
+
+              <div>
+                <label className="ceo-form-label">Burn Rate (val) *</label>
+                <input className="ceo-form-input" value={kpiForm.burnRate} onChange={e => { setKpiForm({...kpiForm, burnRate: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, burnRate: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, burnRate: 'Please enter Burn Rate.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, burnRate: 'Please enter Burn Rate.'})); else setKpiErrors(p => ({...p, burnRate: ''})); }} placeholder="e.g. ₹400K/mo" />
+                {kpiErrors.burnRate && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.burnRate}</div>}
+              </div>
+              <div>
+                <label className="ceo-form-label">Burn Rate Trend *</label>
+                <input className="ceo-form-input" value={kpiForm.burnTrend} onChange={e => { setKpiForm({...kpiForm, burnTrend: e.target.value}); if(e.target.value.trim()) setKpiErrors(p => ({...p, burnTrend: ''})); }} onFocus={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, burnTrend: 'Please enter Burn Rate Trend.'})); }} onBlur={e => { if(!e.target.value.trim()) setKpiErrors(p => ({...p, burnTrend: 'Please enter Burn Rate Trend.'})); else setKpiErrors(p => ({...p, burnTrend: ''})); }} placeholder="e.g. Stable" />
+                {kpiErrors.burnTrend && <div style={{ color: 'var(--ceo-danger)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {kpiErrors.burnTrend}</div>}
               </div>
             </div>
             <div className="ceo-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', background: '#f8fafc' }}>

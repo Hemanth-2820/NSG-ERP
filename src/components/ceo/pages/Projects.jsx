@@ -1,9 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { 
-  Search, CheckCircle, AlertTriangle, Clock, Target, Plus, RefreshCw, AlertCircle, X
+  Search, CheckCircle, AlertTriangle, Clock, Target, Plus, RefreshCw, AlertCircle, X, ChevronDown
 } from 'lucide-react';
 import '../CEO.css';
+
+const CustomSelect = ({ name, options, defaultValue, placeholder, error, onChange, onFocus }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue || '');
+  
+  const selectedOpt = options.find(o => typeof o === 'object' ? o.value === value : o === value);
+  const displayLabel = selectedOpt ? (typeof selectedOpt === 'object' ? selectedOpt.label : selectedOpt) : placeholder;
+
+  return (
+    <div style={{ position: 'relative' }} tabIndex={-1} onBlur={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        setIsOpen(false);
+        if (onFocus) onFocus(value);
+      }
+    }}>
+      <input type="hidden" name={name} value={value} />
+      <div 
+        onClick={() => { setIsOpen(!isOpen); if (onFocus) onFocus(value); }}
+        style={{ width: '100%', marginTop: '4px', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--ceo-border)', fontSize: '14px', background: '#FFF', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        <span style={{ color: value ? '#000' : '#9ca3af' }}>{displayLabel}</span>
+        <ChevronDown size={16} color="#64748b" />
+      </div>
+      {isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: '#FFF', border: '1px solid #CBD5E1', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '150px', overflowY: 'auto' }}>
+          {options.map((opt, i) => {
+            const val = typeof opt === 'object' ? opt.value : opt;
+            const label = typeof opt === 'object' ? opt.label : opt;
+            return (
+              <div 
+                key={i}
+                onClick={() => { setValue(val); setIsOpen(false); if(onChange) onChange(val); }}
+                style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '14px', borderBottom: i < options.length - 1 ? '1px solid #f1f5f9' : 'none', background: value === val ? '#f8fafc' : '#FFF' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.background = value === val ? '#f8fafc' : '#FFF'}
+              >
+                {label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Projects({ currentUser }) {
   const token = localStorage.getItem('nsg_jwt_token');
@@ -26,9 +71,10 @@ export default function Projects({ currentUser }) {
   const [saving, setSaving] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newProject, setNewProject] = useState({ name: '', client: '', department: '', budget: '', used: '', status: 'Active', deadline: '', checklist: '', attachments: '' });
+  const [newProject, setNewProject] = useState({ name: '', client: '', department: '', budget: '', used: '', status: '', deadline: '', checklist: '', attachments: '' });
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const [projectToDelete, setProjectToDelete] = useState(null);
 
@@ -154,6 +200,22 @@ export default function Projects({ currentUser }) {
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
+    
+    const newErrors = {};
+    if (!newProject.name.trim()) newErrors.name = 'Please enter Project Name.';
+    if (!newProject.client.trim()) newErrors.client = 'Please enter Client Name.';
+    if (!newProject.department) newErrors.department = 'Please select Department.';
+    if (!String(newProject.budget).trim()) newErrors.budget = 'Please enter Total Budget.';
+    if (!String(newProject.used).trim()) newErrors.used = 'Please enter Total Spent Budget.';
+    if (!newProject.status) newErrors.status = 'Please select Status.';
+    if (!newProject.deadline) newErrors.deadline = 'Please select Deadline Date.';
+    if (!newProject.attachments || newProject.attachments === '[]') newErrors.attachments = 'upload required documents for this project';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     setCreating(true);
     try {
       const res = await fetch('/api/ceo-portal/projects', {
@@ -175,7 +237,8 @@ export default function Projects({ currentUser }) {
       const created = await res.json();
       mutateProjects();
       setShowCreateModal(false);
-      setNewProject({ name: '', client: '', department: '', budget: '', used: '', status: 'Active', deadline: '', checklist: '', attachments: '' });
+      setNewProject({ name: '', client: '', department: '', budget: '', used: '', status: '', deadline: '', checklist: '', attachments: '' });
+      setErrors({});
     } catch (err) {
       alert('Failed to create project: ' + err.message);
     } finally {
@@ -262,7 +325,15 @@ export default function Projects({ currentUser }) {
             <option value="On Hold">On Hold</option>
             <option value="Completed">Completed</option>
           </select>
-          <button className="ceo-btn ceo-btn-primary" onClick={() => setShowCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '40px', whiteSpace: 'nowrap' }}>
+          <button className="ceo-btn ceo-btn-primary" onClick={() => { 
+            setShowCreateModal(true); 
+            setErrors({
+              department: 'Please select Department.',
+              status: 'Please select Status.',
+              deadline: 'Please select Deadline Date.',
+              attachments: 'upload required documents for this project'
+            }); 
+          }} style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '40px', whiteSpace: 'nowrap' }}>
             <Plus size={16} /> New Project
           </button>
         </div>
@@ -442,14 +513,17 @@ export default function Projects({ currentUser }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Department</label>
-                  <select className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={editProject.department || ''} onChange={e => setEditProject({...editProject, department: e.target.value})}>
-                    <option value="">None / Global</option>
-                    {departments.map(d => <option key={d.id} value={d.name || d.department}>{d.name || d.department}</option>)}
-                  </select>
+                  <CustomSelect 
+                    options={[{label: 'Select Department', value: ''}, ...departments.map(d => ({ label: d.name || d.department, value: d.name || d.department }))]}
+                    defaultValue={editProject.department}
+                    placeholder="Select Department"
+                    onChange={val => setEditProject({...editProject, department: val})}
+                  />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Status</label>
                   <select className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={editProject.status} onChange={e => setEditProject({...editProject, status: e.target.value})}>
+                    <option value="">Select Status</option>
                     <option value="Active">Active</option>
                     <option value="At Risk">At Risk</option>
                     <option value="On Hold">On Hold</option>
@@ -460,11 +534,11 @@ export default function Projects({ currentUser }) {
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Total Budget (₹)</label>
-                  <input required type="text" className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={editProject.budget} onChange={e => setEditProject({...editProject, budget: e.target.value})} />
+                  <input required type="text" className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={editProject.budget} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); setEditProject({...editProject, budget: val}); }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Used Budget (₹)</label>
-                  <input required type="text" className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={editProject.used} onChange={e => setEditProject({...editProject, used: e.target.value})} />
+                  <input required type="text" className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={editProject.used} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); setEditProject({...editProject, used: val}); }} />
                 </div>
               </div>
               <div>
@@ -510,52 +584,123 @@ export default function Projects({ currentUser }) {
           <div className="ceo-command-panel" style={{ width: '500px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="ceo-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="ceo-typography-section-title">Add New Project</div>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-muted)' }}><X size={20} /></button>
+              <button onClick={() => { setShowCreateModal(false); setErrors({}); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-muted)' }}><X size={20} /></button>
             </div>
-            <form onSubmit={handleCreateProject} className="ceo-command-content" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleCreateProject} noValidate className="ceo-command-content" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label className="ceo-typography-meta">Project Name</label>
-                <input required className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={newProject.name} onChange={e => setNewProject({...newProject, name: e.target.value})} placeholder="Enter project name" />
+                <input 
+                  className={`ceo-form-input ${errors.name ? 'error' : ''}`} 
+                  style={{ width: '100%', marginTop: '4px' }} 
+                  value={newProject.name} 
+                  onChange={e => { setNewProject({...newProject, name: e.target.value}); if (e.target.value.trim()) setErrors(prev => ({...prev, name: ''})); }} 
+                  onFocus={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, name: 'Please enter Project Name.'})); }}
+                  onBlur={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, name: 'Please enter Project Name.'})); else setErrors(prev => ({...prev, name: ''})); }}
+                  placeholder="Enter project name" 
+                />
+                {errors.name && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.name}</div>}
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Client</label>
-                  <input required className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={newProject.client} onChange={e => setNewProject({...newProject, client: e.target.value})} placeholder="Enter client name" />
+                  <input 
+                    className={`ceo-form-input ${errors.client ? 'error' : ''}`} 
+                    style={{ width: '100%', marginTop: '4px' }} 
+                    value={newProject.client} 
+                    onChange={e => { setNewProject({...newProject, client: e.target.value}); if (e.target.value.trim()) setErrors(prev => ({...prev, client: ''})); }} 
+                    onFocus={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, client: 'Please enter Client Name.'})); }}
+                    onBlur={e => { if (!e.target.value.trim()) setErrors(prev => ({...prev, client: 'Please enter Client Name.'})); else setErrors(prev => ({...prev, client: ''})); }}
+                    placeholder="Enter client name" 
+                  />
+                  {errors.client && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.client}</div>}
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Department</label>
-                  <select className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={newProject.department} onChange={e => setNewProject({...newProject, department: e.target.value})}>
-                    <option value="">None / Global</option>
-                    {departments.map(d => <option key={d.id} value={d.name || d.department}>{d.name || d.department}</option>)}
-                  </select>
+                  <CustomSelect 
+                    options={[{label: 'Select Department', value: ''}, ...departments.map(d => ({ label: d.name || d.department, value: d.name || d.department }))]}
+                    defaultValue={newProject.department}
+                    placeholder="Select Department"
+                    error={errors.department}
+                    onChange={val => { setNewProject({...newProject, department: val}); if (val) setErrors(prev => ({...prev, department: ''})); }}
+                    onFocus={val => { if (!val) setErrors(prev => ({...prev, department: 'Please select Department.'})); }}
+                  />
+                  {errors.department && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.department}</div>}
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Status</label>
-                  <select className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={newProject.status} onChange={e => setNewProject({...newProject, status: e.target.value})}>
+                  <select 
+                    className={`ceo-form-input ${errors.status ? 'error' : ''}`} 
+                    style={{ width: '100%', marginTop: '4px' }} 
+                    value={newProject.status} 
+                    onChange={e => { setNewProject({...newProject, status: e.target.value}); if (e.target.value) setErrors(prev => ({...prev, status: ''})); }} 
+                    onFocus={e => { if (!e.target.value) setErrors(prev => ({...prev, status: 'Please select Status.'})); }}
+                    onBlur={e => { if (!e.target.value) setErrors(prev => ({...prev, status: 'Please select Status.'})); else setErrors(prev => ({...prev, status: ''})); }}
+                  >
+                    <option value="">Select Status</option>
                     <option value="Active">Active</option>
                     <option value="At Risk">At Risk</option>
                     <option value="On Hold">On Hold</option>
+                    <option value="Completed">Completed</option>
                   </select>
+                  {errors.status && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.status}</div>}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Total Budget (₹)</label>
-                  <input required type="text" className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={newProject.budget} onChange={e => setNewProject({...newProject, budget: e.target.value})} placeholder="Enter total budget" />
+                  <input 
+                    type="text" 
+                    className={`ceo-form-input ${errors.budget ? 'error' : ''}`} 
+                    style={{ width: '100%', marginTop: '4px' }} 
+                    value={newProject.budget} 
+                    onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); setNewProject({...newProject, budget: val}); if (val.trim()) setErrors(prev => ({...prev, budget: ''})); }} 
+                    onFocus={e => { if (!String(e.target.value).trim()) setErrors(prev => ({...prev, budget: 'Please enter Total Budget.'})); }}
+                    onBlur={e => { if (!String(e.target.value).trim()) setErrors(prev => ({...prev, budget: 'Please enter Total Budget.'})); else setErrors(prev => ({...prev, budget: ''})); }}
+                    placeholder="Enter total budget" 
+                  />
+                  {errors.budget && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.budget}</div>}
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="ceo-typography-meta">Used Budget (₹)</label>
-                  <input type="text" className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={newProject.used} onChange={e => setNewProject({...newProject, used: e.target.value})} placeholder="Enter used budget" />
+                  <input 
+                    type="text" 
+                    className={`ceo-form-input ${errors.used ? 'error' : ''}`} 
+                    style={{ width: '100%', marginTop: '4px' }} 
+                    value={newProject.used} 
+                    onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); setNewProject({...newProject, used: val}); if (val.trim()) setErrors(prev => ({...prev, used: ''})); }} 
+                    onFocus={e => { if (!String(e.target.value).trim()) setErrors(prev => ({...prev, used: 'Please enter Total Spent Budget.'})); }}
+                    onBlur={e => { if (!String(e.target.value).trim()) setErrors(prev => ({...prev, used: 'Please enter Total Spent Budget.'})); else setErrors(prev => ({...prev, used: ''})); }}
+                    placeholder="Enter used budget" 
+                  />
+                  {errors.used && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.used}</div>}
                 </div>
               </div>
               <div>
                 <label className="ceo-typography-meta">Deadline</label>
-                <input required type="date" className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} value={newProject.deadline} onChange={e => setNewProject({...newProject, deadline: e.target.value})} placeholder="Enter deadline" />
+                <input 
+                  type="date" 
+                  className={`ceo-form-input ${errors.deadline ? 'error' : ''}`} 
+                  style={{ width: '100%', marginTop: '4px' }} 
+                  value={newProject.deadline} 
+                  onChange={e => { setNewProject({...newProject, deadline: e.target.value}); if (e.target.value) setErrors(prev => ({...prev, deadline: ''})); }} 
+                  onFocus={e => { if (!e.target.value) setErrors(prev => ({...prev, deadline: 'Please select Deadline Date.'})); }}
+                  onBlur={e => { if (!e.target.value) setErrors(prev => ({...prev, deadline: 'Please select Deadline Date.'})); else setErrors(prev => ({...prev, deadline: ''})); }}
+                  placeholder="Enter deadline" 
+                />
+                {errors.deadline && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.deadline}</div>}
               </div>
 
               <div>
                 <label className="ceo-typography-meta">Attachments</label>
-                <input type="file" multiple className="ceo-form-input" style={{ width: '100%', marginTop: '4px' }} onChange={e => handleFileUpload(e, setNewProject, newProject)} disabled={uploading} />
+                <input 
+                  type="file" 
+                  multiple 
+                  className={`ceo-form-input ${errors.attachments ? 'error' : ''}`} 
+                  style={{ width: '100%', marginTop: '4px' }} 
+                  onChange={e => { handleFileUpload(e, setNewProject, newProject); if (e.target.files.length > 0) setErrors(prev => ({...prev, attachments: ''})); }} 
+                  disabled={uploading} 
+                />
+                {errors.attachments && <div style={{ color: 'var(--ceo-danger)', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> {errors.attachments}</div>}
                 {uploading && <span style={{fontSize: '12px', color: 'var(--ceo-primary)'}}>Uploading...</span>}
                 {newProject.attachments && (
                   <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -574,7 +719,7 @@ export default function Projects({ currentUser }) {
                 )}
               </div>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
-                <button type="button" className="ceo-btn" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                <button type="button" className="ceo-btn" onClick={() => { setShowCreateModal(false); setErrors({}); }}>Cancel</button>
                 <button type="submit" className="ceo-btn ceo-btn-primary" disabled={creating}>
                   <Plus size={14} style={{ marginRight: '4px' }} />{creating ? 'Creating...' : 'Create Project'}
                 </button>

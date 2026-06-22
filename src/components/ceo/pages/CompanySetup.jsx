@@ -30,7 +30,135 @@ const initialHolidays = [];
 // CUSTOM COMPONENTS
 // ==========================================
 
+const CustomSelect = ({ name, options, defaultValue, placeholder, error, onChange, onFocus }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue || '');
+  
+  const selectedOpt = options.find(o => typeof o === 'object' ? o.value === value : o === value);
+  const displayLabel = selectedOpt ? (typeof selectedOpt === 'object' ? selectedOpt.label : selectedOpt) : placeholder;
+
+  return (
+    <div style={{ position: 'relative' }} tabIndex={-1} onBlur={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        setIsOpen(false);
+        if (onFocus) onFocus(value);
+      }
+    }}>
+      <input type="hidden" name={name} value={value} />
+      <div 
+        onClick={() => { setIsOpen(!isOpen); if (onFocus) onFocus(value); }}
+        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: error ? '1.5px solid #dc2626' : '1px solid #CBD5E1', boxShadow: error ? '0 0 0 3px rgba(220,38,38,0.1)' : 'none', fontSize: '14px', background: '#FFF', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        <span style={{ color: value ? '#000' : '#9ca3af' }}>{displayLabel}</span>
+        <ChevronDown size={16} color="#64748b" />
+      </div>
+      {isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: '#FFF', border: '1px solid #CBD5E1', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '150px', overflowY: 'auto' }}>
+          {options.map((opt, i) => {
+            const val = typeof opt === 'object' ? opt.value : opt;
+            const label = typeof opt === 'object' ? opt.label : opt;
+            return (
+              <div 
+                key={i}
+                onClick={() => { setValue(val); setIsOpen(false); if(onChange) onChange(val); }}
+                style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '14px', borderBottom: i < options.length - 1 ? '1px solid #f1f5f9' : 'none', background: value === val ? '#f8fafc' : '#FFF' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.background = value === val ? '#f8fafc' : '#FFF'}
+              >
+                {label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const HolidayCalendar = ({ holidays, calMonth, setCalMonth, calYear, setCalYear, onEdit }) => {
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  const prevMonth = () => {
+    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); }
+    else setCalMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); }
+    else setCalMonth(m => m + 1);
+  };
+
+  const getHolidaysForDay = (day) => {
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return holidays.filter(h => h.date === dateStr);
+  };
+
+  return (
+    <div style={{ padding: '24px', background: '#FFF', borderRadius: '12px', border: '1px solid var(--ceo-border)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--ceo-text-primary)' }}>{monthNames[calMonth]} {calYear}</h3>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="ceo-btn" style={{ padding: '6px', background: '#f1f5f9' }} onClick={prevMonth}><ChevronDown size={16} style={{ transform: 'rotate(90deg)' }} /></button>
+          <button className="ceo-btn" style={{ padding: '6px', background: '#f1f5f9' }} onClick={nextMonth}><ChevronDown size={16} style={{ transform: 'rotate(-90deg)' }} /></button>
+        </div>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', textAlign: 'center', fontWeight: 600, color: 'var(--ceo-text-secondary)', marginBottom: '8px', fontSize: '14px' }}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d}>{d}</div>)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+        {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} style={{ padding: '10px', minHeight: '80px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #e2e8f0' }} />)}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const hols = getHolidaysForDay(day);
+          return (
+            <div key={day} style={{ padding: '8px', minHeight: '80px', background: hols.length ? '#f0fdf4' : '#FFF', borderRadius: '8px', border: hols.length ? '1.5px solid #86efac' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontWeight: 600, fontSize: '14px', alignSelf: 'flex-end', color: hols.length ? 'var(--ceo-success)' : 'var(--ceo-text-secondary)' }}>{day}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
+                {hols.map(h => (
+                  <div key={h.id} onClick={() => onEdit(h)} style={{ cursor: 'pointer', background: h.type === 'Mandatory' ? 'var(--ceo-success)' : '#e2e8f0', color: h.type === 'Mandatory' ? '#FFF' : '#334155', fontSize: '11px', padding: '4px 6px', borderRadius: '4px', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }} title={h.name}>
+                    {h.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const CustomModal = ({ isOpen, title, fields, onSave, onClose }) => {
+  const getErrorMsg = (f) => {
+    if (f.label === 'Department Name') return 'Please enter New Department Name.';
+    if (f.label === 'Designation Name') return 'Please enter New Designation Name.';
+    if (f.label === 'Department') return 'Please select Department from DropDown.';
+    if (f.label === 'Shift Name') return 'Please enter Shift Name.';
+    if (f.label === 'Start Time') return 'Please select Start Time from DropDown.';
+    if (f.label === 'End Time') return 'Please select End Time from DropDown.';
+    if (f.label === 'Working Days') return 'Please enter Working Days (e.g. Monday - Friday).';
+    if (f.label === 'Holiday Name') return 'Please enter Holiday Name.';
+    if (f.label === 'Date') return 'Please select Holiday Date.';
+    if (f.label === 'Type') return 'Please select Holiday Type.';
+    return 'This field is required.';
+  };
+
+  const [errors, setErrors] = useState(() => {
+    const initialErrors = {};
+    if (fields) {
+      fields.forEach(f => {
+        if (f.type === 'select' || f.type === 'date') {
+          const val = f.defaultValue || '';
+          if (!val || !val.toString().trim()) {
+            initialErrors[f.name] = getErrorMsg(f);
+          }
+        }
+      });
+    }
+    return initialErrors;
+  });
   if (!isOpen) return null;
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -39,27 +167,88 @@ const CustomModal = ({ isOpen, title, fields, onSave, onClose }) => {
           <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--ceo-text-primary)' }}>{title}</div>
           <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={20} color="var(--ceo-text-muted)" /></button>
         </div>
-        <form onSubmit={(e) => {
+        <form noValidate onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.target);
           const data = {};
-          fields.forEach(f => data[f.name] = formData.get(f.name));
+          let hasError = false;
+          const newErrors = { ...errors };
+          
+          fields.forEach(f => {
+            const val = formData.get(f.name);
+            data[f.name] = val;
+            if (!val || !val.toString().trim()) {
+              newErrors[f.name] = getErrorMsg(f);
+              hasError = true;
+            } else {
+              newErrors[f.name] = null;
+            }
+          });
+          
+          if (hasError) {
+            setErrors(newErrors);
+            return;
+          }
+          
           onSave(data);
         }}>
           {fields.map(f => (
             <div key={f.name} style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--ceo-text-secondary)' }}>{f.label}</label>
               {f.type === 'select' ? (
-                <select name={f.name} defaultValue={f.defaultValue || ''} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', outline: 'none' }} required>
-                  {f.options.map(opt => {
-                    if (typeof opt === 'object') {
-                      return <option key={opt.value} value={opt.value}>{opt.label}</option>;
-                    }
-                    return <option key={opt} value={opt}>{opt}</option>;
-                  })}
-                </select>
+                <CustomSelect name={f.name} options={f.options} defaultValue={f.defaultValue} placeholder={`Select ${f.label}`} error={errors[f.name]} 
+                onChange={(val) => {
+                  if (!val) {
+                    setErrors(prev => ({ ...prev, [f.name]: getErrorMsg(f) }));
+                  } else {
+                    setErrors(prev => ({ ...prev, [f.name]: null }));
+                  }
+                }} 
+                onFocus={(val) => {
+                  if (!val) {
+                    setErrors(prev => ({ ...prev, [f.name]: getErrorMsg(f) }));
+                  }
+                }} 
+                />
               ) : (
-                <input name={f.name} type={f.type || 'text'} defaultValue={f.defaultValue || ''} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', outline: 'none' }} required />
+                <>
+                  <input 
+                    name={f.name} 
+                    type={f.type || 'text'} 
+                    defaultValue={f.defaultValue || ''} 
+                    onChange={(e) => {
+                      if (!e.target.value.trim()) {
+                        setErrors(prev => ({ ...prev, [f.name]: getErrorMsg(f) }));
+                      } else {
+                        setErrors(prev => ({ ...prev, [f.name]: null }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) {
+                        setErrors(prev => ({ ...prev, [f.name]: getErrorMsg(f) }));
+                      }
+                    }}
+                    onFocus={(e) => {
+                      if (!e.target.value.trim()) {
+                        setErrors(prev => ({ ...prev, [f.name]: getErrorMsg(f) }));
+                      }
+                    }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '10px 12px', 
+                      borderRadius: '8px', 
+                      border: errors[f.name] ? '1.5px solid #dc2626' : '1px solid #CBD5E1', 
+                      boxShadow: errors[f.name] ? '0 0 0 3px rgba(220,38,38,0.1)' : 'none',
+                      fontSize: '14px', 
+                      outline: 'none' 
+                    }} 
+                  />
+                </>
+              )}
+              {errors[f.name] && (
+                <div style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                  <AlertCircle size={14} /> {errors[f.name]}
+                </div>
               )}
             </div>
           ))}
@@ -151,11 +340,16 @@ export default function CompanySetup() {
   const [activeTab, setActiveTab] = useState('profile');
   const { refreshCompanyConfig } = useCompany();
   
-  // Database States
   const [deptTree, setDeptTree] = useState(initialDeptTree);
   const [designations, setDesignations] = useState(initialDesignations);
+  const [desigPage, setDesigPage] = useState(1);
   const [shifts, setShifts] = useState(initialShifts);
   const [holidays, setHolidays] = useState(initialHolidays);
+  
+  // Calendar view states
+  const [holidayView, setHolidayView] = useState('list');
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [profileData, setProfileData] = useState({
     name: 'NSG Technologies Pvt Ltd',
     gst: '27AADCN4521E1Z8',
@@ -173,6 +367,11 @@ export default function CompanySetup() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [gstError, setGstError] = useState('');
+  const [cinError, setCinError] = useState('');
+  const [prefixError, setPrefixError] = useState('');
+  const [addressError, setAddressError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
   const [modalConfig, setModalConfig] = useState(null);
   const fileInputRef = useRef(null);
@@ -293,6 +492,31 @@ export default function CompanySetup() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    let hasError = false;
+
+    if (!profileData.name.trim()) {
+      setNameError('Please enter a Legal Company Name.');
+      hasError = true;
+    }
+    if (!profileData.gst.trim()) {
+      setGstError('Please enter GST Number.');
+      hasError = true;
+    }
+    if (!profileData.cin.trim()) {
+      setCinError('Please enter Corporate Identification Number (CIN).');
+      hasError = true;
+    }
+    if (!profileData.emp_id_prefix.trim()) {
+      setPrefixError('Please enter Prefix for Employee ID generation.');
+      hasError = true;
+    }
+    if (!profileData.address.trim()) {
+      setAddressError('Please enter Company Address.');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
     setIsSaving(true);
 
     const p1 = saveSetting('company_name', profileData.name);
@@ -411,8 +635,8 @@ export default function CompanySetup() {
     setModalConfig({
       title: item ? 'Edit Designation' : 'Create Designation',
       fields: [
-        { name: 'name', label: 'Designation Name', defaultValue: item?.name },
-        { name: 'department_id', label: 'Department', type: 'select', options: flatDepts.map(d => ({ value: `${d.id}:${d.name}`, label: d.name })), defaultValue: item ? `${item.department_id}:${item.dept}` : undefined }
+        { name: 'department_id', label: 'Department', type: 'select', options: flatDepts.map(d => ({ value: `${d.id}:${d.name}`, label: d.name })), defaultValue: item ? `${item.department_id}:${item.dept}` : undefined },
+        { name: 'name', label: 'Designation Name', defaultValue: item?.name }
       ],
       onSave: async (data) => {
         setModalConfig(null);
@@ -447,13 +671,23 @@ export default function CompanySetup() {
   };
 
   const handleShiftAddEdit = (item = null) => {
+    const timeOptions = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const hr12 = h % 12 || 12;
+        const hrStr = hr12.toString().padStart(2, '0');
+        const minStr = m.toString().padStart(2, '0');
+        timeOptions.push(`${hrStr}:${minStr} ${ampm}`);
+      }
+    }
     setModalConfig({
       title: item ? 'Edit Shift' : 'Add Shift',
       fields: [
         { name: 'name', label: 'Shift Name', defaultValue: item?.name },
-        { name: 'start_time', label: 'Start Time (e.g. 09:00 AM)', defaultValue: item?.start_time },
-        { name: 'end_time', label: 'End Time (e.g. 06:00 PM)', defaultValue: item?.end_time },
-        { name: 'days', label: 'Working Days', defaultValue: item?.days || 'Mon-Fri' }
+        { name: 'start_time', label: 'Start Time', type: 'select', options: timeOptions, defaultValue: item?.start_time },
+        { name: 'end_time', label: 'End Time', type: 'select', options: timeOptions, defaultValue: item?.end_time },
+        { name: 'days', label: 'Working Days', defaultValue: item?.days }
       ],
       onSave: async (data) => {
         setModalConfig(null);
@@ -490,7 +724,7 @@ export default function CompanySetup() {
       title: item ? 'Edit Holiday' : 'Add Holiday',
       fields: [
         { name: 'name', label: 'Holiday Name', defaultValue: item?.name },
-        { name: 'date', label: 'Date (e.g. Dec 25, 2026)', defaultValue: item?.date },
+        { name: 'date', label: 'Date', type: 'date', defaultValue: item?.date },
         { name: 'type', label: 'Type', type: 'select', options: ['Mandatory', 'Optional'], defaultValue: item?.type }
       ],
       onSave: async (data) => {
@@ -546,7 +780,11 @@ export default function CompanySetup() {
           boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 100, fontWeight: 500,
           animation: 'fadeInDown 0.3s ease forwards'
         }}>
-          <CheckCircle size={18} color="var(--ceo-success)" />
+          {toastMsg.toLowerCase().includes('fail') || toastMsg.toLowerCase().includes('error') ? (
+            <AlertCircle size={18} color="var(--ceo-danger)" />
+          ) : (
+            <CheckCircle size={18} color="var(--ceo-success)" />
+          )}
           {toastMsg}
         </div>
       )}
@@ -638,32 +876,148 @@ export default function CompanySetup() {
                       <div className="ceo-typography-meta" style={{ marginBottom: '16px', fontSize: '13px' }}>{logoFile ? `Selected: ${logoFile}` : 'Recommended 400x400px PNG or SVG format. Max 2MB.'}</div>
                       <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleLogoUpload} accept="image/*" />
                       <button type="button" className="ceo-btn" style={{ background: '#FFF' }} onClick={() => fileInputRef.current?.click()}><Upload size={16} /> Select File</button>
+                      {isEditingProfile && (
+                        <div style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
+                          <AlertCircle size={14} /> Implement The Company Logo Globally Entire Application.
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="ceo-form-group" style={{ gridColumn: '1 / -1' }}>
                     <label>Company Name (Legal)</label>
-                    <input className="ceo-form-input" required disabled={!isEditingProfile} value={profileData.name} onChange={(e) => setProfileData({ ...profileData, name: e.target.value })} />
+                    <input 
+                      className="ceo-form-input" 
+                      required 
+                      disabled={!isEditingProfile} 
+                      value={profileData.name} 
+                      onChange={(e) => {
+                        setProfileData({ ...profileData, name: e.target.value });
+                        if (!e.target.value.trim()) {
+                          setNameError('Please enter a Legal Company Name.');
+                        } else {
+                          setNameError('');
+                        }
+                      }} 
+                      style={nameError ? { 
+                        borderColor: '#dc2626',
+                        boxShadow: '0 0 0 3px rgba(220,38,38,0.1)'
+                      } : {}}
+                    />
+                    {nameError && (
+                      <span style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                        <AlertCircle size={14} /> {nameError}
+                      </span>
+                    )}
                   </div>
 
                   <div className="ceo-form-group">
                     <label>GST Number</label>
-                    <input className="ceo-form-input" required disabled={!isEditingProfile} value={profileData.gst} onChange={(e) => setProfileData({ ...profileData, gst: e.target.value })} />
+                    <input 
+                      className="ceo-form-input" 
+                      required 
+                      disabled={!isEditingProfile} 
+                      value={profileData.gst} 
+                      onChange={(e) => {
+                        setProfileData({ ...profileData, gst: e.target.value });
+                        if (!e.target.value.trim()) {
+                          setGstError('Please enter GST Number.');
+                        } else {
+                          setGstError('');
+                        }
+                      }} 
+                      style={gstError ? { 
+                        borderColor: '#dc2626',
+                        boxShadow: '0 0 0 3px rgba(220,38,38,0.1)'
+                      } : {}}
+                    />
+                    {gstError && (
+                      <span style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                        <AlertCircle size={14} /> {gstError}
+                      </span>
+                    )}
                   </div>
 
                   <div className="ceo-form-group">
                     <label>CIN</label>
-                    <input className="ceo-form-input" required disabled={!isEditingProfile} value={profileData.cin} onChange={(e) => setProfileData({ ...profileData, cin: e.target.value })} />
+                    <input 
+                      className="ceo-form-input" 
+                      required 
+                      disabled={!isEditingProfile} 
+                      value={profileData.cin} 
+                      onChange={(e) => {
+                        setProfileData({ ...profileData, cin: e.target.value });
+                        if (!e.target.value.trim()) {
+                          setCinError('Please enter Corporate Identification Number (CIN).');
+                        } else {
+                          setCinError('');
+                        }
+                      }} 
+                      style={cinError ? { 
+                        borderColor: '#dc2626',
+                        boxShadow: '0 0 0 3px rgba(220,38,38,0.1)'
+                      } : {}}
+                    />
+                    {cinError && (
+                      <span style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                        <AlertCircle size={14} /> {cinError}
+                      </span>
+                    )}
                   </div>
                   
                   <div className="ceo-form-group">
                     <label>Employee ID Prefix</label>
-                    <input className="ceo-form-input" required disabled={!isEditingProfile} value={profileData.emp_id_prefix} onChange={(e) => setProfileData({...profileData, emp_id_prefix: e.target.value})} />
+                    <input 
+                      className="ceo-form-input" 
+                      required 
+                      disabled={!isEditingProfile} 
+                      value={profileData.emp_id_prefix} 
+                      onChange={(e) => {
+                        setProfileData({...profileData, emp_id_prefix: e.target.value});
+                        if (!e.target.value.trim()) {
+                          setPrefixError('Please enter Prefix for Employee ID generation.');
+                        } else {
+                          setPrefixError('');
+                        }
+                      }} 
+                      style={prefixError ? { 
+                        borderColor: '#dc2626',
+                        boxShadow: '0 0 0 3px rgba(220,38,38,0.1)'
+                      } : {}}
+                    />
+                    {prefixError && (
+                      <span style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                        <AlertCircle size={14} /> {prefixError}
+                      </span>
+                    )}
                   </div>
                   
                   <div className="ceo-form-group" style={{ gridColumn: '1 / -1' }}>
                     <label>Registered Address</label>
-                    <textarea className="ceo-form-input" required disabled={!isEditingProfile} rows={3} value={profileData.address || ''} onChange={(e) => setProfileData({ ...profileData, address: e.target.value })} />
+                    <textarea 
+                      className="ceo-form-input" 
+                      required 
+                      disabled={!isEditingProfile} 
+                      rows={3} 
+                      value={profileData.address || ''} 
+                      onChange={(e) => {
+                        setProfileData({ ...profileData, address: e.target.value });
+                        if (!e.target.value.trim()) {
+                          setAddressError('Please enter Company Address.');
+                        } else {
+                          setAddressError('');
+                        }
+                      }} 
+                      style={addressError ? { 
+                        borderColor: '#dc2626',
+                        boxShadow: '0 0 0 3px rgba(220,38,38,0.1)'
+                      } : {}}
+                    />
+                    {addressError && (
+                      <span style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                        <AlertCircle size={14} /> {addressError}
+                      </span>
+                    )}
                   </div>
 
                   <div className="ceo-form-group" style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -749,7 +1103,7 @@ export default function CompanySetup() {
                     </tr>
                   </thead>
                   <tbody>
-                    {designations.map(des => (
+                    {designations.slice((desigPage - 1) * 8, desigPage * 8).map(des => (
                       <tr key={des.id}>
                         <td style={{ fontWeight: 600 }}>{des.name}</td>
                         <td>{des.dept}</td>
@@ -763,6 +1117,29 @@ export default function CompanySetup() {
                     {designations.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--ceo-text-muted)' }}>No designations available.</td></tr>}
                   </tbody>
                 </table>
+                {designations.length > 8 && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', padding: '16px', borderTop: '1px solid var(--ceo-border)' }}>
+                    <button 
+                      className="ceo-btn" 
+                      onClick={() => setDesigPage(p => Math.max(1, p - 1))} 
+                      disabled={desigPage === 1}
+                      style={{ background: '#FFF' }}
+                    >
+                      Previous
+                    </button>
+                    <span style={{ fontSize: '14px', color: 'var(--ceo-text-secondary)', padding: '0 8px' }}>
+                      Page {desigPage} of {Math.ceil(designations.length / 8)}
+                    </span>
+                    <button 
+                      className="ceo-btn" 
+                      onClick={() => setDesigPage(p => Math.min(Math.ceil(designations.length / 8), p + 1))} 
+                      disabled={desigPage === Math.ceil(designations.length / 8)}
+                      style={{ background: '#FFF' }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -810,37 +1187,54 @@ export default function CompanySetup() {
             <>
               <div className="ceo-command-header">
                 <div className="ceo-typography-card-title"><CalendarDays size={20} color="var(--ceo-primary)" /> Company Holidays</div>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
+                    <button className={`ceo-btn ${holidayView === 'list' ? 'ceo-btn-primary' : ''}`} style={{ padding: '6px 12px', border: 'none', background: holidayView === 'list' ? 'var(--ceo-primary)' : 'transparent', color: holidayView === 'list' ? '#fff' : 'var(--ceo-text-secondary)', borderRadius: '6px' }} onClick={() => setHolidayView('list')}>List</button>
+                    <button className={`ceo-btn ${holidayView === 'calendar' ? 'ceo-btn-primary' : ''}`} style={{ padding: '6px 12px', border: 'none', background: holidayView === 'calendar' ? 'var(--ceo-primary)' : 'transparent', color: holidayView === 'calendar' ? '#fff' : 'var(--ceo-text-secondary)', borderRadius: '6px' }} onClick={() => setHolidayView('calendar')}>Calendar</button>
+                  </div>
                   <button className="ceo-btn ceo-btn-primary" onClick={() => handleHolidayAddEdit()}><Plus size={16} /> Add Holiday</button>
                 </div>
               </div>
               <div className="ceo-command-content" style={{ padding: 0 }}>
-                <table className="ceo-erp-table">
-                  <thead>
-                    <tr>
-                      <th>Holiday Name</th>
-                      <th>Date</th>
-                      <th>Type</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {holidays.map(hol => (
-                      <tr key={hol.id}>
-                        <td style={{ fontWeight: 600 }}>{hol.name}</td>
-                        <td>{hol.date}</td>
-                        <td>
-                          <span className={`ceo-badge ${hol.type === 'Mandatory' ? 'success' : 'neutral'}`}>{hol.type}</span>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button className="ceo-btn" style={{ padding: '6px', marginRight: '8px' }} onClick={() => handleHolidayAddEdit(hol)}><Edit2 size={14} /></button>
-                          <button className="ceo-btn" style={{ padding: '6px' }} onClick={() => handleHolidayDelete(hol.id)}><Trash2 size={14} color="var(--ceo-danger)" /></button>
-                        </td>
+                {holidayView === 'list' ? (
+                  <table className="ceo-erp-table">
+                    <thead>
+                      <tr>
+                        <th>Holiday Name</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
-                    ))}
-                    {holidays.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--ceo-text-muted)' }}>No holidays available.</td></tr>}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {holidays.map(hol => (
+                        <tr key={hol.id}>
+                          <td style={{ fontWeight: 600 }}>{hol.name}</td>
+                          <td>{hol.date}</td>
+                          <td>
+                            <span className={`ceo-badge ${hol.type === 'Mandatory' ? 'success' : 'neutral'}`}>{hol.type}</span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button className="ceo-btn" style={{ padding: '6px', marginRight: '8px' }} onClick={() => handleHolidayAddEdit(hol)}><Edit2 size={14} /></button>
+                            <button className="ceo-btn" style={{ padding: '6px' }} onClick={() => handleHolidayDelete(hol.id)}><Trash2 size={14} color="var(--ceo-danger)" /></button>
+                          </td>
+                        </tr>
+                      ))}
+                      {holidays.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--ceo-text-muted)' }}>No holidays available.</td></tr>}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ padding: '24px' }}>
+                    <HolidayCalendar 
+                      holidays={holidays}
+                      calMonth={calMonth}
+                      setCalMonth={setCalMonth}
+                      calYear={calYear}
+                      setCalYear={setCalYear}
+                      onEdit={handleHolidayAddEdit}
+                    />
+                  </div>
+                )}
               </div>
             </>
           )}

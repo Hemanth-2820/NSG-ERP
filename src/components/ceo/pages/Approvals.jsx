@@ -172,9 +172,11 @@ const ApprovalRow = ({ item, isSelected, isChecked, onSelect, onToggleCheck, act
         transition: 'background 0.2s'
       }}
     >
-      <td onClick={(e) => e.stopPropagation()} style={{ padding: '16px 24px', width: '60px' }}>
-        <input type="checkbox" checked={isChecked} onChange={() => onToggleCheck(item.id)} style={{ width: '16px', height: '16px', accentColor: THEME.primary }} />
-      </td>
+      {activeTab !== 'History' && (
+        <td onClick={(e) => e.stopPropagation()} style={{ padding: '16px 24px', width: '60px' }}>
+          <input type="checkbox" checked={isChecked} onChange={() => onToggleCheck(item.id)} style={{ width: '16px', height: '16px', accentColor: THEME.primary }} />
+        </td>
+      )}
       {activeTab === 'Claim Expenses' ? (
         <>
           <td style={{ padding: '16px', color: THEME.textMuted, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>{item.submittedAt}</td>
@@ -255,7 +257,7 @@ const ApprovalTable = ({ data, activeTab, selectedIds, onToggleCheck, onToggleAl
     // Dropdown Filters Check
     if (filterState.type !== 'All' && a.type !== filterState.type) return false;
     if (filterState.submittedBy !== 'All' && a.requestedBy !== filterState.submittedBy) return false;
-    if (filterState.id && !a.id.toLowerCase().includes(filterState.id.toLowerCase())) return false;
+    if (filterState.id && !String(a.id).toLowerCase().includes(filterState.id.toLowerCase())) return false;
     
     return true;
   });
@@ -263,9 +265,9 @@ const ApprovalTable = ({ data, activeTab, selectedIds, onToggleCheck, onToggleAl
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     filtered = filtered.filter(a => 
-      a.id.toLowerCase().includes(q) || 
-      a.type.toLowerCase().includes(q) || 
-      a.requestedBy.toLowerCase().includes(q)
+      String(a.id).toLowerCase().includes(q) || 
+      String(a.type).toLowerCase().includes(q) || 
+      String(a.requestedBy).toLowerCase().includes(q)
     );
   }
 
@@ -357,7 +359,7 @@ const ApprovalTable = ({ data, activeTab, selectedIds, onToggleCheck, onToggleAl
               )}
             </div>
           )}
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && activeTab !== 'History' && (
             <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: THEME.primary, border: 'none', color: '#FFF', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
               Bulk Approve ({selectedIds.size})
             </button>
@@ -370,9 +372,11 @@ const ApprovalTable = ({ data, activeTab, selectedIds, onToggleCheck, onToggleAl
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
           <thead>
               <tr style={{ background: THEME.bgBase, borderBottom: `1px solid ${THEME.border}` }}>
-                <th style={{ padding: '16px 24px', width: '60px' }}>
-                  <input type="checkbox" checked={isAllChecked} onChange={() => onToggleAll(filtered)} style={{ width: '16px', height: '16px', accentColor: THEME.primary }} />
-                </th>
+                {activeTab !== 'History' && (
+                  <th style={{ padding: '16px 24px', width: '60px' }}>
+                    <input type="checkbox" checked={isAllChecked} onChange={() => onToggleAll(filtered)} style={{ width: '16px', height: '16px', accentColor: THEME.primary }} />
+                  </th>
+                )}
                 {activeTab === 'Claim Expenses' ? (
                   <>
                     <th style={{ padding: '16px', color: THEME.textMuted, fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
