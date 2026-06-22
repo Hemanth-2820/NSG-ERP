@@ -1,11 +1,90 @@
 // Crash fix applied
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Plus, Search, Download, Lock, RefreshCw, Trash2, Edit3, Filter, Shield, Users, User, Eye, EyeOff } from 'lucide-react';
+import { CheckCircle, Plus, Search, Download, Lock, RefreshCw, Trash2, Edit3, Filter, Shield, Users, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { notify } from '../../utils/notify';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import styles from './employeeRegistry.module.css';
 import { useCompany } from '../../../common/CompanyContext';
+
+const CustomSelect = ({ value, onChange, disabled, style, optionsContent, onFocus, onBlur }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const parseOptions = (nodes) => {
+    let opts = [];
+    React.Children.forEach(nodes, child => {
+      if (!child) return;
+      if (child.type === 'option') {
+        opts.push({ value: child.props.value, label: child.props.children });
+      } else if (child.props && child.props.children) {
+        opts = opts.concat(parseOptions(child.props.children));
+      }
+    });
+    return opts;
+  };
+  
+  const opts = parseOptions(optionsContent);
+  const selected = opts.find(o => String(o.value) === String(value));
+
+  return (
+    <div 
+      ref={containerRef} 
+      style={{ ...style, position: 'relative', userSelect: 'none', padding: 0, outline: 'none' }}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      tabIndex={0}
+    >
+      <div 
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        style={{ 
+          width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 12px', boxSizing: 'border-box'
+        }}
+      >
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {selected ? selected.label : 'Select...'}
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      
+      {isOpen && !disabled && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
+          backgroundColor: 'var(--bg-secondary)', color: 'inherit', borderRadius: '4px', marginTop: '4px',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: '120px', overflowY: 'auto'
+        }}>
+          {opts.map((o, i) => (
+            <div 
+              key={i}
+              onClick={(e) => { e.stopPropagation(); onChange({ target: { value: o.value } }); setIsOpen(false); }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = String(o.value) === String(value) ? 'var(--bg-tertiary)' : 'transparent'}
+              style={{
+                padding: '8px 12px', cursor: 'pointer', fontSize: '14px',
+                backgroundColor: String(o.value) === String(value) ? 'var(--bg-tertiary)' : 'transparent',
+                fontWeight: String(o.value) === String(value) ? 'bold' : 'normal'
+              }}
+            >
+              {o.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const { companyName, companyLogo, empIdPrefix } = useCompany();
@@ -46,10 +125,11 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [newShift, setNewShift] = useState('');
   const [newPhotoFile, setNewPhotoFile] = useState(null);
   const [newPhoto, setNewPhoto] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80');
-  const [newJoinDate, setNewJoinDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newStatus, setNewStatus] = useState('probation');
+  const [newJoinDate, setNewJoinDate] = useState('');
+  const [newStatus, setNewStatus] = useState('');
+  const [wizardErrors, setWizardErrors] = useState({});
   const [newManagerId, setNewManagerId] = useState('');
-  const [newSystemRole, setNewSystemRole] = useState('employee');
+  const [newSystemRole, setNewSystemRole] = useState('');
   const [newPfNumber, setNewPfNumber] = useState('');
   const [newUan, setNewUan] = useState('');
   const [newEsiNumber, setNewEsiNumber] = useState('');
@@ -88,6 +168,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [editAccountNumber, setEditAccountNumber] = useState('');
   const [editIfscCode, setEditIfscCode] = useState('');
   const [editBankBranch, setEditBankBranch] = useState('');
+  const [editErrors, setEditErrors] = useState({});
 
   // Reset Password Modal States
   const [showResetModal, setShowResetModal] = useState(false);
@@ -355,6 +436,64 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    
+    // Manually trigger validation errors for required fields
+    const newErrors = {};
+    let hasErrors = false;
+    
+    const cleanName = String(newName || '').trim();
+    if (!cleanName) { newErrors['EMPLOYEEFULLNAME'] = 'Please enter EMPLOYEE FULL NAME.'; hasErrors = true; }
+    else if (!/^[A-Za-z\s.,'-]+$/.test(cleanName)) { newErrors['EMPLOYEEFULLNAME'] = 'Must contain only letters and standard characters.'; hasErrors = true; }
+    if (!newEmpId) { newErrors['EMPLOYEEID'] = 'Please enter EMPLOYEE ID.'; hasErrors = true; }
+    if (!newEmail) { newErrors['EMAILADDRESS'] = 'Please enter EMAIL ADDRESS.'; hasErrors = true; }
+    if (!newDept) { newErrors['DEPARTMENT'] = 'Please select DEPARTMENT.'; hasErrors = true; }
+    if (!newRole) { newErrors['DESIGNATIONTITLE'] = 'Please select DESIGNATION.'; hasErrors = true; }
+    if (!newSystemRole) { newErrors['SYSTEMROLE'] = 'Please select SYSTEM ROLE.'; hasErrors = true; }
+    if (!newJoinDate) { newErrors['JOININGDATE'] = 'Please enter JOINING DATE.'; hasErrors = true; }
+    if (newSystemRole === 'employee' && !newManagerId) { newErrors['REPORTSTOTEAMLEAD'] = 'Please select REPORTS TO.'; hasErrors = true; }
+    if (!newStatus) { newErrors['EMPLOYMENTSTATUS'] = 'Please select EMPLOYMENT STATUS.'; hasErrors = true; }
+    if (!newShift) { newErrors['SHIFTTIMING'] = 'Please select SHIFT TIMING.'; hasErrors = true; }
+    
+    const cleanPf = String(newPfNumber || '').trim();
+    if (!cleanPf) { newErrors['PFNUMBER'] = 'Please enter PF NUMBER.'; hasErrors = true; }
+    
+    const cleanUan = String(newUan || '').trim();
+    if (!cleanUan) { newErrors['UAN'] = 'Please enter UAN.'; hasErrors = true; }
+    else if (!/^\d{12}$/.test(cleanUan)) { newErrors['UAN'] = 'Must be exactly 12 digits.'; hasErrors = true; }
+    
+    const cleanEsi = String(newEsiNumber || '').trim();
+    if (!cleanEsi) { newErrors['ESINUMBER'] = 'Please enter ESI NUMBER.'; hasErrors = true; }
+    else if (!/^\d{5,20}$/.test(cleanEsi)) { newErrors['ESINUMBER'] = 'Must be 5 to 20 digits.'; hasErrors = true; }
+    
+    const cleanPan = String(newPanNumber || '').trim();
+    if (!cleanPan) { newErrors['PAN'] = 'Please enter PAN.'; hasErrors = true; }
+    else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(cleanPan)) { newErrors['PAN'] = 'Must be a valid 10-character PAN.'; hasErrors = true; }
+    
+    const cleanLoc = String(newLocation || '').trim();
+    if (!cleanLoc) { newErrors['OFFICELOCATION'] = 'Please enter OFFICE LOCATION.'; hasErrors = true; }
+    else if (!/^[A-Za-z0-9\s.,&()'-]+$/.test(cleanLoc)) { newErrors['OFFICELOCATION'] = 'Must be a valid string.'; hasErrors = true; }
+    
+    const cleanAccount = String(newAccountNumber || '').trim();
+    if (!cleanAccount) { newErrors['BANKACCOUNTNUMBER'] = 'Please enter BANK ACCOUNT NUMBER.'; hasErrors = true; }
+    else if (!/^\d{8,17}$/.test(cleanAccount)) { newErrors['BANKACCOUNTNUMBER'] = 'Must be 8 to 17 digits.'; hasErrors = true; }
+    
+    const cleanIfsc = String(newIfscCode || '').trim();
+    if (!cleanIfsc) { newErrors['IFSCCODE'] = 'Please enter IFSC CODE.'; hasErrors = true; }
+    else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(cleanIfsc)) { newErrors['IFSCCODE'] = 'Must be a valid 11-character IFSC Code.'; hasErrors = true; }
+    
+    const cleanBankName = String(newBankName || '').trim();
+    if (!cleanBankName) { newErrors['BANKNAME'] = 'Please enter BANK NAME.'; hasErrors = true; }
+    else if (!/^[A-Za-z\s.,'-]+$/.test(cleanBankName)) { newErrors['BANKNAME'] = 'Must contain only letters and standard characters.'; hasErrors = true; }
+
+    const cleanBankBranch = String(newBankBranch || '').trim();
+    if (!cleanBankBranch) { newErrors['BANKBRANCHNAME'] = 'Please enter BANK BRANCH NAME.'; hasErrors = true; }
+    else if (!/^[A-Za-z\s.,'-]+$/.test(cleanBankBranch)) { newErrors['BANKBRANCHNAME'] = 'Must contain only letters and standard characters.'; hasErrors = true; }
+    
+    if (hasErrors) {
+      setWizardErrors(newErrors);
+      return;
+    }
+
     const token = localStorage.getItem('nsg_jwt_token');
     try {
       let finalPhotoUrl = newPhoto;
@@ -408,7 +547,13 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Failed to add employee on the server.');
+        let errMsg = errData.detail || 'Failed to add employee on the server.';
+        if (Array.isArray(errData.detail)) {
+          errMsg = errData.detail.map(e => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join(', ');
+        } else if (typeof errMsg === 'object') {
+          errMsg = JSON.stringify(errMsg);
+        }
+        throw new Error(errMsg);
       }
 
       const result = await response.json();
@@ -542,6 +687,62 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   // ─── Edit Employee (PUT) ────────────────────────────────────────────────────
   const handleEditEmployee = async (e) => {
     e.preventDefault();
+
+    const newErrors = {};
+    let hasErrors = false;
+    
+    const cleanEditName = String(editName || '').trim();
+    if (!cleanEditName) { newErrors['EMPLOYEEFULLNAME'] = 'Please enter EMPLOYEE FULL NAME.'; hasErrors = true; }
+    else if (!/^[A-Za-z\s.,'-]+$/.test(cleanEditName)) { newErrors['EMPLOYEEFULLNAME'] = 'Must contain only letters and standard characters.'; hasErrors = true; }
+    if (!editEmpId) { newErrors['EMPLOYEEID'] = 'Please enter EMPLOYEE ID.'; hasErrors = true; }
+    if (!editEmail) { newErrors['EMAILADDRESS'] = 'Please enter EMAIL ADDRESS.'; hasErrors = true; }
+    if (!editDept) { newErrors['DEPARTMENT'] = 'Please select DEPARTMENT.'; hasErrors = true; }
+    if (!editRole) { newErrors['DESIGNATIONTITLE'] = 'Please select DESIGNATION / TITLE.'; hasErrors = true; }
+    if (!editPhone) { newErrors['PHONENUMBER'] = 'Please enter PHONE NUMBER.'; hasErrors = true; }
+    if (!editSystemRole) { newErrors['SYSTEMROLE'] = 'Please select SYSTEM ROLE.'; hasErrors = true; }
+    if (editSystemRole === 'employee' && !editManager) { newErrors['REPORTSTOTEAMLEAD'] = 'Please select REPORTS TO.'; hasErrors = true; }
+    
+    const cleanPf = String(editPfNumber || '').trim();
+    if (!cleanPf) { newErrors['PFNUMBER'] = 'Please enter PF NUMBER.'; hasErrors = true; }
+    
+    const cleanUan = String(editUan || '').trim();
+    if (!cleanUan) { newErrors['UAN'] = 'Please enter UAN.'; hasErrors = true; }
+    else if (!/^\d{12}$/.test(cleanUan)) { newErrors['UAN'] = 'Must be exactly 12 digits.'; hasErrors = true; }
+    
+    const cleanEsi = String(editEsiNumber || '').trim();
+    if (!cleanEsi) { newErrors['ESINUMBER'] = 'Please enter ESI NUMBER.'; hasErrors = true; }
+    else if (!/^\d{5,20}$/.test(cleanEsi)) { newErrors['ESINUMBER'] = 'Must be 5 to 20 digits.'; hasErrors = true; }
+    
+    const cleanPan = String(editPanNumber || '').trim();
+    if (!cleanPan) { newErrors['PAN'] = 'Please enter PAN.'; hasErrors = true; }
+    else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(cleanPan)) { newErrors['PAN'] = 'Must be a valid 10-character PAN.'; hasErrors = true; }
+    
+    const cleanLoc = String(editLocation || '').trim();
+    if (!cleanLoc) { newErrors['OFFICELOCATION'] = 'Please enter OFFICE LOCATION.'; hasErrors = true; }
+    else if (!/^[A-Za-z0-9\s.,&()'-]+$/.test(cleanLoc)) { newErrors['OFFICELOCATION'] = 'Must be a valid string.'; hasErrors = true; }
+    
+    const cleanAccount = String(editAccountNumber || '').trim();
+    if (!cleanAccount) { newErrors['BANKACCOUNTNUMBER'] = 'Please enter BANK ACCOUNT NUMBER.'; hasErrors = true; }
+    else if (!/^\d{8,17}$/.test(cleanAccount)) { newErrors['BANKACCOUNTNUMBER'] = 'Must be 8 to 17 digits.'; hasErrors = true; }
+    
+    const cleanIfsc = String(editIfscCode || '').trim();
+    if (!cleanIfsc) { newErrors['IFSCCODE'] = 'Please enter IFSC CODE.'; hasErrors = true; }
+    else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(cleanIfsc)) { newErrors['IFSCCODE'] = 'Must be a valid 11-character IFSC Code.'; hasErrors = true; }
+    
+    const cleanBankName = String(editBankName || '').trim();
+    if (!cleanBankName) { newErrors['BANKNAME'] = 'Please enter BANK NAME.'; hasErrors = true; }
+    else if (!/^[A-Za-z\s.,'-]+$/.test(cleanBankName)) { newErrors['BANKNAME'] = 'Must contain only letters and standard characters.'; hasErrors = true; }
+
+    const cleanBankBranch = String(editBankBranch || '').trim();
+    if (!cleanBankBranch) { newErrors['BANKBRANCHNAME'] = 'Please enter BANK BRANCH NAME.'; hasErrors = true; }
+    else if (!/^[A-Za-z\s.,'-]+$/.test(cleanBankBranch)) { newErrors['BANKBRANCHNAME'] = 'Must contain only letters and standard characters.'; hasErrors = true; }
+    
+    if (hasErrors) {
+      setEditErrors(newErrors);
+      notify('Please fix the errors in the form before submitting.', 'error');
+      return;
+    }
+
     const token = localStorage.getItem('nsg_jwt_token');
     try {
       let finalPhotoUrl = editPhoto;
@@ -594,7 +795,13 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Failed to update employee.');
+        let errMsg = errData.detail || 'Failed to update employee on the server.';
+        if (Array.isArray(errData.detail)) {
+          errMsg = errData.detail.map(e => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join(', ');
+        } else if (typeof errMsg === 'object') {
+          errMsg = JSON.stringify(errMsg);
+        }
+        throw new Error(errMsg);
       }
       setShowEditModal(false);
       setEditEmp(null);
@@ -1135,137 +1342,162 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
       {/* Popups Adding */}
       {showAddWizard && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) setShowAddWizard(false); }}>
-          <form onSubmit={handleAddEmployee} className="card" style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '32px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+          <form onSubmit={handleAddEmployee} noValidate className="card" style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '32px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
             <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>🧑‍💼 Add New Employee Wizard</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE FULL NAME *</label>
-                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} required placeholder="e.g. Jane Doe" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE ID</label>
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ padding: '10px 12px', backgroundColor: 'var(--bg-tertiary)', borderRight: '1px solid var(--border-color)', color: 'var(--text-muted)', fontWeight: 'bold' }}>
-                    {empIdPrefix}-
+            {(() => {
+              const renderField = (label, value, setValue, type = 'text', required = false, options = null, disabled = false, placeholder = '', extraProps = {}, formatRegex = null, formatError = '') => {
+                const fieldKey = label.replace(/[^a-zA-Z]/g, '');
+                const actionWord = options ? 'select' : 'enter';
+                const isSelectOrDate = options !== null || type === 'date';
+                const hasError = (isSelectOrDate && required && !value) 
+                  ? `Please ${actionWord} ${label.replace(' *', '').replace(' / TITLE', '').replace(' (TEAM LEAD)', '')}.` 
+                  : wizardErrors[fieldKey];
+                
+                const validate = (val) => {
+                  if (required && !val) {
+                    setWizardErrors(p => ({ ...p, [fieldKey]: `Please ${actionWord} ${label.replace(' *', '').replace(' / TITLE', '').replace(' (TEAM LEAD)', '')}.` }));
+                  } else if (val && formatRegex && !formatRegex.test(val)) {
+                    setWizardErrors(p => ({ ...p, [fieldKey]: formatError }));
+                  } else {
+                    setWizardErrors(p => ({ ...p, [fieldKey]: '' }));
+                  }
+                };
+
+                return (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>{label}</label>
+                    {options ? (
+                      <CustomSelect 
+                        value={value} 
+                        onChange={(e) => { setValue(e.target.value); if (e.target.value) setWizardErrors(p => ({ ...p, [fieldKey]: '' })); }}
+                        onFocus={(e) => validate(e.target.value)}
+                        onBlur={(e) => validate(e.target.value)}
+                        disabled={disabled}
+                        required={required}
+                        style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: hasError ? '1px solid #ef4444' : '1px solid var(--border-color)', color: 'inherit', borderRadius: '8px', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, ...extraProps.style }}
+                        optionsContent={options}
+                        {...extraProps}
+                      />
+                    ) : (
+                      <input 
+                        type={type} 
+                        value={value} 
+                        onChange={(e) => { 
+                          let val = e.target.value;
+                          if (extraProps.numericOnly) {
+                            val = val.replace(/\D/g, '');
+                            if (extraProps.maxLength) val = val.slice(0, extraProps.maxLength);
+                            e.target.value = val;
+                          }
+                          if (extraProps.uppercase) {
+                            val = val.toUpperCase();
+                            e.target.value = val;
+                          }
+                          setValue(val); 
+                          if (val) setWizardErrors(p => ({ ...p, [fieldKey]: '' })); 
+                        }}
+                        onFocus={(e) => validate(e.target.value)}
+                        onBlur={(e) => validate(e.target.value)}
+                        disabled={disabled}
+                        required={required}
+                        placeholder={placeholder}
+                        spellCheck="false"
+                        style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: hasError ? '1px solid #ef4444' : '1px solid var(--border-color)', color: 'inherit', padding: '10px 12px', borderRadius: '8px', cursor: disabled ? 'not-allowed' : 'text', opacity: disabled ? 0.6 : 1, ...extraProps.style }}
+                        {...extraProps}
+                      />
+                    )}
+                    {hasError && <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> {hasError}</div>}
                   </div>
-                  <input type="text" value={newEmpId} onChange={(e) => setNewEmpId(e.target.value)} placeholder="Auto-gen if blank" style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: '#fff', padding: '10px 12px', outline: 'none' }} />
+                );
+              };
+
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                  {renderField('EMPLOYEE FULL NAME *', newName, setNewName, 'text', true, null, false, 'e.g. Employee Name', {}, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE ID *</label>
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-primary)', border: wizardErrors['EMPLOYEEID'] ? '1px solid #ef4444' : '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                      <div style={{ padding: '10px 12px', backgroundColor: 'var(--bg-tertiary)', borderRight: '1px solid var(--border-color)', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                        {empIdPrefix}-
+                      </div>
+                      <input 
+                        type="text" 
+                        value={newEmpId} 
+                        onChange={(e) => { setNewEmpId(e.target.value); if (e.target.value) setWizardErrors(p => ({ ...p, EMPLOYEEID: '' })); }} 
+                        onFocus={(e) => { if (!e.target.value) setWizardErrors(p => ({ ...p, EMPLOYEEID: 'Please enter EMPLOYEE ID.' })); }}
+                        onBlur={(e) => { if (!e.target.value) setWizardErrors(p => ({ ...p, EMPLOYEEID: 'Please enter EMPLOYEE ID.' })); }}
+                        placeholder="Enter ID" 
+                        required
+                        style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: '#fff', padding: '10px 12px', outline: 'none' }} 
+                      />
+                    </div>
+                    {wizardErrors['EMPLOYEEID'] && <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> {wizardErrors['EMPLOYEEID']}</div>}
+                  </div>
+                  
+                  {renderField('EMAIL ADDRESS *', newEmail, setNewEmail, 'email', true, null, false, 'employee@example.com')}
+                  
+                  {renderField('DEPARTMENT *', newDept, setNewDept, 'text', true, (
+                    <>
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                    </>
+                  ))}
+                  
+                  {renderField('DESIGNATION / TITLE *', newRole, setNewRole, 'text', true, (
+                    <>
+                      <option value="">Select Designation</option>
+                      {designations.filter(d => !newDept || d.dept === newDept).map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                    </>
+                  ), !newDept, '', { title: !newDept ? "First choose a department" : "" })}
+                  
+                  {renderField('SYSTEM ROLE *', newSystemRole, setNewSystemRole, 'text', true, (
+                    <>
+                      <option value="">Select System Role</option>
+                      <option value="employee">Employee</option>
+                      <option value="tl">Team Lead (TL)</option>
+                      <option value="hr">HR Admin</option>
+                    </>
+                  ))}
+                  
+                  {renderField('JOINING DATE *', newJoinDate, setNewJoinDate, 'date', true)}
+                  
+                  {renderField('REPORTS TO (TEAM LEAD) *', newManagerId, setNewManagerId, 'text', newSystemRole === 'employee', (
+                    <>
+                      <option value="">Select Team Lead</option>
+                      {teamLeads.map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+                    </>
+                  ), newSystemRole !== 'employee', '', { title: newSystemRole !== 'employee' ? "Only employees report to a team lead" : "" })}
+                  
+                  {renderField('EMPLOYMENT STATUS *', newStatus, setNewStatus, 'text', true, (
+                    <>
+                      <option value="">Select Status</option>
+                      <option value="probation">Probation</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </>
+                  ))}
+                  
+                  {renderField('SHIFT TIMING *', newShift, setNewShift, 'text', true, (
+                    <>
+                      <option value="">Select Shift</option>
+                      <option value="Standard 9 to 5">Standard 9 to 5</option>
+                      {shifts.map(s => <option key={s.id} value={s.name}>{s.name} ({s.start_time} - {s.end_time})</option>)}
+                    </>
+                  ))}
+                  
+                  {renderField('PF NUMBER *', newPfNumber, setNewPfNumber, 'text', true, null, false, 'Enter PF Number', { uppercase: true })}
+                  {renderField('UAN *', newUan, setNewUan, 'text', true, null, false, 'Enter UAN', { numericOnly: true, maxLength: 12 }, /^\d{12}$/, 'Must be exactly 12 digits.')}
+                  {renderField('ESI NUMBER *', newEsiNumber, setNewEsiNumber, 'text', true, null, false, 'Enter ESI Number', { numericOnly: true, maxLength: 20 }, /^\d{5,20}$/, 'Must be 5 to 20 digits.')}
+                  {renderField('PAN *', newPanNumber, setNewPanNumber, 'text', true, null, false, 'Enter PAN', { uppercase: true, maxLength: 10 }, /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Must be a valid 10-character PAN.')}
+                  {renderField('OFFICE LOCATION *', newLocation, setNewLocation, 'text', true, null, false, 'Enter Office Location', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  {renderField('BANK ACCOUNT NUMBER *', newAccountNumber, setNewAccountNumber, 'text', true, null, false, 'Enter Account Number', { numericOnly: true, maxLength: 17 }, /^\d{8,17}$/, 'Must be 8 to 17 digits.')}
+                  {renderField('IFSC CODE *', newIfscCode, setNewIfscCode, 'text', true, null, false, 'Enter IFSC Code', { uppercase: true, maxLength: 11 }, /^[A-Z]{4}0[A-Z0-9]{6}$/i, 'Must be a valid 11-character IFSC Code.')}
+                  {renderField('BANK NAME *', newBankName, setNewBankName, 'text', true, null, false, 'Enter Bank Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  {renderField('BANK BRANCH NAME *', newBankBranch, setNewBankBranch, 'text', true, null, false, 'Enter Branch Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
                 </div>
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMAIL ADDRESS *</label>
-                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required placeholder="jane@hmns.com" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DEPARTMENT *</label>
-                <select value={newDept} onChange={(e) => setNewDept(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
-                  <option value="">Select Department</option>
-                  {departments.map(d => (
-                    <option key={d.id} value={d.name}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DESIGNATION / TITLE *</label>
-                <select disabled={!newDept} title={!newDept ? "First choose a department" : ""} value={newRole} onChange={(e) => setNewRole(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: !newDept ? 'not-allowed' : 'pointer', opacity: !newDept ? 0.6 : 1 }}>
-                  <option value="">Select Designation</option>
-                  {designations.filter(d => !newDept || d.dept === newDept).map(d => (
-                    <option key={d.id} value={d.name}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>SYSTEM ROLE</label>
-                <select value={newSystemRole} onChange={(e) => setNewSystemRole(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
-                  <option value="employee">Employee</option>
-                  <option value="tl">Team Lead (TL)</option>
-                  <option value="hr">HR Admin</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>JOINING DATE *</label>
-                <input type="date" value={newJoinDate} onChange={(e) => setNewJoinDate(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>REPORTS TO (TEAM LEAD)</label>
-                <select disabled={newSystemRole !== 'employee'} title={newSystemRole !== 'employee' ? "Only employees report to a team lead" : ""} value={newManagerId} onChange={(e) => setNewManagerId(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: newSystemRole !== 'employee' ? 'not-allowed' : 'pointer', opacity: newSystemRole !== 'employee' ? 0.6 : 1 }}>
-                  <option value="">None / Executive</option>
-                  {teamLeads.map(tl => (
-                    <option key={tl.id} value={tl.id}>{tl.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYMENT STATUS</label>
-                <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
-                  <option value="probation">Probation</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>SHIFT TIMING</label>
-                <select value={newShift} onChange={(e) => setNewShift(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
-                  <option value="">Standard 9 to 5</option>
-                  {shifts.map(s => (
-                    <option key={s.id} value={s.name}>{s.name} ({s.start_time} - {s.end_time})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PF NUMBER</label>
-                <input type="text" value={newPfNumber} onChange={(e) => setNewPfNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>UAN</label>
-                <input type="text" value={newUan} onChange={(e) => setNewUan(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>ESI NUMBER</label>
-                <input type="text" value={newEsiNumber} onChange={(e) => setNewEsiNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PAN</label>
-                <input type="text" value={newPanNumber} onChange={(e) => setNewPanNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>OFFICE LOCATION</label>
-                <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>BANK ACCOUNT NUMBER</label>
-                <input type="text" value={newAccountNumber} onChange={(e) => setNewAccountNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>IFSC CODE</label>
-                <input type="text" value={newIfscCode} onChange={(e) => setNewIfscCode(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>BANK NAME</label>
-                <input type="text" value={newBankName} onChange={(e) => setNewBankName(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>BANK BRANCH NAME</label>
-                <input type="text" value={newBankBranch} onChange={(e) => setNewBankBranch(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-            </div>
+              );
+            })()}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button type="button" style={{ background: 'none', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }} onClick={() => setShowAddWizard(false)}>Cancel</button>
               <button type="submit" style={{ backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Create Profile</button>
@@ -1277,123 +1509,148 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
       {/* Edit Employee Modal */}
       {showEditModal && editEmp && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}>
-          <form onSubmit={handleEditEmployee} className="card" style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '32px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+          <form noValidate onSubmit={handleEditEmployee} className="card" style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '32px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
             <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>✏️ Edit Employee Profile</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE FULL NAME *</label>
-                <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
+            {(() => {
+              const renderField = (label, value, setValue, type = 'text', required = false, options = null, disabled = false, placeholder = '', extraProps = {}, formatRegex = null, formatError = '') => {
+                const fieldKey = label.replace(/[^a-zA-Z]/g, '');
+                const actionWord = options ? 'select' : 'enter';
+                const isSelectOrDate = options !== null || type === 'date';
+                const hasError = (isSelectOrDate && required && !value) 
+                  ? `Please ${actionWord} ${label.replace(' *', '').replace(' / TITLE', '').replace(' (TEAM LEAD)', '')}.` 
+                  : editErrors[fieldKey];
+                
+                const validate = (val) => {
+                  const cleanVal = String(val || '').trim();
+                  if (required && !cleanVal) {
+                    setEditErrors(p => ({ ...p, [fieldKey]: `Please ${actionWord} ${label.replace(' *', '').replace(' / TITLE', '').replace(' (TEAM LEAD)', '')}.` }));
+                  } else if (cleanVal && formatRegex && !formatRegex.test(cleanVal)) {
+                    setEditErrors(p => ({ ...p, [fieldKey]: formatError }));
+                  } else {
+                    setEditErrors(p => ({ ...p, [fieldKey]: '' }));
+                  }
+                };
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMAIL ADDRESS *</label>
-                <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
+                return (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>{label}</label>
+                    {options ? (
+                      <CustomSelect 
+                        value={value} 
+                        onChange={(e) => { setValue(e.target.value); if (e.target.value) setEditErrors(p => ({ ...p, [fieldKey]: '' })); }}
+                        onFocus={(e) => validate(e.target.value)}
+                        onBlur={(e) => validate(e.target.value)}
+                        disabled={disabled}
+                        required={required}
+                        style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: hasError ? '1px solid #ef4444' : '1px solid var(--border-color)', color: 'inherit', borderRadius: '8px', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, ...extraProps.style }}
+                        optionsContent={options}
+                        {...extraProps}
+                      />
+                    ) : (
+                      <input 
+                        type={type} 
+                        value={value} 
+                        onChange={(e) => { 
+                          let val = e.target.value;
+                          if (extraProps.numericOnly) {
+                            val = val.replace(/\D/g, '');
+                            if (extraProps.maxLength) val = val.slice(0, extraProps.maxLength);
+                            e.target.value = val;
+                          }
+                          if (extraProps.uppercase) {
+                            val = val.toUpperCase();
+                            e.target.value = val;
+                          }
+                          setValue(val); 
+                          if (val) setEditErrors(p => ({ ...p, [fieldKey]: '' })); 
+                        }}
+                        onFocus={(e) => validate(e.target.value)}
+                        onBlur={(e) => validate(e.target.value)}
+                        disabled={disabled}
+                        required={required}
+                        placeholder={placeholder}
+                        spellCheck="false"
+                        style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: hasError ? '1px solid #ef4444' : '1px solid var(--border-color)', color: 'inherit', padding: '10px 12px', borderRadius: '8px', cursor: disabled ? 'not-allowed' : 'text', opacity: disabled ? 0.6 : 1, ...extraProps.style }}
+                        {...extraProps}
+                      />
+                    )}
+                    {hasError && <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> {hasError}</div>}
+                  </div>
+                );
+              };
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE ID</label>
-                <input type="text" value={editEmpId} onChange={(e) => setEditEmpId(e.target.value)} placeholder="Auto-generated if left blank" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DEPARTMENT *</label>
-                <select value={editDept} onChange={(e) => setEditDept(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
-                  <option value="">Select Department</option>
-                  {departments.map(d => (
-                    <option key={d.id} value={d.name}>{d.name}</option>
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                  {renderField('EMPLOYEE FULL NAME *', editName, setEditName, 'text', true, null, false, 'e.g. Employee Name', {}, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>EMPLOYEE ID *</label>
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-primary)', border: editErrors['EMPLOYEEID'] ? '1px solid #ef4444' : '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                      <div style={{ padding: '10px 12px', backgroundColor: 'var(--bg-tertiary)', borderRight: '1px solid var(--border-color)', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                        {empIdPrefix}-
+                      </div>
+                      <input 
+                        type="text" 
+                        value={editEmpId} 
+                        onChange={(e) => { setEditEmpId(e.target.value); if (e.target.value) setEditErrors(p => ({ ...p, EMPLOYEEID: '' })); }} 
+                        onFocus={(e) => { if (!e.target.value) setEditErrors(p => ({ ...p, EMPLOYEEID: 'Please enter EMPLOYEE ID.' })); }}
+                        onBlur={(e) => { if (!e.target.value) setEditErrors(p => ({ ...p, EMPLOYEEID: 'Please enter EMPLOYEE ID.' })); }}
+                        placeholder="Enter ID" 
+                        required
+                        style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: '#fff', padding: '10px 12px', outline: 'none' }} 
+                      />
+                    </div>
+                    {editErrors['EMPLOYEEID'] && <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> {editErrors['EMPLOYEEID']}</div>}
+                  </div>
+                  
+                  {renderField('EMAIL ADDRESS *', editEmail, setEditEmail, 'email', true, null, false, 'employee@example.com')}
+                  
+                  {renderField('DEPARTMENT *', editDept, setEditDept, 'text', true, (
+                    <>
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                    </>
                   ))}
-                </select>
-              </div>
+                  
+                  {renderField('DESIGNATION / TITLE *', editRole, setEditRole, 'text', true, (
+                    <>
+                      <option value="">Select Designation</option>
+                      {designations.filter(d => !editDept || d.dept === editDept).map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                    </>
+                  ), !editDept, '', { title: !editDept ? "First choose a department" : "" })}
+                  
+                  {renderField('PHONE NUMBER *', editPhone, setEditPhone, 'text', true, null, false, '+91 99000 11000', { numericOnly: true })}
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>DESIGNATION / TITLE *</label>
-                <select disabled={!editDept} title={!editDept ? "First choose a department" : ""} value={editRole} onChange={(e) => setEditRole(e.target.value)} required style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: !editDept ? 'not-allowed' : 'pointer', opacity: !editDept ? 0.6 : 1 }}>
-                  <option value="">Select Designation</option>
-                  {designations.filter(d => !editDept || d.dept === editDept).map(d => (
-                    <option key={d.id} value={d.name}>{d.name}</option>
+                  {renderField('SYSTEM ROLE *', editSystemRole, setEditSystemRole, 'text', true, (
+                    <>
+                      <option value="">Select System Role</option>
+                      <option value="employee">Employee</option>
+                      <option value="tl">Team Lead (TL)</option>
+                      <option value="hr">HR Admin</option>
+                    </>
                   ))}
-                </select>
-              </div>
+                  
+                  {renderField('REPORTS TO (TEAM LEAD) *', editManager, setEditManager, 'text', editSystemRole === 'employee', (
+                    <>
+                      <option value="">None / Executive</option>
+                      {teamLeads.map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+                    </>
+                  ), editSystemRole !== 'employee', '', { title: editSystemRole !== 'employee' ? "Only employees report to a team lead" : "" })}
+                  
+                  {renderField('PF NUMBER *', editPfNumber, setEditPfNumber, 'text', true, null, false, 'Enter PF Number', { uppercase: true })}
+                  {renderField('UAN *', editUan, setEditUan, 'text', true, null, false, 'Enter UAN', { numericOnly: true, maxLength: 12 }, /^\d{12}$/, 'Must be exactly 12 digits.')}
+                  {renderField('ESI NUMBER *', editEsiNumber, setEditEsiNumber, 'text', true, null, false, 'Enter ESI Number', { numericOnly: true, maxLength: 20 }, /^\d{5,20}$/, 'Must be 5 to 20 digits.')}
+                  {renderField('PAN *', editPanNumber, setEditPanNumber, 'text', true, null, false, 'Enter PAN', { uppercase: true, maxLength: 10 }, /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Must be a valid 10-character PAN.')}
+                  {renderField('OFFICE LOCATION *', editLocation, setEditLocation, 'text', true, null, false, 'Enter Office Location', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  {renderField('BANK ACCOUNT NUMBER *', editAccountNumber, setEditAccountNumber, 'text', true, null, false, 'Enter Account Number', { numericOnly: true, maxLength: 17 }, /^\d{8,17}$/, 'Must be 8 to 17 digits.')}
+                  {renderField('IFSC CODE *', editIfscCode, setEditIfscCode, 'text', true, null, false, 'Enter IFSC Code', { uppercase: true, maxLength: 11 }, /^[A-Z]{4}0[A-Z0-9]{6}$/i, 'Must be a valid 11-character IFSC Code.')}
+                  {renderField('BANK NAME *', editBankName, setEditBankName, 'text', true, null, false, 'Enter Bank Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  {renderField('BANK BRANCH NAME *', editBankBranch, setEditBankBranch, 'text', true, null, false, 'Enter Branch Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PHONE NUMBER</label>
-                <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+91 99000 11000" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>SYSTEM ROLE</label>
-                <select value={editSystemRole} onChange={(e) => setEditSystemRole(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }}>
-                  <option value="employee">Employee</option>
-                  <option value="tl">Team Lead (TL)</option>
-                  <option value="hr">HR Admin</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>REPORTS TO (TEAM LEAD)</label>
-                <select disabled={editSystemRole !== 'employee'} title={editSystemRole !== 'employee' ? "Only employees report to a team lead" : ""} value={editManager} onChange={(e) => setEditManager(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', cursor: editSystemRole !== 'employee' ? 'not-allowed' : 'pointer', opacity: editSystemRole !== 'employee' ? 0.6 : 1 }}>
-                  <option value="">None / Executive</option>
-                  {teamLeads.map(tl => (
-                    <option key={tl.id} value={tl.id}>{tl.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PF NUMBER</label>
-                <input type="text" value={editPfNumber} onChange={(e) => setEditPfNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>UAN</label>
-                <input type="text" value={editUan} onChange={(e) => setEditUan(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>ESI NUMBER</label>
-                <input type="text" value={editEsiNumber} onChange={(e) => setEditEsiNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PAN</label>
-                <input type="text" value={editPanNumber} onChange={(e) => setEditPanNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>OFFICE LOCATION</label>
-                <input type="text" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>BANK ACCOUNT NUMBER</label>
-                <input type="text" value={editAccountNumber} onChange={(e) => setEditAccountNumber(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>IFSC CODE</label>
-                <input type="text" value={editIfscCode} onChange={(e) => setEditIfscCode(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>BANK NAME</label>
-                <input type="text" value={editBankName} onChange={(e) => setEditBankName(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>BANK BRANCH NAME</label>
-                <input type="text" value={editBankBranch} onChange={(e) => setEditBankBranch(e.target.value)} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
-              </div>
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-muted)' }}>PROFILE PHOTO</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  {editPhoto && (
-                    <img src={typeof editPhoto === 'string' ? editPhoto : URL.createObjectURL(editPhotoFile)} alt="Current profile" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }} />
-                  )}
-                  <input type="file" accept="image/*" onChange={(e) => setEditPhotoFile(e.target.files[0])} style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px' }} />
                 </div>
-              </div>
-            </div>
+              );
+            })()}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => { setShowEditModal(false); setEditEmp(null); }} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#fff', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
               <button type="submit" style={{ backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>Save Changes</button>
