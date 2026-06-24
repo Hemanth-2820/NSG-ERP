@@ -117,7 +117,7 @@ class EmployeeResponse(BaseModel):
     phone: Optional[str]
     department: Optional[str]
     designation: Optional[str]
-    status: str
+    status: Optional[str] = "active"
     join_date: Optional[date]
     probation_end_date: Optional[date]
     bank_name: Optional[str]
