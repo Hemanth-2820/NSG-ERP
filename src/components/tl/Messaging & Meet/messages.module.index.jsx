@@ -1106,7 +1106,13 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               <div style={{ flex: 1 }}>
                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', marginBottom: '2px' }}>Pinned Messages ({pinnedMsgs.length})</div>
                  <div style={{ fontSize: '13px', color: '#92400E', maxHeight: '40px', overflowY: 'auto' }}>
-                    {pinnedMsgs.map(pm => (
+                    {pinnedMsgs.filter(m => {
+                      if (selectedChannel.startsWith('dm-')) {
+                        const targetUser = getDmUser(selectedChannel)?.name;
+                        return m.sender === tlName || m.sender === targetUser || m.sender === tlName + ' (TL)' || m.sender === targetUser + ' (TL)' || m.sender === 'System';
+                      }
+                      return true;
+                    }).map(pm => (
                        <div 
                          key={pm.id} 
                          onClick={() => {
@@ -1169,7 +1175,14 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               <div style={{ fontSize: '13px' }}>Start the conversation!</div>
             </div>
           ) : (
-            (messages[selectedChannel] || []).filter(m => !m.parent_id).map((msg, idx) => {
+            (messages[selectedChannel] || []).filter(m => {
+              if (m.parent_id) return false;
+              if (selectedChannel.startsWith('dm-')) {
+                const targetUser = getDmUser(selectedChannel)?.name;
+                return m.sender === tlName || m.sender === targetUser || m.sender === tlName + ' (TL)' || m.sender === targetUser + ' (TL)' || m.sender === 'System';
+              }
+              return true;
+            }).map((msg, idx) => {
               const isMsgMe = msg.sender === tlName || msg.sender === tlName + ' (TL)';
               const isDeleted = !!msg.deleted_at;
               

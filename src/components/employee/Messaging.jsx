@@ -946,32 +946,32 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 120px)', overflow: 'hidden', background: '#F8FAFC', borderRadius: '12px', border: '1px solid var(--ceo-border)' }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 120px)', overflow: 'hidden', background: '#F8FAFC', borderRadius: '12px', border: '1px solid var(--tl-border)' }}>
       
       {/* === LEFT SIDEBAR === */}
-      <div style={{ width: '280px', background: '#FFFFFF', borderRight: '1px solid var(--ceo-border)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--ceo-border)' }}>
+      <div style={{ width: '280px', background: '#FFFFFF', borderRight: '1px solid var(--tl-border)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--tl-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--ceo-text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MessageSquare size={20} color="var(--ceo-primary)" /> Team Chat
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--tl-text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MessageSquare size={20} color="var(--tl-primary)" /> Team Chat
             </h2>
             <div style={{ position: 'relative' }}>
               <div style={{ cursor: 'pointer', position: 'relative' }} title="Profile Menu" onClick={() => setShowDPMenu(!showDPMenu)}>
-                <AvatarFallback  src={currentUser?.photo ? `${currentUser.photo}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(empName)}`} alt="You" style={{ width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover', border: '2px solid var(--ceo-border)' }}  />
-                <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--ceo-primary)', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #FFF' }}>
+                <AvatarFallback  src={currentUser?.photo ? `${currentUser.photo}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(empName)}`} alt="You" style={{ width: '36px', height: '36px', borderRadius: '18px', objectFit: 'cover', border: '2px solid var(--tl-border)' }}  />
+                <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--tl-primary)', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #FFF' }}>
                   <Camera size={10} color="#FFF" />
                 </div>
               </div>
               {showDPMenu && (
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: '#FFF', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid var(--ceo-border)', zIndex: 100, width: '150px', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: '#FFF', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid var(--tl-border)', zIndex: 100, width: '150px', overflow: 'hidden' }}>
                   <button 
                     onClick={() => {
                       setLightboxMedia({ url: currentUser?.photo ? currentUser.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(empName)}`, type: 'image' });
                       setShowDPMenu(false);
                     }}
-                    style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+                    style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
                   >Preview Picture</button>
-                  <label style={{ width: '100%', padding: '12px 16px', display: 'block', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)', borderTop: '1px solid var(--ceo-divider)' }}>
+                  <label style={{ width: '100%', padding: '12px 16px', display: 'block', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)', borderTop: '1px solid var(--tl-divider)' }}>
                     Change Picture
                     <input type="file" style={{ display: 'none' }} accept="image/*" onChange={(e) => { setShowDPMenu(false); handleDPUpload(e); }} />
                   </label>
@@ -980,7 +980,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             </div>
           </div>
           <div style={{ position: 'relative' }}>
-            <Search size={14} color="var(--ceo-text-muted)" style={{ position: 'absolute', left: '12px', top: '10px' }} />
+            <Search size={14} color="var(--tl-text-muted)" style={{ position: 'absolute', left: '12px', top: '10px' }} />
             <input 
               type="text" 
               placeholder={isSearching ? "Searching..." : "Search messages..."} 
@@ -996,7 +996,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingLeft: '8px', paddingRight: '8px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', letterSpacing: '0.5px' }}>CHANNELS</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--tl-text-muted)', letterSpacing: '0.5px' }}>CHANNELS</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '24px' }}>
             {myChannels.map(chan => (
@@ -1006,18 +1006,18 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 style={{ 
                   display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
                   background: selectedChannel === chan.id ? '#EFF6FF' : 'transparent',
-                  color: selectedChannel === chan.id ? 'var(--ceo-primary)' : 'var(--ceo-text-secondary)',
+                  color: selectedChannel === chan.id ? 'var(--tl-primary)' : 'var(--tl-text-secondary)',
                   fontWeight: selectedChannel === chan.id ? 700 : 600,
                   fontSize: '14px', transition: 'all 0.2s'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Hash size={16} /> {chan.name}</div>
-                {getUnreadCount(chan.id) > 0 && <span style={{ background: 'var(--ceo-danger)', color: '#FFF', fontSize: '11px', fontWeight: 800, padding: '2px 6px', borderRadius: '10px' }}>{getUnreadCount(chan.id)}</span>}
+                {getUnreadCount(chan.id) > 0 && <span style={{ background: 'var(--tl-danger)', color: '#FFF', fontSize: '11px', fontWeight: 800, padding: '2px 6px', borderRadius: '10px' }}>{getUnreadCount(chan.id)}</span>}
               </div>
             ))}
           </div>
 
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginBottom: '8px', paddingLeft: '8px', letterSpacing: '0.5px' }}>DIRECT MESSAGES</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--tl-text-muted)', marginBottom: '8px', paddingLeft: '8px', letterSpacing: '0.5px' }}>DIRECT MESSAGES</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {employees.filter(e => !e.isMe).map(emp => {
               const dmId = getDmId(emp.name);
@@ -1029,17 +1029,17 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                   style={{ 
                     display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
                     background: isSelected ? '#EFF6FF' : 'transparent',
-                    color: isSelected ? 'var(--ceo-primary)' : 'var(--ceo-text-secondary)',
+                    color: isSelected ? 'var(--tl-primary)' : 'var(--tl-text-secondary)',
                     fontWeight: isSelected ? 700 : 600,
                     fontSize: '14px', transition: 'all 0.2s'
                   }}
                 >
                   <div style={{ position: 'relative' }}>
                     <AvatarFallback  src={emp.photo ? `${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}`)} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '12px', objectFit: 'cover' }}  />
-                    <div style={{ position: 'absolute', bottom: -2, right: -2, width: '8px', height: '8px', borderRadius: '4px', background: emp.status === 'Active' ? 'var(--ceo-success)' : 'var(--ceo-warning)', border: '2px solid #FFF' }}></div>
+                    <div style={{ position: 'absolute', bottom: -2, right: -2, width: '8px', height: '8px', borderRadius: '4px', background: emp.status === 'Active' ? 'var(--tl-success)' : 'var(--tl-warning)', border: '2px solid #FFF' }}></div>
                   </div>
                   <div style={{ flex: 1 }}>{emp.name}</div>
-                  {getUnreadCount(dmId) > 0 && <span style={{ background: 'var(--ceo-danger)', color: '#FFF', fontSize: '11px', fontWeight: 800, padding: '2px 6px', borderRadius: '10px' }}>{getUnreadCount(dmId)}</span>}
+                  {getUnreadCount(dmId) > 0 && <span style={{ background: 'var(--tl-danger)', color: '#FFF', fontSize: '11px', fontWeight: 800, padding: '2px 6px', borderRadius: '10px' }}>{getUnreadCount(dmId)}</span>}
                 </div>
               );
             })}
@@ -1051,24 +1051,24 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FFF' }}>
         
         {/* Chat Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFF' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--tl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFF' }}>
           <div>
             <div 
-              style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ceo-text-primary)', display: 'flex', alignItems: 'center', gap: '8px', cursor: isDM ? 'default' : 'pointer' }}
+              style={{ fontSize: '18px', fontWeight: 800, color: 'var(--tl-text-primary)', display: 'flex', alignItems: 'center', gap: '8px', cursor: isDM ? 'default' : 'pointer' }}
               onClick={() => !isDM && setShowGroupMembersModal(true)}
             >
-              {isDM ? <span style={{ color: 'var(--ceo-primary)' }}>@</span> : <Hash size={20} color="var(--ceo-text-muted)" />}
+              {isDM ? <span style={{ color: 'var(--tl-primary)' }}>@</span> : <Hash size={20} color="var(--tl-text-muted)" />}
               {isDM ? getDmUser(selectedChannel)?.name : selectedChannel}
             </div>
             <div 
-              style={{ fontSize: '12px', color: 'var(--ceo-text-secondary)', fontWeight: 500, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', cursor: isDM ? 'default' : 'pointer' }}
+              style={{ fontSize: '12px', color: 'var(--tl-text-secondary)', fontWeight: 500, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', cursor: isDM ? 'default' : 'pointer' }}
               onClick={() => !isDM && setShowGroupMembersModal(true)}
             >
               {isDM ? (
                 (() => {
                   const dmUser = getDmUser(selectedChannel);
                   const presence = dmUser ? userPresence[dmUser.name] : null;
-                  if (presence?.online) return <span style={{ color: 'var(--ceo-success)' }}>Online</span>;
+                  if (presence?.online) return <span style={{ color: 'var(--tl-success)' }}>Online</span>;
                   if (presence?.last_active) return <span>Last seen at {new Date(presence.last_active + (presence.last_active.endsWith('Z') ? '' : 'Z')).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>;
                   return <span>Offline</span>;
                 })()
@@ -1080,28 +1080,28 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
           
           <div style={{ display: 'flex', gap: '12px', position: 'relative' }}>
             {!isDM && (
-              <button onClick={() => setShowGroupMembersModal(true)} className="ceo-btn" style={{ padding: '8px 16px', background: '#F8FAFC', border: '1px solid var(--ceo-border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Users size={16} color="var(--ceo-primary)" /> Members
+              <button onClick={() => setShowGroupMembersModal(true)} className="tk-confirm-btn" style={{ padding: '8px 16px', background: '#F8FAFC', border: '1px solid var(--tl-border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={16} color="var(--tl-primary)" /> Members
               </button>
             )}
-            <button onClick={() => setIsGalleryOpen(!isGalleryOpen)} className="ceo-btn" style={{ padding: '8px 16px', background: '#F8FAFC', border: '1px solid var(--ceo-border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Image size={16} color="var(--ceo-primary)" /> Files & Media
+            <button onClick={() => setIsGalleryOpen(!isGalleryOpen)} className="tk-confirm-btn" style={{ padding: '8px 16px', background: '#F8FAFC', border: '1px solid var(--tl-border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Image size={16} color="var(--tl-primary)" /> Files & Media
             </button>
-            <button onClick={handleStartCall} className="ceo-btn" style={{ padding: '8px 16px', background: '#F8FAFC', border: '1px solid var(--ceo-border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Video size={16} color="var(--ceo-primary)" /> Video Call
+            <button onClick={handleStartCall} className="tk-confirm-btn" style={{ padding: '8px 16px', background: '#F8FAFC', border: '1px solid var(--tl-border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Video size={16} color="var(--tl-primary)" /> Video Call
             </button>
             {!isDM && (
               <div style={{ position: 'relative' }}>
-                <button onClick={() => setIsChannelMenuOpen(!isChannelMenuOpen)} className="ceo-btn" style={{ padding: '8px', background: '#F8FAFC', border: '1px solid var(--ceo-border)' }}><MoreVertical size={16} /></button>
+                <button onClick={() => setIsChannelMenuOpen(!isChannelMenuOpen)} className="tk-confirm-btn" style={{ padding: '8px', background: '#F8FAFC', border: '1px solid var(--tl-border)' }}><MoreVertical size={16} /></button>
                 {isChannelMenuOpen && (
-                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: '#FFF', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid var(--ceo-border)', zIndex: 100, width: '150px', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: '#FFF', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid var(--tl-border)', zIndex: 100, width: '150px', overflow: 'hidden' }}>
                     <button 
                       onClick={() => { setEditChannelName(selectedChannel); setIsEditChannelOpen(true); setIsChannelMenuOpen(false); }} 
-                      style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+                      style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
                     >Edit Channel Name</button>
                     <button 
                       onClick={handleDeleteChannel}
-                      style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--ceo-danger)', borderTop: '1px solid var(--ceo-divider)' }}
+                      style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--tl-danger)', borderTop: '1px solid var(--tl-divider)' }}
                     >Delete Channel</button>
                   </div>
                 )}
@@ -1120,7 +1120,13 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               <div style={{ flex: 1 }}>
                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', marginBottom: '2px' }}>Pinned Messages ({pinnedMsgs.length})</div>
                  <div style={{ fontSize: '13px', color: '#92400E', maxHeight: '40px', overflowY: 'auto' }}>
-                    {pinnedMsgs.map(pm => (
+                    {pinnedMsgs.filter(m => {
+                      if (selectedChannel.startsWith('dm-')) {
+                        const targetUser = getDmUser(selectedChannel)?.name;
+                        return m.sender === empName || m.sender === targetUser || m.sender === empName + ' (TL)' || m.sender === targetUser + ' (TL)' || m.sender === 'System';
+                      }
+                      return true;
+                    }).map(pm => (
                        <div 
                          key={pm.id} 
                          onClick={() => {
@@ -1156,18 +1162,18 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
         {/* Messages Feed */}
         {searchResults ? (
            <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#FFF' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--ceo-border)', paddingBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--tl-border)', paddingBottom: '16px' }}>
                  <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Search Results for "{searchQuery}"</h2>
-                 <button onClick={() => { setSearchResults(null); setSearchQuery(''); setIsSearching(false); }} className="ceo-btn" style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700 }}>Close Search</button>
+                 <button onClick={() => { setSearchResults(null); setSearchQuery(''); setIsSearching(false); }} className="tk-confirm-btn" style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700 }}>Close Search</button>
               </div>
               {searchResults.length === 0 ? (
-                 <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--ceo-text-muted)' }}>No messages found.</div>
+                 <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--tl-text-muted)' }}>No messages found.</div>
               ) : (
                  searchResults.map(res => (
-                    <div key={res.id} onClick={() => { setSelectedChannel(res.channel_id); setSearchResults(null); setSearchQuery(''); setIsSearching(false); }} style={{ padding: '16px', border: '1px solid var(--ceo-border)', borderRadius: '12px', cursor: 'pointer', background: '#F8FAFC' }}>
+                    <div key={res.id} onClick={() => { setSelectedChannel(res.channel_id); setSearchResults(null); setSearchQuery(''); setIsSearching(false); }} style={{ padding: '16px', border: '1px solid var(--tl-border)', borderRadius: '12px', cursor: 'pointer', background: '#F8FAFC' }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <strong style={{ fontSize: '14px', color: 'var(--ceo-primary)' }}>{res.sender} <span style={{ color: 'var(--ceo-text-muted)' }}>in {res.channel_id}</span></strong>
-                          <span style={{ fontSize: '12px', color: 'var(--ceo-text-muted)' }}>{new Date(res.timestamp + (res.timestamp.endsWith('Z') ? '' : 'Z')).toLocaleString()}</span>
+                          <strong style={{ fontSize: '14px', color: 'var(--tl-primary)' }}>{res.sender} <span style={{ color: 'var(--tl-text-muted)' }}>in {res.channel_id}</span></strong>
+                          <span style={{ fontSize: '12px', color: 'var(--tl-text-muted)' }}>{new Date(res.timestamp + (res.timestamp.endsWith('Z') ? '' : 'Z')).toLocaleString()}</span>
                        </div>
                        <div style={{ fontSize: '14px' }}>{renderMessageText(res.text)}</div>
                     </div>
@@ -1177,13 +1183,20 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
         ) : (
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', background: '#F8FAFC' }}>
           {(messages[selectedChannel] || []).filter(m => !m.parent_id).length === 0 ? (
-            <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--ceo-text-muted)' }}>
+            <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--tl-text-muted)' }}>
               <MessageSquare size={48} style={{ opacity: 0.2, margin: '0 auto 16px auto' }} />
               <div style={{ fontSize: '16px', fontWeight: 600 }}>No messages yet</div>
               <div style={{ fontSize: '13px' }}>Start the conversation!</div>
             </div>
           ) : (
-            (messages[selectedChannel] || []).filter(m => !m.parent_id).map((msg, idx) => {
+            (messages[selectedChannel] || []).filter(m => {
+              if (m.parent_id) return false;
+              if (selectedChannel.startsWith('dm-')) {
+                const targetUser = getDmUser(selectedChannel)?.name;
+                return m.sender === empName || m.sender === targetUser || m.sender === empName + ' (TL)' || m.sender === targetUser + ' (TL)' || m.sender === 'System';
+              }
+              return true;
+            }).map((msg, idx) => {
               const isMsgMe = msg.sender === empName || msg.sender === empName + ' (TL)';
               const isDeleted = !!msg.deleted_at;
               
@@ -1225,9 +1238,9 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isMsgMe ? 'row-reverse' : 'row' }}>
                       <div style={{ 
-                        background: isDeleted ? '#F1F5F9' : (isMsgMe ? 'var(--ceo-primary)' : '#FFF'), 
-                        color: isDeleted ? 'var(--ceo-text-muted)' : (isMsgMe ? '#FFF' : 'var(--ceo-text-primary)'),
-                        padding: '12px 16px', borderRadius: '12px', border: (isMsgMe && !isDeleted) ? 'none' : '1px solid var(--ceo-border)',
+                        background: isDeleted ? '#F1F5F9' : (isMsgMe ? 'var(--tl-primary)' : '#FFF'), 
+                        color: isDeleted ? 'var(--tl-text-muted)' : (isMsgMe ? '#FFF' : 'var(--tl-text-primary)'),
+                        padding: '12px 16px', borderRadius: '12px', border: (isMsgMe && !isDeleted) ? 'none' : '1px solid var(--tl-border)',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.05)', fontSize: '14px', lineHeight: '1.5', fontStyle: isDeleted ? 'italic' : 'normal'
                       }}>
                         {isDeleted ? (
@@ -1240,16 +1253,16 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                               onKeyDown={e => { if(e.key === 'Enter') submitEditMessage(msg.id, editingText); if(e.key === 'Escape') setEditingMessageId(null); }}
                               style={{ border: 'none', background: 'rgba(255,255,255,0.2)', color: isMsgMe ? '#FFF' : '#000', outline: 'none', minWidth: '200px' }} 
                             />
-                            <button onClick={()=>submitEditMessage(msg.id, editingText)} style={{ background: 'transparent', border: 'none', color: isMsgMe ? '#FFF' : 'var(--ceo-primary)', cursor: 'pointer', fontWeight: 'bold' }}>Save</button>
-                            <button onClick={()=>setEditingMessageId(null)} style={{ background: 'transparent', border: 'none', color: isMsgMe ? 'rgba(255,255,255,0.7)' : 'var(--ceo-text-muted)', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={()=>submitEditMessage(msg.id, editingText)} style={{ background: 'transparent', border: 'none', color: isMsgMe ? '#FFF' : 'var(--tl-primary)', cursor: 'pointer', fontWeight: 'bold' }}>Save</button>
+                            <button onClick={()=>setEditingMessageId(null)} style={{ background: 'transparent', border: 'none', color: isMsgMe ? 'rgba(255,255,255,0.7)' : 'var(--tl-text-muted)', cursor: 'pointer' }}>Cancel</button>
                           </div>
                         ) : msg.isCallStatus ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isMsgMe ? '#FFF' : 'var(--ceo-primary)', fontWeight: '600' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isMsgMe ? '#FFF' : 'var(--tl-primary)', fontWeight: '600' }}>
                             <Video size={16} />
                             <span>{renderMessageText(msg.text)}</span>
                             <button 
                               type="button" 
-                              style={{ marginLeft: '12px', padding: '6px 16px', borderRadius: '6px', backgroundColor: isMsgMe ? '#FFF' : 'var(--ceo-primary)', color: isMsgMe ? 'var(--ceo-primary)' : 'white', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}
+                              style={{ marginLeft: '12px', padding: '6px 16px', borderRadius: '6px', backgroundColor: isMsgMe ? '#FFF' : 'var(--tl-primary)', color: isMsgMe ? 'var(--tl-primary)' : 'white', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}
                               onClick={() => {
                                 setHuddlePeer({ channelId: selectedChannel, roomName: selectedChannel, name: selectedChannel, displayName: empName });
                               }}
@@ -1284,9 +1297,9 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                     {hasReactions && !isDeleted && (
                       <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexDirection: isMsgMe ? 'row-reverse' : 'row' }}>
                         {Object.entries(parsedReactions).map(([emoji, users]) => (
-                          <div key={emoji} onClick={()=>handleReactMessage(msg.id, msg.reactions, emoji)} style={{ background: '#F1F5F9', border: '1px solid var(--ceo-border)', borderRadius: '12px', padding: '2px 6px', fontSize: '12px', cursor: 'pointer', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <div key={emoji} onClick={()=>handleReactMessage(msg.id, msg.reactions, emoji)} style={{ background: '#F1F5F9', border: '1px solid var(--tl-border)', borderRadius: '12px', padding: '2px 6px', fontSize: '12px', cursor: 'pointer', display: 'flex', gap: '4px', alignItems: 'center' }}>
                             <span>{emoji}</span>
-                            <span style={{ fontWeight: 600, color: 'var(--ceo-text-secondary)' }}>{users.length}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--tl-text-secondary)' }}>{users.length}</span>
                           </div>
                         ))}
                       </div>
@@ -1301,11 +1314,11 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
         )}
 
         {/* Message Input */}
-        <div style={{ padding: '20px 24px', background: '#FFF', borderTop: '1px solid var(--ceo-border)', position: 'relative' }}>
+        <div style={{ padding: '20px 24px', background: '#FFF', borderTop: '1px solid var(--tl-border)', position: 'relative' }}>
           
           {/* Typing Indicator */}
           {typingUsers[selectedChannel] && typingUsers[selectedChannel].length > 0 && (
-            <div style={{ position: 'absolute', top: '-24px', left: '24px', fontSize: '12px', color: 'var(--ceo-text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ position: 'absolute', top: '-24px', left: '24px', fontSize: '12px', color: 'var(--tl-text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <div style={{ display: 'flex', gap: '2px' }}>
                  <span style={{ animation: 'pulse 1.5s infinite' }}>.</span><span style={{ animation: 'pulse 1.5s infinite 0.2s' }}>.</span><span style={{ animation: 'pulse 1.5s infinite 0.4s' }}>.</span>
               </div>
@@ -1315,17 +1328,17 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
           
           {/* Attachment Preview */}
           {attachmentFile && (
-            <div style={{ position: 'absolute', bottom: '100%', left: '24px', background: '#FFF', border: '1px solid var(--ceo-border)', padding: '8px', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <div style={{ position: 'absolute', bottom: '100%', left: '24px', background: '#FFF', border: '1px solid var(--tl-border)', padding: '8px', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.05)' }}>
               {attachmentPreview === 'document' ? <div style={{width:'40px', height:'40px', background:'#F1F5F9', borderRadius:'4px', display:'flex', alignItems:'center', justifyContent:'center'}}><Paperclip size={20}/></div> : <AvatarFallback  src={attachmentPreview} alt="preview" style={{width:'40px', height:'40px', objectFit:'cover', borderRadius:'4px'}}  />}
               <div style={{fontSize:'12px', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{attachmentFile.name}</div>
-              <button onClick={clearAttachment} style={{background:'transparent', border:'none', cursor:'pointer'}}><X size={14} color="var(--ceo-danger)"/></button>
+              <button onClick={clearAttachment} style={{background:'transparent', border:'none', cursor:'pointer'}}><X size={14} color="var(--tl-danger)"/></button>
             </div>
           )}
 
-          <form onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#F8FAFC', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--ceo-border)' }}>
+          <form onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#F8FAFC', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--tl-border)' }}>
             <label style={{ cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}>
               <input type="file" style={{ display: 'none' }} onChange={handleFileUpload} />
-              <Paperclip size={18} color="var(--ceo-text-muted)" />
+              <Paperclip size={18} color="var(--tl-text-muted)" />
             </label>
             <div style={{ position: 'relative', flex: 1 }}>
               <input 
@@ -1352,16 +1365,16 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                   }
                 }} 
                 placeholder={`Message ${selectedChannel.startsWith('dm-') ? '@' + (getDmUser(selectedChannel)?.name || 'Colleague') : '#' + selectedChannel}`}
-                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '8px 0', color: 'var(--ceo-text-primary)' }} 
+                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '8px 0', color: 'var(--tl-text-primary)' }} 
                 disabled={isUploading}
               />
               {showMentionsPopup && (
-                <div style={{ position: 'absolute', bottom: '100%', left: 0, background: '#FFF', borderRadius: '8px', border: '1px solid var(--ceo-border)', boxShadow: '0 -4px 10px rgba(0,0,0,0.1)', zIndex: 3000, width: '250px', maxHeight: '150px', overflowY: 'auto' }}>
+                <div style={{ position: 'absolute', bottom: '100%', left: 0, background: '#FFF', borderRadius: '8px', border: '1px solid var(--tl-border)', boxShadow: '0 -4px 10px rgba(0,0,0,0.1)', zIndex: 3000, width: '250px', maxHeight: '150px', overflowY: 'auto' }}>
                   {employees.filter(e => e.name.toLowerCase().includes(mentionsFilter)).map(emp => (
                     <div key={emp.id} onClick={() => {
                        setInputVal(prev => prev.replace(/@\w*$/, `@${emp.name.replace(/\s+/g, '')} `));
                        setShowMentionsPopup(false);
-                    }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--ceo-divider)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--tl-divider)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <AvatarFallback  src={emp.photo ? `${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}`)} alt="" style={{ width: '20px', height: '20px', borderRadius: '10px' }}  />
                       <span style={{ fontSize: '13px', fontWeight: 600 }}>{emp.name}</span>
                     </div>
@@ -1369,7 +1382,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 </div>
               )}
             </div>
-            <button type="button" onClick={() => setShowChatEmojiPicker(!showChatEmojiPicker)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }}><Smile size={18} color="var(--ceo-text-muted)" /></button>
+            <button type="button" onClick={() => setShowChatEmojiPicker(!showChatEmojiPicker)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }}><Smile size={18} color="var(--tl-text-muted)" /></button>
             
             {showChatEmojiPicker && (
               <div style={{ position: 'absolute', bottom: '100%', right: '80px', marginBottom: '10px', zIndex: 3001 }}>
@@ -1382,7 +1395,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               </div>
             )}
 
-            <button type="submit" disabled={(!inputVal.trim() && !attachmentFile) || isUploading} style={{ background: (inputVal.trim() || attachmentFile) && !isUploading ? 'var(--ceo-primary)' : '#E2E8F0', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: (inputVal.trim() || attachmentFile) && !isUploading ? 'pointer' : 'not-allowed', color: '#FFF', fontWeight: 600, transition: 'all 0.2s' }}>
+            <button type="submit" disabled={(!inputVal.trim() && !attachmentFile) || isUploading} style={{ background: (inputVal.trim() || attachmentFile) && !isUploading ? 'var(--tl-primary)' : '#E2E8F0', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: (inputVal.trim() || attachmentFile) && !isUploading ? 'pointer' : 'not-allowed', color: '#FFF', fontWeight: 600, transition: 'all 0.2s' }}>
               {isUploading ? 'Sending...' : 'Send'}
             </button>
           </form>
@@ -1391,28 +1404,28 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       
       {/* Right Thread Panel */}
       {activeThreadMessage && (
-        <div style={{ width: '320px', background: '#FFF', borderLeft: '1px solid var(--ceo-border)', display: 'flex', flexDirection: 'column' }}>
-           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC' }}>
+        <div style={{ width: '320px', background: '#FFF', borderLeft: '1px solid var(--tl-border)', display: 'flex', flexDirection: 'column' }}>
+           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--tl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC' }}>
              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Thread</h3>
-             <button onClick={() => setActiveThreadMessage(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--ceo-text-muted)" /></button>
+             <button onClick={() => setActiveThreadMessage(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--tl-text-muted)" /></button>
            </div>
            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-              <div style={{ paddingBottom: '20px', borderBottom: '1px solid var(--ceo-divider)', marginBottom: '20px' }}>
+              <div style={{ paddingBottom: '20px', borderBottom: '1px solid var(--tl-divider)', marginBottom: '20px' }}>
                  <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>{activeThreadMessage.sender}</div>
                  <div style={{ fontSize: '14px', lineHeight: 1.5 }}>{renderMessageText(activeThreadMessage.text)}</div>
               </div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginBottom: '16px' }}>REPLIES</div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--tl-text-muted)', marginBottom: '16px' }}>REPLIES</div>
               {(messages[selectedChannel] || []).filter(m => m.parent_id === activeThreadMessage.id).map(msg => (
                  <div key={msg.id} style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '16px', background: 'var(--ceo-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}>{msg.sender.charAt(0)}</div>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '16px', background: 'var(--tl-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}>{msg.sender.charAt(0)}</div>
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '2px' }}>{msg.sender} <span style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', fontWeight: 'normal' }}>{msg.timestamp || msg.time}</span></div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '2px' }}>{msg.sender} <span style={{ fontSize: '11px', color: 'var(--tl-text-muted)', fontWeight: 'normal' }}>{msg.timestamp || msg.time}</span></div>
                       <div style={{ fontSize: '14px', lineHeight: 1.5 }}>{renderMessageText(msg.text)}</div>
                     </div>
                  </div>
               ))}
            </div>
-           <div style={{ padding: '16px', borderTop: '1px solid var(--ceo-border)' }}>
+           <div style={{ padding: '16px', borderTop: '1px solid var(--tl-border)' }}>
              <input type="text" placeholder="Reply..." onKeyDown={e => {
                 if (e.key === 'Enter' && e.target.value.trim()) {
                    const payload = { type: 'new_message', channel_id: selectedChannel, sender: empName, text: e.target.value.trim(), parent_id: activeThreadMessage.id };
@@ -1421,22 +1434,22 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                    }
                    e.target.value = '';
                 }
-             }} style={{ width: '100%', padding: '12px', border: '1px solid var(--ceo-border)', borderRadius: '8px', outline: 'none', fontSize: '13px' }} />
+             }} style={{ width: '100%', padding: '12px', border: '1px solid var(--tl-border)', borderRadius: '8px', outline: 'none', fontSize: '13px' }} />
            </div>
         </div>
       )}
 
       {/* Right Media Gallery Panel */}
       {isGalleryOpen && (
-        <div style={{ width: '320px', background: '#FFF', borderLeft: '1px solid var(--ceo-border)', display: 'flex', flexDirection: 'column', zIndex: 10 }}>
-           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC' }}>
-             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}><Image size={18} color="var(--ceo-primary)" /> Files & Media</h3>
-             <button onClick={() => setIsGalleryOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--ceo-text-muted)" /></button>
+        <div style={{ width: '320px', background: '#FFF', borderLeft: '1px solid var(--tl-border)', display: 'flex', flexDirection: 'column', zIndex: 10 }}>
+           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--tl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC' }}>
+             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}><Image size={18} color="var(--tl-primary)" /> Files & Media</h3>
+             <button onClick={() => setIsGalleryOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--tl-text-muted)" /></button>
            </div>
            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
               {(() => {
                 const mediaMsgs = (messages[selectedChannel] || []).filter(m => m.attachment_url);
-                if (mediaMsgs.length === 0) return <div style={{ textAlign: 'center', color: 'var(--ceo-text-muted)', marginTop: '40px' }}>No files shared yet.</div>;
+                if (mediaMsgs.length === 0) return <div style={{ textAlign: 'center', color: 'var(--tl-text-muted)', marginTop: '40px' }}>No files shared yet.</div>;
                 
                 const images = mediaMsgs.filter(m => m.attachment_type === 'image');
                 const others = mediaMsgs.filter(m => m.attachment_type !== 'image');
@@ -1445,7 +1458,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                   <div>
                     {images.length > 0 && (
                       <div style={{ marginBottom: '24px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginBottom: '12px' }}>IMAGES</div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--tl-text-muted)', marginBottom: '12px' }}>IMAGES</div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                           {images.map(m => (
                              <AvatarFallback key={m.id}  src={`${m.attachment_url}`} alt="media" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setLightboxMedia({ url: `${m.attachment_url}`, type: 'image' })} />
@@ -1455,12 +1468,12 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                     )}
                     {others.length > 0 && (
                       <div>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginBottom: '12px' }}>DOCUMENTS</div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--tl-text-muted)', marginBottom: '12px' }}>DOCUMENTS</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {others.map(m => (
-                             <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#F8FAFC', border: '1px solid var(--ceo-border)', borderRadius: '8px' }}>
-                                <Paperclip size={16} color="var(--ceo-text-muted)" />
-                                <a href={`${m.attachment_url}`} target="_blank" rel="noreferrer" style={{ fontSize: '13px', color: 'var(--ceo-primary)', textDecoration: 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.attachment_url.split('/').pop()}</a>
+                             <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#F8FAFC', border: '1px solid var(--tl-border)', borderRadius: '8px' }}>
+                                <Paperclip size={16} color="var(--tl-text-muted)" />
+                                <a href={`${m.attachment_url}`} target="_blank" rel="noreferrer" style={{ fontSize: '13px', color: 'var(--tl-primary)', textDecoration: 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.attachment_url.split('/').pop()}</a>
                              </div>
                           ))}
                         </div>
@@ -1487,7 +1500,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
           {/* Call Header */}
           <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '4px', background: 'var(--ceo-danger)', animation: 'pulse 2s infinite' }}></div>
+              <div style={{ width: '8px', height: '8px', borderRadius: '4px', background: 'var(--tl-danger)', animation: 'pulse 2s infinite' }}></div>
               <span style={{ color: '#FFF', fontSize: '12px', fontWeight: 700 }}>{formatDuration(callDuration)}</span>
             </div>
             <div style={{ color: '#FFF', fontSize: '13px', fontWeight: 700 }}>Meeting: {selectedChannel}</div>
@@ -1505,7 +1518,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               callScreenCamera ? (
                 <video ref={callCameraVideoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} muted />
               ) : (
-                <div style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'var(--ceo-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#FFF', fontWeight: 700 }}>SJ</div>
+                <div style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'var(--tl-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#FFF', fontWeight: 700 }}>SJ</div>
               )
             )}
 
@@ -1528,25 +1541,25 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
           <div style={{ padding: '16px', display: 'flex', justifyContent: 'center', gap: '16px', background: '#1E293B' }}>
             <button 
               onClick={(e) => { e.stopPropagation(); setCallScreenMic(!callScreenMic); }} 
-              style={{ width: '44px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: callScreenMic ? '#334155' : 'var(--ceo-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '44px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: callScreenMic ? '#334155' : 'var(--tl-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               {callScreenMic ? <Mic size={20} color="#FFF" /> : <MicOff size={20} color="#FFF" />}
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); setCallScreenCamera(!callScreenCamera); }} 
-              style={{ width: '44px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: callScreenCamera ? '#334155' : 'var(--ceo-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '44px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: callScreenCamera ? '#334155' : 'var(--tl-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               {callScreenCamera ? <Video size={20} color="#FFF" /> : <VideoOff size={20} color="#FFF" />}
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); toggleScreenShare(); }} 
-              style={{ width: '44px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: callScreenShare ? 'var(--ceo-success)' : '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '44px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: callScreenShare ? 'var(--tl-success)' : '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               <Monitor size={20} color="#FFF" />
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); handleEndCall(); }} 
-              style={{ width: '56px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: 'var(--ceo-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '56px', height: '44px', borderRadius: '22px', border: 'none', cursor: 'pointer', background: 'var(--tl-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               <PhoneOff size={20} color="#FFF" />
             </button>
@@ -1561,7 +1574,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
           {/* Header */}
           <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '5px', background: 'var(--ceo-danger)', animation: 'pulse 2s infinite' }}></div>
+              <div style={{ width: '10px', height: '10px', borderRadius: '5px', background: 'var(--tl-danger)', animation: 'pulse 2s infinite' }}></div>
               <span style={{ color: '#FFF', fontSize: '14px', fontWeight: 700 }}>{formatDuration(callDuration)}</span>
               <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)' }}></div>
               <span style={{ color: '#E2E8F0', fontSize: '16px', fontWeight: 600 }}>Meeting: {selectedChannel}</span>
@@ -1595,7 +1608,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                           callScreenCamera ? (
                             <video ref={callCameraVideoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} muted />
                           ) : (
-                            <div style={{ width: '120px', height: '120px', borderRadius: '60px', background: 'var(--ceo-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', color: '#FFF', fontWeight: 700 }}>SJ</div>
+                            <div style={{ width: '120px', height: '120px', borderRadius: '60px', background: 'var(--tl-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', color: '#FFF', fontWeight: 700 }}>SJ</div>
                           )
                         )}
                         {!callScreenMic && (
@@ -1673,25 +1686,25 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
           <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', background: '#0F172A', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <button 
               onClick={(e) => { e.stopPropagation(); setCallScreenMic(!callScreenMic); }} 
-              style={{ width: '56px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: callScreenMic ? '#334155' : 'var(--ceo-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '56px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: callScreenMic ? '#334155' : 'var(--tl-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               {callScreenMic ? <Mic size={24} color="#FFF" /> : <MicOff size={24} color="#FFF" />}
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); setCallScreenCamera(!callScreenCamera); }} 
-              style={{ width: '56px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: callScreenCamera ? '#334155' : 'var(--ceo-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '56px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: callScreenCamera ? '#334155' : 'var(--tl-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               {callScreenCamera ? <Video size={24} color="#FFF" /> : <VideoOff size={24} color="#FFF" />}
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); toggleScreenShare(); }} 
-              style={{ width: '56px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: callScreenShare ? 'var(--ceo-success)' : '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '56px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: callScreenShare ? 'var(--tl-success)' : '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               <Monitor size={24} color="#FFF" />
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); handleEndCall(); }} 
-              style={{ width: '80px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: 'var(--ceo-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              style={{ width: '80px', height: '56px', borderRadius: '28px', border: 'none', cursor: 'pointer', background: 'var(--tl-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
             >
               <PhoneOff size={24} color="#FFF" />
             </button>
@@ -1704,14 +1717,14 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       {isCreateChannelOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
           <div style={{ background: '#FFF', width: '400px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--ceo-text-primary)' }}>Create New Channel</h3>
-              <button onClick={() => setIsCreateChannelOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--ceo-text-muted)" /></button>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--tl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--tl-text-primary)' }}>Create New Channel</h3>
+              <button onClick={() => setIsCreateChannelOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--tl-text-muted)" /></button>
             </div>
             <form onSubmit={handleCreateChannel} style={{ padding: '20px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>CHANNEL NAME</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: '#F8FAFC', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '0 12px' }}>
-                <Hash size={16} color="var(--ceo-text-muted)" />
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--tl-text-secondary)', marginBottom: '8px' }}>CHANNEL NAME</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#F8FAFC', border: '1px solid var(--tl-border)', borderRadius: '8px', padding: '0 12px' }}>
+                <Hash size={16} color="var(--tl-text-muted)" />
                 <input 
                   autoFocus
                   required
@@ -1722,8 +1735,8 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 />
               </div>
               <div style={{ marginTop: '16px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>SELECT MEMBERS</label>
-                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '8px', background: '#F8FAFC' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--tl-text-secondary)', marginBottom: '8px' }}>SELECT MEMBERS</label>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--tl-border)', borderRadius: '8px', padding: '8px', background: '#F8FAFC' }}>
                   {employees.filter(e => String(e.id) !== 'ceo').map(emp => (
                     <label key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', cursor: 'pointer', borderRadius: '4px', ':hover': { background: '#FFF' } }}>
                       <input 
@@ -1738,13 +1751,13 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                         }}
                       />
                       <AvatarFallback  src={emp.photo ? `${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '24px', height: '24px', borderRadius: '12px' }}  />
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>{emp.name}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}>{emp.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={() => { setIsCreateChannelOpen(false); setSelectedMembers([]); setNewChannelName(''); }} className="ceo-btn" style={{ fontWeight: 700 }}>Cancel</button>
+                <button type="button" onClick={() => { setIsCreateChannelOpen(false); setSelectedMembers([]); setNewChannelName(''); }} className="tk-confirm-btn" style={{ fontWeight: 700 }}>Cancel</button>
                 <button type="submit" className="ceo-btn ceo-btn-primary" style={{ fontWeight: 700 }}>Create Channel</button>
               </div>
             </form>
@@ -1756,14 +1769,14 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       {isEditChannelOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }} onClick={(e) => { if (e.target === e.currentTarget) { setIsEditChannelOpen(false) } }}>
           <div style={{ background: '#FFF', width: '400px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--ceo-text-primary)' }}>Edit Channel Name</h3>
-              <button onClick={() => setIsEditChannelOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--ceo-text-muted)" /></button>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--tl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--tl-text-primary)' }}>Edit Channel Name</h3>
+              <button onClick={() => setIsEditChannelOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--tl-text-muted)" /></button>
             </div>
             <form onSubmit={handleEditChannel} style={{ padding: '20px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>NEW CHANNEL NAME</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: '#F8FAFC', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '0 12px' }}>
-                <Hash size={16} color="var(--ceo-text-muted)" />
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--tl-text-secondary)', marginBottom: '8px' }}>NEW CHANNEL NAME</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#F8FAFC', border: '1px solid var(--tl-border)', borderRadius: '8px', padding: '0 12px' }}>
+                <Hash size={16} color="var(--tl-text-muted)" />
                 <input 
                   autoFocus
                   required
@@ -1774,7 +1787,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 />
               </div>
               <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={() => setIsEditChannelOpen(false)} className="ceo-btn" style={{ fontWeight: 700 }}>Cancel</button>
+                <button type="button" onClick={() => setIsEditChannelOpen(false)} className="tk-confirm-btn" style={{ fontWeight: 700 }}>Cancel</button>
                 <button type="submit" className="ceo-btn ceo-btn-primary" style={{ fontWeight: 700 }}>Save Changes</button>
               </div>
             </form>
@@ -1786,16 +1799,16 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       {isAddMemberOpen && !isDM && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
           <div style={{ background: '#FFF', width: '500px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', maxHeight: '85vh' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--tl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--ceo-text-primary)' }}>Manage Members</h3>
-                <div style={{ fontSize: '12px', color: 'var(--ceo-text-secondary)' }}>#{selectedChannel}</div>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--tl-text-primary)' }}>Manage Members</h3>
+                <div style={{ fontSize: '12px', color: 'var(--tl-text-secondary)' }}>#{selectedChannel}</div>
               </div>
-              <button onClick={() => setIsAddMemberOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--ceo-text-muted)" /></button>
+              <button onClick={() => setIsAddMemberOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} color="var(--tl-text-muted)" /></button>
             </div>
             
-            <form onSubmit={handleAddGuest} style={{ padding: '16px', borderBottom: '1px solid var(--ceo-divider)', background: '#F8FAFC' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>INVITE GUEST BY PHONE</div>
+            <form onSubmit={handleAddGuest} style={{ padding: '16px', borderBottom: '1px solid var(--tl-divider)', background: '#F8FAFC' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--tl-text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>INVITE GUEST BY PHONE</div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input required value={newGuestName} onChange={e=>setNewGuestName(e.target.value)} type="text" placeholder="Guest Name" className="ceo-form-input" style={{ flex: 1, height: '36px', fontSize: '13px' }} />
                 <input required value={newGuestPhone} onChange={e=>setNewGuestPhone(e.target.value)} type="text" placeholder="+91 Phone Number" className="ceo-form-input" style={{ flex: 1, height: '36px', fontSize: '13px' }} />
@@ -1804,24 +1817,24 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             </form>
 
             <div style={{ overflowY: 'auto', flex: 1, padding: '8px 0', background: '#FFF' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', margin: '8px 16px', letterSpacing: '0.5px' }}>EXISTING EMPLOYEES</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--tl-text-muted)', margin: '8px 16px', letterSpacing: '0.5px' }}>EXISTING EMPLOYEES</div>
               {employees.map(emp => {
                 const isMember = (channelMembers[selectedChannel] || []).includes(emp.id);
                 return (
-                  <div key={emp.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--ceo-border)' }}>
+                  <div key={emp.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--tl-border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <AvatarFallback  src={emp.photo ? `${emp.photo}` : (emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=random`)} alt={emp.name} style={{ width: '32px', height: '32px', borderRadius: '16px' }}  />
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>{emp.name} {emp.isMe && '(You)'}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--tl-text-primary)' }}>{emp.name} {emp.isMe && '(You)'}</div>
                     </div>
                     <button 
                       onClick={() => toggleMemberInChannel(emp.id)}
                       disabled={emp.isMe}
-                      className="ceo-btn" 
+                      className="tk-confirm-btn" 
                       style={{ 
                         padding: '6px 12px', fontSize: '12px', fontWeight: 700, 
-                        background: isMember ? 'transparent' : 'var(--ceo-primary)', 
-                        color: isMember ? 'var(--ceo-text-secondary)' : '#FFF',
-                        border: isMember ? '1px solid var(--ceo-border)' : 'none',
+                        background: isMember ? 'transparent' : 'var(--tl-primary)', 
+                        color: isMember ? 'var(--tl-text-secondary)' : '#FFF',
+                        border: isMember ? '1px solid var(--tl-border)' : 'none',
                         opacity: emp.isMe ? 0.5 : 1,
                         cursor: emp.isMe ? 'not-allowed' : 'pointer'
                       }}
@@ -1866,7 +1879,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               background: '#FFF', 
               borderRadius: '12px', 
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', 
-              border: '1px solid var(--ceo-border)',
+              border: '1px solid var(--tl-border)',
               width: '180px',
               overflow: 'hidden',
               display: 'flex',
@@ -1874,7 +1887,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--ceo-divider)', background: '#F8FAFC', fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)' }}>
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--tl-divider)', background: '#F8FAFC', fontSize: '11px', fontWeight: 700, color: 'var(--tl-text-muted)' }}>
               MESSAGE ACTIONS
             </div>
             
@@ -1883,14 +1896,14 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 navigator.clipboard.writeText(contextMenu.msg.text || '');
                 closeContextMenu();
               }} 
-              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ceo-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--tl-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
             >
               <Copy size={16} /> Copy Message
             </button>
 
             <button 
               onClick={() => { setActiveThreadMessage(contextMenu.msg); closeContextMenu(); }} 
-              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ceo-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--tl-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
             >
               <MessageSquare size={16} /> Reply in Thread
             </button>
@@ -1902,14 +1915,14 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 }
                 closeContextMenu();
               }} 
-              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ceo-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--tl-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
             >
               <Pin size={16} /> {contextMenu.msg.is_pinned ? 'Unpin Message' : 'Pin Message'}
             </button>
 
             <button 
               onClick={() => { setShowEmojiPicker(contextMenu.msg.id); }} 
-              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ceo-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--tl-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
             >
               <Smile size={16} /> React
             </button>
@@ -1919,7 +1932,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 setForwardMessageModal(contextMenu.msg);
                 closeContextMenu();
               }} 
-              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ceo-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+              style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--tl-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
             >
               <Send size={16} /> Forward Message
             </button>
@@ -1929,13 +1942,13 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               <>
                 <button 
                   onClick={() => { setEditingMessageId(contextMenu.msg.id); setEditingText(contextMenu.msg.text); closeContextMenu(); }} 
-                  style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ceo-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}
+                  style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--tl-divider)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-text-primary)' }}
                 >
                   <MessageSquare size={16} /> Edit Message
                 </button>
                 <button 
                   onClick={() => { handleDeleteMessage(contextMenu.msg.id); closeContextMenu(); }} 
-                  style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--ceo-danger)' }}
+                  style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--tl-danger)' }}
                 >
                   <Trash2 size={16} /> Delete Message
                 </button>
@@ -1981,9 +1994,9 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       {showGroupMembersModal && currentChannel && !isDM && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#FFF', borderRadius: '16px', width: '400px', maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--ceo-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--ceo-text-primary)' }}>Group Members</h3>
-              <button onClick={() => setShowGroupMembersModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={20} color="var(--ceo-text-muted)" /></button>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--tl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--tl-text-primary)' }}>Group Members</h3>
+              <button onClick={() => setShowGroupMembersModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={20} color="var(--tl-text-muted)" /></button>
             </div>
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {(currentChannel.members || []).map(empId => {
@@ -1993,8 +2006,8 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 return (
                   <div key={empId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <AvatarFallback  src={avatar} alt={name} style={{ width: '40px', height: '40px', borderRadius: '20px', objectFit: 'cover', border: '1px solid var(--ceo-border)' }}  />
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--ceo-text-primary)' }}>{name}</div>
+                      <AvatarFallback  src={avatar} alt={name} style={{ width: '40px', height: '40px', borderRadius: '20px', objectFit: 'cover', border: '1px solid var(--tl-border)' }}  />
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--tl-text-primary)' }}>{name}</div>
                     </div>
                     {empId !== 'ceo' && (
                       <button 
@@ -2002,7 +2015,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                           setSelectedChannel(getDmId(name));
                           setShowGroupMembersModal(false);
                         }}
-                        style={{ padding: '6px 12px', background: '#F1F5F9', border: '1px solid var(--ceo-border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: 'var(--ceo-text-primary)', display: 'flex', gap: '6px', alignItems: 'center' }}
+                        style={{ padding: '6px 12px', background: '#F1F5F9', border: '1px solid var(--tl-border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: 'var(--tl-text-primary)', display: 'flex', gap: '6px', alignItems: 'center' }}
                       >
                         <MessageSquare size={14} /> Message
                       </button>
@@ -2027,25 +2040,25 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if (e.target === e.currentTarget) { setForwardMessageModal(null) } }}>
           <div style={{ background: '#FFF', width: '400px', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Forward Message To...</h3>
-            <div style={{ fontSize: '13px', color: 'var(--ceo-text-muted)', background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--ceo-border)', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '13px', color: 'var(--tl-text-muted)', background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--tl-border)', fontStyle: 'italic' }}>
                "{forwardMessageModal.text}"
-               {forwardMessageModal.attachment_url && <div style={{marginTop: '4px', color: 'var(--ceo-primary)'}}>[Attachment Included]</div>}
+               {forwardMessageModal.attachment_url && <div style={{marginTop: '4px', color: 'var(--tl-primary)'}}>[Attachment Included]</div>}
             </div>
             <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }}>
-               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)' }}>CHANNELS</div>
+               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--tl-text-muted)' }}>CHANNELS</div>
                {(typeof dbChannels !== 'undefined' ? dbChannels : (typeof chatChannels !== 'undefined' ? chatChannels : [])).map(c => (
-                  <button key={"fwd-"+c.id} onClick={() => executeForwardMessage(c.id)} style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid var(--ceo-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>
-                    <Hash size={16} color="var(--ceo-text-muted)"/> {c.name}
+                  <button key={"fwd-"+c.id} onClick={() => executeForwardMessage(c.id)} style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid var(--tl-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--tl-text-primary)' }}>
+                    <Hash size={16} color="var(--tl-text-muted)"/> {c.name}
                   </button>
                ))}
-               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginTop: '8px' }}>DIRECT MESSAGES</div>
+               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--tl-text-muted)', marginTop: '8px' }}>DIRECT MESSAGES</div>
                {(typeof employees !== 'undefined' ? employees : []).filter(e => !e.isMe).map(e => (
-                  <button key={"fwd-dm-"+e.id} onClick={() => executeForwardMessage(getDmId(e.name))} style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid var(--ceo-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>
+                  <button key={"fwd-dm-"+e.id} onClick={() => executeForwardMessage(getDmId(e.name))} style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid var(--tl-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--tl-text-primary)' }}>
                     <img src={e.photo ? e.photo : (e.avatar || "https://ui-avatars.com/api/?name="+e.name.replace(' ', '+'))} alt="" style={{width: '24px', height: '24px', borderRadius: '12px', objectFit: 'cover'}} onError={(ev)=>{ev.target.onerror=null;ev.target.src="https://ui-avatars.com/api/?name="+e.name.replace(' ', '+');}} /> {e.name}
                   </button>
                ))}
             </div>
-            <button onClick={() => setForwardMessageModal(null)} style={{ padding: '12px', background: '#E2E8F0', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', color: 'var(--ceo-text-primary)' }}>Cancel</button>
+            <button onClick={() => setForwardMessageModal(null)} style={{ padding: '12px', background: '#E2E8F0', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', color: 'var(--tl-text-primary)' }}>Cancel</button>
           </div>
         </div>
       )}
