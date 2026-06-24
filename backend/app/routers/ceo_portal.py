@@ -2269,7 +2269,7 @@ class DepartmentUpdate(BaseModel):
 
 class DesignationBase(BaseModel):
     name: str
-    department_id: int
+    department_id: Optional[int] = None
     level: str
 
 class ShiftBase(BaseModel):

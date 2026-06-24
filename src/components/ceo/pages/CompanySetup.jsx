@@ -721,8 +721,8 @@ export default function CompanySetup() {
       ],
       onSave: async (data) => {
         setModalConfig(null);
-        const deptId = parseInt(data.department_id.split(':')[0]);
-        const payload = { name: data.name, department_id: deptId, level: item ? item.level : 1 };
+        const deptId = data.department_id ? parseInt(data.department_id.split(':')[0]) : null;
+        const payload = { name: data.name, department_id: deptId, level: item ? item.level : "1" };
         const url = item ? `/api/ceo-portal/designations/${item.id}` : '/api/ceo-portal/designations';
         const method = item ? 'PUT' : 'POST';
         const res = await fetch(url, {
