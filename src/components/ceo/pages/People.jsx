@@ -415,8 +415,8 @@ export default function People() {
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const matchSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || emp.id.toLowerCase().includes(searchTerm.toLowerCase()) || emp.role.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchDept = selectedDept ? emp.dept === selectedDept : true;
-      const matchStatus = selectedStatus ? emp.status === selectedStatus : true;
+      const matchDept = (selectedDept && selectedDept !== 'All Departments') ? emp.dept === selectedDept : true;
+      const matchStatus = (selectedStatus && selectedStatus !== 'All') ? emp.status === selectedStatus : true;
       return matchSearch && matchDept && matchStatus;
     });
   }, [employees, searchTerm, selectedDept, selectedStatus]);
