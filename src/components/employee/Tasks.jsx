@@ -647,10 +647,7 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
           </div>
         )}
 
-        {/* PR Form — only show when task is in 'pr' status */}
-        {status === 'pr' && (
-          <PrSubmitForm task={task} onSubmit={handlePrSubmit} />
-        )}
+        {/* PR Form — removed per user request */}
 
         {/* Save button */}
         <div style={{ display: 'flex', gap: '12px', marginTop: 20 }}>
