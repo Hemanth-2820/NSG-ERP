@@ -107,6 +107,7 @@ class EmployeeCreateRequest(BaseModel):
     account_number: Optional[str] = None
     ifsc_code: Optional[str] = None
     bank_branch: Optional[str] = None
+    current_salary: Optional[float] = None
 
 class EmployeeResponse(BaseModel):
     id: int
@@ -896,7 +897,14 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
         emp_id = f"NSG-0{max_serial + 1}"
     probation_end = date.fromordinal(req.join_date.toordinal() + 30)
     
-    initial_docs = []
+    init_ctc = req.current_salary if req.current_salary else 0.0
+    init_base = init_ctc * 0.4
+    
+    initial_docs_dict = {
+        "docs_list": [],
+        "ctc": init_ctc,
+        "base_salary": init_base
+    }
     
     default_pwd_plain = f"{req.name.replace(' ', '')}@123"
     default_pwd = security.hash_password(default_pwd_plain)
@@ -920,7 +928,7 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
         manager="John Doe",
         manager_id=req.manager_id,
         photo=req.photo or "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80",
-        documents=json.dumps(initial_docs),
+        documents=json.dumps(initial_docs_dict),
         pf_number=req.pf_number,
         uan=req.uan,
         esi_number=req.esi_number,

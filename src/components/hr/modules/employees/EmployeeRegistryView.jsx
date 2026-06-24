@@ -139,6 +139,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [newAccountNumber, setNewAccountNumber] = useState('');
   const [newIfscCode, setNewIfscCode] = useState('');
   const [newBankBranch, setNewBankBranch] = useState('');
+  const [newCurrentSalary, setNewCurrentSalary] = useState('');
 
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
@@ -489,6 +490,10 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
     if (!cleanBankBranch) { newErrors['BANKBRANCHNAME'] = 'Please enter BANK BRANCH NAME.'; hasErrors = true; }
     else if (!/^[A-Za-z\s.,'-]+$/.test(cleanBankBranch)) { newErrors['BANKBRANCHNAME'] = 'Must contain only letters and standard characters.'; hasErrors = true; }
     
+    const cleanSalary = String(newCurrentSalary || '').trim();
+    if (!cleanSalary) { newErrors['CURRENTSALARYCTC'] = 'Please enter CURRENT SALARY.'; hasErrors = true; }
+    else if (isNaN(cleanSalary) || Number(cleanSalary) <= 0) { newErrors['CURRENTSALARYCTC'] = 'Must be a positive number.'; hasErrors = true; }
+    
     if (hasErrors) {
       setWizardErrors(newErrors);
       return;
@@ -541,7 +546,8 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           bank_name: newBankName || null,
           account_number: newAccountNumber || null,
           ifsc_code: newIfscCode || null,
-          bank_branch: newBankBranch || null
+          bank_branch: newBankBranch || null,
+          current_salary: newCurrentSalary ? parseFloat(newCurrentSalary) : null
         })
       });
 
@@ -1495,6 +1501,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
                   {renderField('IFSC CODE *', newIfscCode, setNewIfscCode, 'text', true, null, false, 'Enter IFSC Code', { uppercase: true, maxLength: 11 }, /^[A-Z]{4}0[A-Z0-9]{6}$/i, 'Must be a valid 11-character IFSC Code.')}
                   {renderField('BANK NAME *', newBankName, setNewBankName, 'text', true, null, false, 'Enter Bank Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
                   {renderField('BANK BRANCH NAME *', newBankBranch, setNewBankBranch, 'text', true, null, false, 'Enter Branch Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
+                  {renderField('CURRENT SALARY (CTC) *', newCurrentSalary, setNewCurrentSalary, 'text', true, null, false, 'e.g. 500000', { numericOnly: true }, /^\d+$/, 'Must be a valid number.')}
                 </div>
               );
             })()}
