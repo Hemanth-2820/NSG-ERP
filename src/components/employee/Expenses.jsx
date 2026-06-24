@@ -208,48 +208,56 @@ export default function Expenses({ currentUser }) {
             </div>
 
             <div className="card-table-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
-              <table className="data-table">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr>
-                    <th style={{ fontSize: '11px' }}>Date</th>
-                    <th style={{ fontSize: '11px' }}>Category</th>
-                    <th style={{ fontSize: '11px' }}>Amount</th>
-                    <th style={{ fontSize: '11px' }}>Description</th>
-                    <th style={{ fontSize: '11px' }}>Receipt</th>
-                    <th style={{ fontSize: '11px' }}>CEO Approval</th>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px' }}>Date</th>
+                    <th style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px' }}>Category</th>
+                    <th style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px' }}>Amount</th>
+                    <th style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px' }}>Description</th>
+                    <th style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px' }}>Receipt</th>
+                    <th style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px' }}>CEO Approval</th>
                   </tr>
                 </thead>
                 <tbody>
                   {claims.map((claim) => {
                     const isSelected = selectedClaim?.id === claim.id;
-                    const catColor = getCategoryColor(claim.category);
-                    const formattedAmount = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(claim.amount);
+                    const catColor = claim.category ? getCategoryColor(claim.category) : 'var(--text-muted)';
+                    const formattedAmount = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(claim.amount || 0);
                     return (
-                      <tr key={claim.id} onClick={() => setSelectedClaim(claim)} className={`expense-tr-row ${isSelected ? 'expense-row-selected' : ''}`}>
-                        <td style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>{claim.date}</td>
-                        <td>
-                          <span className="badge-cat" style={{ color: catColor, backgroundColor: `${catColor}15` }}>{getCategoryLabel(claim.category)}</span>
+                      <tr key={claim.id} onClick={() => setSelectedClaim(claim)} className={`expense-tr-row ${isSelected ? 'expense-row-selected' : ''}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ fontSize: '13px', padding: '16px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{claim.date || '-'}</td>
+                        <td style={{ padding: '16px' }}>
+                          {claim.category ? (
+                            <span className="badge-cat" style={{ color: catColor, backgroundColor: `${catColor}15` }}>{getCategoryLabel(claim.category)}</span>
+                          ) : (
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>-</span>
+                          )}
                         </td>
-                        <td className="claim-amt" style={{ color: catColor }}>{formattedAmount}</td>
+                        <td className="claim-amt" style={{ padding: '16px', color: catColor }}>{formattedAmount}</td>
                         <td 
                           onClick={(e) => { e.stopPropagation(); setViewDescription(claim.description); }}
-                          style={{ fontSize: '11px', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }} 
+                          style={{ fontSize: '13px', padding: '16px', color: 'var(--text-secondary)', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }} 
                           title="Click to view full description"
                         >
-                          <span style={{ textDecoration: 'underline' }}>{claim.description}</span>
+                          <span style={{ textDecoration: 'underline' }}>{claim.description || '-'}</span>
                         </td>
-                        <td onClick={(e) => e.stopPropagation()}>
+                        <td style={{ padding: '16px' }} onClick={(e) => e.stopPropagation()}>
                           <a 
                             href={claim.receiptName} 
                             download 
-                            style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', cursor: 'pointer' }}
+                            style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', cursor: 'pointer' }}
                             onMouseOver={(e) => { e.currentTarget.style.color = 'var(--accent-green)'; e.currentTarget.style.textDecoration = 'underline'; }}
                             onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.textDecoration = 'none'; }}
                           >
-                            <FileText size={12} /> {claim.receiptName}
+                            <FileText size={14} /> {claim.receiptName || 'N/A'}
                           </a>
                         </td>
-                        <td><span className={`status-pill ${claim.payrollStatus === 'reimbursed' ? 'approved' : claim.payrollStatus}`}>{claim.payrollStatus === 'reimbursed' ? 'Approved' : claim.payrollStatus}</span></td>
+                        <td style={{ padding: '16px' }}>
+                          <span className={`status-pill ${claim.payrollStatus === 'reimbursed' ? 'approved' : (claim.payrollStatus || 'pending')}`}>
+                            {claim.payrollStatus === 'reimbursed' ? 'Approved' : (claim.payrollStatus || 'Pending')}
+                          </span>
+                        </td>
                       </tr>
                     );
                   })}
