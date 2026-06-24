@@ -55,7 +55,7 @@ class UserDetailResponse(BaseModel):
     role: str
     department: Optional[str]
     designation: Optional[str]
-    status: str
+    status: Optional[str] = "active"
     join_date: Optional[date]
     photo: Optional[str]
     last_active: Optional[datetime] = None
