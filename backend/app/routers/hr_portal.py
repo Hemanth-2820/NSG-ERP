@@ -764,14 +764,16 @@ def transition_candidate_to_employee(id: int, current_user: models.User = Depend
         db.add(db_task)
         
     # Auto-seed training progress (mandatory induction track 1)
-    db_progress = models.TrainingProgress(
-        employee_id=db_emp.id,
-        track_id=1,
-        completed_modules=0,
-        quiz_score=0.0,
-        passed=False
-    )
-    db.add(db_progress)
+    default_track = db.query(models.TrainingTrack).filter(models.TrainingTrack.id == 1).first()
+    if default_track:
+        db_progress = models.TrainingProgress(
+            employee_id=db_emp.id,
+            track_id=1,
+            completed_modules=0,
+            quiz_score=0.0,
+            passed=False
+        )
+        db.add(db_progress)
     
     # Auto-seed NDA esign request
     db_esign = models.EsignRequest(
@@ -949,14 +951,16 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
         )
         db.add(db_task)
 
-    db_progress = models.TrainingProgress(
-        employee_id=db_emp.id,
-        track_id=1,
-        completed_modules=0,
-        quiz_score=0.0,
-        passed=False
-    )
-    db.add(db_progress)
+    default_track = db.query(models.TrainingTrack).filter(models.TrainingTrack.id == 1).first()
+    if default_track:
+        db_progress = models.TrainingProgress(
+            employee_id=db_emp.id,
+            track_id=1,
+            completed_modules=0,
+            quiz_score=0.0,
+            passed=False
+        )
+        db.add(db_progress)
 
     db_log = models.AuditLog(
         initiator_id=current_user.name,
