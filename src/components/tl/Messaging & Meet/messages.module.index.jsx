@@ -376,8 +376,51 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   // Auto-scroll chat and mark read
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    if (selectedChannel && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'mark_read', channel_id: selectedChannel, user_name: tlName }));
+    if (selectedChannel && getUnreadCount(selectedChannel) > 0) {
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: 'mark_read', channel_id: selectedChannel, user_name: tlName }));
+      }
+      
+      const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
+      if (isCorporateChannel) {
+        setDbChannels(prev => prev.map(c => {
+          if (c.id === selectedChannel) {
+            return {
+              ...c,
+              messages: (c.messages || []).map(m => {
+                if (m.isMe || m.sender === tlName) return m;
+                try {
+                  let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
+                  if (!seenArr.includes(tlName)) {
+                    seenArr.push(tlName);
+                    return { ...m, seen_by: JSON.stringify(seenArr) };
+                  }
+                } catch(e) {}
+                return m;
+              })
+            };
+          }
+          return c;
+        }));
+      } else {
+        setLocalDmMessages(prev => {
+          if (!prev[selectedChannel]) return prev;
+          return {
+            ...prev,
+            [selectedChannel]: prev[selectedChannel].map(m => {
+              if (m.isMe || m.sender === tlName) return m;
+              try {
+                let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
+                if (!seenArr.includes(tlName)) {
+                  seenArr.push(tlName);
+                  return { ...m, seen_by: JSON.stringify(seenArr) };
+                }
+              } catch(e) {}
+              return m;
+            })
+          };
+        });
+      }
     }
   }, [messages, selectedChannel]);
 
@@ -584,6 +627,20 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       isCallStatus: true,
       isMe: true
     };
+
+    const callPayload = {
+      type: 'new_message',
+      channel_id: selectedChannel,
+      sender: tlName,
+      text: 'Started a video call',
+      isCallStatus: true,
+      isMe: true
+    };
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(callPayload));
+      return;
+    }
 
     if (isCorporateChannel) {
       const updatedChannels = chatChannels.map(c => {
