@@ -496,7 +496,7 @@ export default function EmployeeDashboard({ setActiveTab, currentUser }) {
                           )}
                         </div>
                         <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ann.title}</strong>
-                        <div dangerouslySetInnerHTML={{ __html: ann.body }} className="quill-content" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }} />
+                        <div dangerouslySetInnerHTML={{ __html: ann.body }} className="quill-content" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4, maxHeight: 120, overflowY: 'auto', paddingRight: 4 }} />
                       </div>
                     ))}
                     {dbData.announcements.length > annsPerPage && (
