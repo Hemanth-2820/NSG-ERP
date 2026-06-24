@@ -619,7 +619,7 @@ const Dashboard = ({ setActiveTab, setSelectedChatUser }) => {
                       )}
                     </div>
                     <strong style={{ fontSize: '14px', color: '#0F172A', lineHeight: 1.3 }}>{ann.title}</strong>
-                    <div dangerouslySetInnerHTML={{ __html: ann.body }} style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5, maxHeight: '3.8em', overflow: 'hidden' }} />
+                    <div dangerouslySetInnerHTML={{ __html: ann.body }} style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5 }} />
                   </div>
                 ))}
               </div>
