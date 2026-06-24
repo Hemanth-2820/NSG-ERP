@@ -407,7 +407,7 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          status: status,          // use local status state (user's selected status), NOT task.status prop (server value)
+          status: task.status,          // SEND THE ORIGINAL SERVER VALUE (prevents status change without approval)
           custom_data: JSON.stringify(updatedCustomData)
         })
       });
@@ -494,8 +494,8 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
 
   function changeStatus(s) {
     setStatus(s);
-    // Only update the status — notes/attachments are saved separately via "Save Notes" button
-    onUpdate(task.id, { status: s });
+    // Removed onUpdate here so the status isn't changed on the server directly.
+    // The employee just selects the tab to add notes, then clicks Save.
   }
 
   function handlePrSubmit(url, notes) {
@@ -656,7 +656,7 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
             style={{ flex: 1 }}
             onClick={() => {
               if (status === 'assignee') {
-                changeStatus('pending'); // 'pending' is the internal status for Todo
+                onUpdate(task.id, { status: 'pending' }); // Explicitly save to pending
                 if (onClose) onClose();
               } else {
                 saveStatusNotesAndAttachments();
@@ -671,7 +671,7 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
               className="tk-confirm-btn"
               style={{ flex: 1, background: '#ef4444', borderColor: '#ef4444' }}
               onClick={() => {
-                changeStatus('blocked');
+                onUpdate(task.id, { status: 'blocked' }); // Explicitly save to blocked
                 if (onClose) onClose();
               }}
               disabled={savingNotes}
