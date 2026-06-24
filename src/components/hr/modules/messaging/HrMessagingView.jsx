@@ -50,7 +50,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                 name: c.name,
                 label: c.label,
                 type: c.type,
-                members: c.members && c.members.length > 0 ? c.members : (c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo']),
+                members: c.members && c.members.length > 0 ? c.members : [],
                 messages: msgs.map(m => {
                   const tzFixed = m.timestamp.endsWith('Z') ? m.timestamp : m.timestamp + 'Z';
                   return {
@@ -80,7 +80,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
             name: c.name,
             label: c.label,
             type: c.type,
-            members: c.type === 'grievance' ? ['102', 'hr'] : ['101', '102', '103', '104', '105', 'hr', 'ceo'],
+            members: c.members && c.members.length > 0 ? c.members : [],
             messages: []
           };
         }));

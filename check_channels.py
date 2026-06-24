@@ -1,7 +1,4 @@
-import json
-import sqlite3
 import os
-
 try:
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -16,9 +13,8 @@ try:
 
     channels = session.query(models.ChatChannel).all()
     print("Channels:")
-    for ch in channels:
-        if ch.id.startswith('dm-'):
-            print(ch.id, ch.members)
+    for c in channels:
+        print(f"ID: {c.id}, Name: {c.name}, Members: {c.members}")
 
 except Exception as e:
     print("Error:", e)
