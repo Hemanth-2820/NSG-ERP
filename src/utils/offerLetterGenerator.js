@@ -29,15 +29,8 @@ export const getOfferLetterHTML = (data) => {
     </div>
   `;
 
-  const watermarkHTML = `
-    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; z-index: 0; pointer-events: none;">
-      <img src="/hmns-logo.png" style="width: 400px; filter: grayscale(100%);" alt="watermark" />
-    </div>
-  `;
-
   const pageWrapper = (content) => `
     <div style="width: 210mm; height: 296mm; position: relative; overflow: hidden; box-sizing: border-box; page-break-after: always; background: white;">
-      ${watermarkHTML}
       ${headerHTML}
       <div style="padding: 20px 50px; font-size: 14.5px; line-height: 1.5; z-index: 10; position: relative; text-align: justify;">
         ${content}

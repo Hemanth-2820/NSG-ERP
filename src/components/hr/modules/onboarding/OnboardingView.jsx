@@ -367,7 +367,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
 
         if (isGlobal) {
             const token = localStorage.getItem('nsg_jwt_token');
-            const res = await fetch('/api/hr-portal/onboarding/global-template/offer_letter', {
+            const res = await fetch('/api/hr-portal/onboarding/global-template', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
