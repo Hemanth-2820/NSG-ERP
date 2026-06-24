@@ -90,13 +90,15 @@ const TeamDirectory = () => {
     const start = new Date(leave.from_date);
     const end = new Date(leave.to_date);
     let current = new Date(start);
+    const emp = teamMembers.find(m => m.id === leave.user_id);
+    const empName = emp ? emp.name : `Emp #${leave.user_id}`;
     while (current <= end) {
       calendarEvents.push({
         day: current.getDate(),
         month: current.getMonth(),
         year: current.getFullYear(),
         type: leave.leave_type === 'WFH' ? 'wfh' : 'leave',
-        label: `${leave.leave_type} - Emp #${leave.user_id}`
+        label: `${leave.leave_type} - ${empName}`
       });
       current.setDate(current.getDate() + 1);
     }
