@@ -1,13 +1,5 @@
-import sys
-sys.path.insert(0, 'app')
-from app import database, models
-
-db = database.SessionLocal()
-users = db.query(models.User).all()
-for u in users:
-    print(f"ID={u.id}, Name={u.name}, Email={u.email}, Role={u.role}")
-print("---")
-channels = db.query(models.ChatChannel).all()
-for c in channels:
-    print(f"Channel ID={c.id}, Name={c.name}, Members={c.members}")
-db.close()
+from app.database import engine
+from sqlalchemy import text
+with engine.connect() as conn:
+    res = conn.execute(text("SELECT email, role FROM users")).fetchall()
+    print(res)
