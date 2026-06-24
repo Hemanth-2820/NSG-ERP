@@ -373,9 +373,12 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     };
   }, [chatChannels, employees]);
 
-  // Auto-scroll chat
+  // Auto-scroll chat and mark read
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (selectedChannel && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'mark_read', channel_id: selectedChannel, user_name: tlName }));
+    }
   }, [messages, selectedChannel]);
 
   // Call duration timer
@@ -913,7 +916,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   const getUnreadCount = (channelId) => {
     const msgs = messages[channelId] || [];
     return msgs.filter(m => {
-       if (m.isMe || (m.sender && m.sender.includes('TL'))) return false;
+       if (m.isMe || m.sender === tlName) return false;
        try {
          const seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
          return !seenArr.includes(tlName);
@@ -1006,7 +1009,15 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginBottom: '8px', paddingLeft: '8px', letterSpacing: '0.5px' }}>DIRECT MESSAGES</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {employees.filter(e => !e.isMe).map(emp => {
+            {employees.filter(e => !e.isMe).sort((a, b) => {
+              const aId = getDmId(a.name);
+              const bId = getDmId(b.name);
+              const aMsgs = messages[aId] || [];
+              const bMsgs = messages[bId] || [];
+              const aLast = aMsgs.length > 0 ? new Date(aMsgs[aMsgs.length - 1].timestamp).getTime() : 0;
+              const bLast = bMsgs.length > 0 ? new Date(bMsgs[bMsgs.length - 1].timestamp).getTime() : 0;
+              return bLast - aLast;
+            }).map(emp => {
               const dmId = getDmId(emp.name);
               const isSelected = selectedChannel === dmId;
               return (
