@@ -169,6 +169,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
   const [editAccountNumber, setEditAccountNumber] = useState('');
   const [editIfscCode, setEditIfscCode] = useState('');
   const [editBankBranch, setEditBankBranch] = useState('');
+  const [editCurrentSalary, setEditCurrentSalary] = useState('');
   const [editErrors, setEditErrors] = useState({});
 
   // Reset Password Modal States
@@ -796,7 +797,8 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           bank_name: editBankName || null,
           account_number: editAccountNumber || null,
           ifsc_code: editIfscCode || null,
-          bank_branch: editBankBranch || null
+          bank_branch: editBankBranch || null,
+          current_salary: editCurrentSalary ? parseFloat(editCurrentSalary) : null
         })
       });
       if (!res.ok) {
@@ -861,6 +863,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
     setEditAccountNumber(emp.account_number || '');
     setEditIfscCode(emp.ifsc_code || '');
     setEditBankBranch(emp.bank_branch || '');
+    setEditCurrentSalary(emp.current_salary || '');
     setEditPhotoFile(null);
     setShowEditModal(true);
   };
@@ -1652,7 +1655,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
                   {renderField('IFSC CODE *', editIfscCode, setEditIfscCode, 'text', true, null, false, 'Enter IFSC Code', { uppercase: true, maxLength: 11 }, /^[A-Z]{4}0[A-Z0-9]{6}$/i, 'Must be a valid 11-character IFSC Code.')}
                   {renderField('BANK NAME *', editBankName, setEditBankName, 'text', true, null, false, 'Enter Bank Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
                   {renderField('BANK BRANCH NAME *', editBankBranch, setEditBankBranch, 'text', true, null, false, 'Enter Branch Name', { uppercase: true }, /^[A-Za-z\s.,'-]+$/, 'Must contain only letters and standard characters.')}
-                  
+                  {renderField('CURRENT SALARY (CTC) *', editCurrentSalary, setEditCurrentSalary, 'text', true, null, false, 'e.g. 500000', { numericOnly: true }, /^\d+$/, 'Must be a valid number.')}
 
                 </div>
               );

@@ -164,6 +164,7 @@ class EmployeeUpdateRequest(BaseModel):
     account_number: Optional[str] = None
     ifsc_code: Optional[str] = None
     bank_branch: Optional[str] = None
+    current_salary: Optional[float] = None
 
 class PasswordResetRequest(BaseModel):
     new_password: str
