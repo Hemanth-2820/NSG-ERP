@@ -11,7 +11,7 @@ export const useCompany = () => {
 };
 
 export const CompanyProvider = ({ children }) => {
-  const [companyName, setCompanyName] = useState('HMNS Software');
+  const [companyName, setCompanyName] = useState('ERP Software');
   const [companyLogo, setCompanyLogo] = useState('/hmns-logo.png');
   const [empIdPrefix, setEmpIdPrefix] = useState('nsg');
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -21,7 +21,7 @@ export const CompanyProvider = ({ children }) => {
       const response = await fetch('/api/auth/company-config');
       if (response.ok) {
         const data = await response.json();
-        setCompanyName(data.company_name || 'HMNS Software');
+        setCompanyName(data.company_name || 'ERP Software');
         
         let logoUrl = data.company_logo || '/hmns-logo.png';
         if (logoUrl && logoUrl !== '/hmns-logo.png' && !logoUrl.startsWith('http') && !logoUrl.startsWith('/api/')) {
