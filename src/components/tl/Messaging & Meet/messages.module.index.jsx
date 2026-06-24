@@ -281,7 +281,8 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   // Initialize WebSocket connection for real-time messaging
   useEffect(() => {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//127.0.0.1:8000/employee-portal/ws/${encodeURIComponent(tlName)}`;
+    const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '127.0.0.1:8000' : 'nsg-erp.onrender.com';
+    const wsUrl = `${wsProtocol}//${wsHost}/employee-portal/ws/${encodeURIComponent(tlName)}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
