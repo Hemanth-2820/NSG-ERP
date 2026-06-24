@@ -217,7 +217,7 @@ const Projects = () => {
           else if (t.status === 'testing') columns.testing.push(card);
           else if (t.status === 'blocked') columns.rejected.push(card);
           else if (t.status === 'pr') columns.pr.push(card);
-          else if (t.status === 'assignee') { /* skip — not yet accepted */ }
+          else if (t.status === 'assignee' || t.status === 'done' || t.status === 'To Do') { /* skip 'done', and 'To Do' is typically not used, but just in case */ }
           else columns.todo.push(card);
         });
         setKanbanData(columns);
