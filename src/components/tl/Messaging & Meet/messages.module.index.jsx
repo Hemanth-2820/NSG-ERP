@@ -181,6 +181,17 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
   const [localDmMessages, setLocalDmMessages] = useState({});
 
+  const getDmId = (otherName) => {
+    return "dm-" + [tlName, otherName].sort().join('-');
+  };
+
+  const getDmUser = (channelId) => {
+    if (!channelId || !channelId.startsWith('dm-')) return null;
+    const names = channelId.replace('dm-', '').split('-');
+    const otherName = names.find(n => n !== tlName) || names[0];
+    return employees.find(e => e.name === otherName) || { name: otherName };
+  };
+
   const currentChannel = chatChannels.find(c => c.id === selectedChannel);
 
   const messages = useMemo(() => {
@@ -331,7 +342,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 {
                   id: newMsg.id,
                   sender: newMsg.sender,
-                  avatar: employees.find(e => e.name === newMsg.sender || `dm-${e.id}` === newMsg.channel_id)?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(newMsg.sender),
+                  avatar: employees.find(e => e.name === newMsg.sender || getDmId(e.name) === newMsg.channel_id)?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(newMsg.sender),
                   text: newMsg.text,
                   timestamp: newMsg.timestamp ? new Date(newMsg.timestamp.endsWith('Z') ? newMsg.timestamp : newMsg.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
                   isMe: newMsg.sender === tlName || newMsg.sender === tlName + ' (TL)',
@@ -541,27 +552,6 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     }
     setInputVal('');
 
-    // Simulated reply
-    setTimeout(() => {
-      const isDM = selectedChannel.startsWith('dm-');
-      if (isDM) {
-        const senderName = employees.find(e => `dm-${e.id}` === selectedChannel)?.name || 'Colleague';
-        const senderAvatar = employees.find(e => `dm-${e.id}` === selectedChannel)?.avatar;
-
-        const autoReply = {
-          id: Date.now() + 1,
-          sender: senderName,
-          avatar: senderAvatar,
-          text: 'Got it! I will check that out shortly.',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        
-        setLocalDmMessages(prev => ({
-          ...prev,
-          [selectedChannel]: [...(prev[selectedChannel] || []), autoReply]
-        }));
-      }
-    }, 2000);
   };
 
 
@@ -575,7 +565,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     // Only use HuddleModal, avoid the broken floating PIP
     setHuddlePeer({
       channelId: selectedChannel,
-      roomName: isDM ? `DM-${employees.find(e => `dm-${e.id}` === selectedChannel)?.name}` : selectedChannel,
+      roomName: isDM ? `DM-${employees.find(e => getDmId(e.name) === selectedChannel)?.name}` : selectedChannel,
       name: selectedChannel,
       displayName: 'TL (TL)'
     });
@@ -1016,7 +1006,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginBottom: '8px', paddingLeft: '8px', letterSpacing: '0.5px' }}>DIRECT MESSAGES</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {employees.filter(e => !e.isMe).map(emp => {
-              const dmId = `dm-${emp.id}`;
+              const dmId = getDmId(emp.name);
               const isSelected = selectedChannel === dmId;
               return (
                 <div 
@@ -1054,7 +1044,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               onClick={() => !isDM && setShowGroupMembersModal(true)}
             >
               {isDM ? <span style={{ color: 'var(--ceo-primary)' }}>@</span> : <Hash size={20} color="var(--ceo-text-muted)" />}
-              {isDM ? employees.find(e => `dm-${e.id}` === selectedChannel)?.name : selectedChannel}
+              {isDM ? employees.find(e => getDmId(e.name) === selectedChannel)?.name : selectedChannel}
             </div>
             <div 
               style={{ fontSize: '12px', color: 'var(--ceo-text-secondary)', fontWeight: 500, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', cursor: isDM ? 'default' : 'pointer' }}
@@ -1062,7 +1052,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             >
               {isDM ? (
                 (() => {
-                  const dmUser = employees.find(e => `dm-${e.id}` === selectedChannel);
+                  const dmUser = employees.find(e => getDmId(e.name) === selectedChannel);
                   const presence = dmUser ? userPresence[dmUser.name] : null;
                   if (presence?.online) return <span style={{ color: 'var(--ceo-success)' }}>Online</span>;
                   if (presence?.last_active) return <span>Last seen at {new Date(presence.last_active + (presence.last_active.endsWith('Z') ? '' : 'Z')).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>;
@@ -1347,7 +1337,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                     }, 2000);
                   }
                 }} 
-                placeholder={`Message ${selectedChannel.startsWith('dm-') ? '@' + employees.find(e => `dm-${e.id}` === selectedChannel)?.name : '#' + selectedChannel}`}
+                placeholder={`Message ${selectedChannel.startsWith('dm-') ? '@' + employees.find(e => getDmId(e.name) === selectedChannel)?.name : '#' + selectedChannel}`}
                 style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '8px 0', color: 'var(--ceo-text-primary)' }} 
                 disabled={isUploading}
               />
@@ -1995,7 +1985,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                     {empId !== 'ceo' && (
                       <button 
                         onClick={() => {
-                          setSelectedChannel(`dm-${empId}`);
+                          setSelectedChannel(getDmId(empIdName));
                           setShowGroupMembersModal(false);
                         }}
                         style={{ padding: '6px 12px', background: '#F1F5F9', border: '1px solid var(--ceo-border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: 'var(--ceo-text-primary)', display: 'flex', gap: '6px', alignItems: 'center' }}
@@ -2036,7 +2026,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                ))}
                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)', marginTop: '8px' }}>DIRECT MESSAGES</div>
                {(typeof employees !== 'undefined' ? employees : []).filter(e => !e.isMe).map(e => (
-                  <button key={"fwd-dm-"+e.id} onClick={() => executeForwardMessage("dm-"+e.id)} style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid var(--ceo-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>
+                  <button key={"fwd-dm-"+e.id} onClick={() => executeForwardMessage(getDmId(e.name))} style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid var(--ceo-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>
                     <img src={e.photo ? e.photo : (e.avatar || "https://ui-avatars.com/api/?name="+e.name.replace(' ', '+'))} alt="" style={{width: '24px', height: '24px', borderRadius: '12px', objectFit: 'cover'}} onError={(ev)=>{ev.target.onerror=null;ev.target.src="https://ui-avatars.com/api/?name="+e.name.replace(' ', '+');}} /> {e.name}
                   </button>
                ))}
