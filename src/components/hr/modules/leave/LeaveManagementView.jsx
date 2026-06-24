@@ -782,7 +782,7 @@ export function LeaveManagementView() {
                   style={{ backgroundColor: 'var(--bg-primary)', border: leaveErrors.empId ? '1px solid #ef4444' : '1px solid var(--border-color)', color: '#fff', padding: '10px 12px', borderRadius: '8px', outline: 'none' }}
                 >
                   <option value="">-- Choose Staff member --</option>
-                  {employees.map(emp => (
+                  {employees.filter(emp => emp.role !== 'ceo').map(emp => (
                     <option key={emp.id} value={emp.id}>{emp.name} ({emp.emp_id} - {emp.department})</option>
                   ))}
                 </select>
