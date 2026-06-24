@@ -1362,7 +1362,7 @@ export default function Messaging({ initialSelectedChannel, currentUser }) {
                             <button onClick={()=>submitEditMessage(msg.id, editingText)} style={{ background: 'transparent', border: 'none', color: isMsgMe ? '#FFF' : 'var(--ceo-primary)', cursor: 'pointer', fontWeight: 'bold' }}>Save</button>
                             <button onClick={()=>setEditingMessageId(null)} style={{ background: 'transparent', border: 'none', color: isMsgMe ? 'rgba(255,255,255,0.7)' : 'var(--ceo-text-muted)', cursor: 'pointer' }}>Cancel</button>
                           </div>
-                        ) : msg.isCallStatus ? (
+                        ) : (msg.isCallStatus || msg.attachment_type === 'call_status') ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isMsgMe ? '#FFF' : 'var(--ceo-primary)', fontWeight: '600' }}>
                             <Video size={16} />
                             <span>{renderMessageText(msg.text)}</span>

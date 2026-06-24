@@ -1585,7 +1585,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             sender=sender,
                             text=text,
                             attachment_url=msg_data.get("attachment_url"),
-                            attachment_type=msg_data.get("attachment_type"),
+                            attachment_type="call_status" if msg_data.get("isCallStatus") else msg_data.get("attachment_type"),
                             parent_id=msg_data.get("parent_id"),
                             mentions=msg_data.get("mentions")
                         )
@@ -1605,7 +1605,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             "parent_id": db_msg.parent_id,
                             "mentions": db_msg.mentions,
                             "is_pinned": db_msg.is_pinned,
-                            "timestamp": db_msg.timestamp.isoformat()
+                            "timestamp": db_msg.timestamp.isoformat(),
+                            "isCallStatus": db_msg.attachment_type == "call_status"
                         }
                         await manager.broadcast_message(broadcast_data)
                     finally:
