@@ -691,7 +691,7 @@ class UserProfileResponse(BaseModel):
     department: Optional[str] = None
     is_active: Optional[bool] = True
     photo: Optional[str] = None
-    dob: Optional[str] = None
+    dob: Optional[date] = None
     gender: Optional[str] = None
     address: Optional[str] = None
     emergency_contact_name: Optional[str] = None
