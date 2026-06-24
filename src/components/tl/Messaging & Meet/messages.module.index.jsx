@@ -87,7 +87,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   }, []);
   
   const chatChannels = dbChannels;
-  const myChannels = chatChannels.filter(c => c.id === "general-channel" || (c.members && c.members.includes(String(currentUser?.id || 'tl'))));
+  const myChannels = chatChannels.filter(c => !c.id.startsWith('dm-') && (c.id === "general-channel" || (c.members && c.members.includes(String(currentUser?.id || 'tl')))));
 
   const [selectedChannel, setSelectedChannel] = useState(() => {
     if (initialSelectedChannel) return initialSelectedChannel;
@@ -2032,7 +2032,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             </div>
             <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }}>
                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ceo-text-muted)' }}>CHANNELS</div>
-               {(typeof dbChannels !== 'undefined' ? dbChannels : (typeof chatChannels !== 'undefined' ? chatChannels : [])).map(c => (
+               {(typeof dbChannels !== 'undefined' ? dbChannels : (typeof chatChannels !== 'undefined' ? chatChannels : [])).filter(c => !c.id.startsWith('dm-')).map(c => (
                   <button key={"fwd-"+c.id} onClick={() => executeForwardMessage(c.id)} style={{ padding: '10px 12px', textAlign: 'left', background: 'transparent', border: '1px solid var(--ceo-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--ceo-text-primary)' }}>
                     <Hash size={16} color="var(--ceo-text-muted)"/> {c.name}
                   </button>
