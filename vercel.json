@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:match*",
+      "destination": "https://nsg-erp.onrender.com/:match*"
+    },
+    {
+      "source": "/uploads/:match*",
+      "destination": "https://nsg-erp.onrender.com/uploads/:match*"
+    }
+  ]
+}
