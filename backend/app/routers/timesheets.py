@@ -123,7 +123,7 @@ def get_my_timesheets(
         res.append(r)
     return res
 
-@router.post("/", response_model=DailyTimesheetResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DailyTimesheetResponse, status_code=status.HTTP_201_CREATED)
 def create_daily_timesheet(
     req: DailyTimesheetCreate, 
     current_user: models.User = Depends(security.get_current_user), 

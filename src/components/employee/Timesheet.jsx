@@ -102,7 +102,7 @@ export default function Timesheet() {
 
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const url = isEditing ? `/api/timesheets/${editId}` : `/api/timesheets/`;
+      const url = isEditing ? `/api/timesheets/${editId}` : `/api/timesheets`;
       const method = isEditing ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
