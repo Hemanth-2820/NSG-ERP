@@ -64,6 +64,17 @@ class User(Base):
     support_tickets = relationship("SupportTicket", back_populates="user", cascade="all, delete-orphan")
     escalations = relationship("Escalation", back_populates="user", cascade="all, delete-orphan")
 
+    @property
+    def current_salary(self):
+        if self.documents:
+            try:
+                import json
+                docs = json.loads(self.documents)
+                return docs.get("ctc")
+            except:
+                pass
+        return None
+
 class Attendance(Base):
     __tablename__ = "attendance"
 

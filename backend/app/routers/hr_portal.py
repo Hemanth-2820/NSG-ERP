@@ -1178,6 +1178,15 @@ def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.Us
         emp.ifsc_code = req.ifsc_code
     if req.bank_branch is not None:
         emp.bank_branch = req.bank_branch
+        
+    if req.current_salary is not None:
+        try:
+            import json
+            docs = json.loads(emp.documents) if emp.documents else {}
+            docs["ctc"] = req.current_salary
+            emp.documents = json.dumps(docs)
+        except Exception:
+            pass
 
     db_log = models.AuditLog(
         initiator_id=current_user.name,
