@@ -501,8 +501,6 @@ export function OnboardingView({ queryParams, setQueryParams }) {
   };
 
 
-  const docxPreviewRef = useRef(null);
-
   const handlePreviewDocxOffer = async (e) => {
     e.preventDefault();
     if (!offerEmp) return;
@@ -536,28 +534,6 @@ export function OnboardingView({ queryParams, setQueryParams }) {
       setDocxEdits({});
       setShowOfferModal(false);
       setShowDocxPreviewModal(true);
-      
-      if (data.file_b64) {
-          setTimeout(() => {
-              if (docxPreviewRef.current) {
-                  const binaryString = window.atob(data.file_b64);
-                  const len = binaryString.length;
-                  const bytes = new Uint8Array(len);
-                  for (let i = 0; i < len; i++) {
-                      bytes[i] = binaryString.charCodeAt(i);
-                  }
-                  
-                  import('docx-preview').then(({ renderAsync }) => {
-                      renderAsync(bytes.buffer, docxPreviewRef.current, null, {
-                          className: 'docx-viewer',
-                          inWrapper: true,
-                          ignoreWidth: false,
-                          ignoreHeight: false
-                      }).catch(err => console.error('DOCX Preview Render Error:', err));
-                  });
-              }
-          }, 300);
-      }
       
     } catch (err) {
       notify(`Error: ${err.message}`, 'error');
@@ -1870,7 +1846,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
       {/* 📄 DOCX CSV EDITOR MODAL */}
       {showDocxPreviewModal && offerEmp && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }} onClick={(e) => { if (e.target === e.currentTarget) { setShowDocxPreviewModal(false) } }}>
-          <div className="card" style={{ width: '95vw', maxWidth: '1600px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '95vh' }}>
+          <div className="card" style={{ width: '800px', maxWidth: '95vw', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '95vh' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 ✏️ Edit Generated DOCX Content
@@ -1879,45 +1855,29 @@ export function OnboardingView({ queryParams, setQueryParams }) {
               <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }} onClick={() => setShowDocxPreviewModal(false)}>✕</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '20px', width: '100%', height: 'calc(100vh - 140px)' }}>
-              
-              <div className="custom-scroll" style={{ flex: '0 0 65%', overflowY: 'auto', backgroundColor: '#e5e7eb', padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                 <div style={{ width: '100%', maxWidth: '210mm', display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', flexShrink: 0 }}>
-                    <button 
-                      onClick={handlePreviewDocxOffer}
-                      style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                    >
-                      🔄 Refresh Preview
-                    </button>
-                 </div>
-                 
-                 <div ref={docxPreviewRef} style={{ width: '210mm', outline: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minHeight: '297mm', backgroundColor: '#fff', zoom: '0.85', color: '#000', fontSize: '15px' }} />
-              </div>
-
-              <div className="custom-scroll" style={{ flex: '0 0 35%', overflowY: 'auto', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
-                 <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>DOCX CSV Board (Paragraphs)</h3>
-                 {isExtractingDocx ? (
-                     <div style={{ fontSize: '12px', color: '#6b7280', padding: '10px', textAlign: 'center' }}>
-                         Extracting text...
-                     </div>
-                 ) : docxExtractedBlocks.length === 0 ? (
-                     <div style={{ fontSize: '13px', color: '#ef4444', padding: '10px', textAlign: 'center', backgroundColor: '#fef2f2', borderRadius: '4px' }}>
-                         <strong>No text found!</strong>
-                     </div>
-                 ) : (
-                     docxExtractedBlocks.map((block, idx) => (
-                        <div key={idx} style={{ marginBottom: '12px' }}>
-                           <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original: {block}</label>
-                           <textarea 
-                              rows={2}
-                              value={docxEdits[idx] !== undefined ? docxEdits[idx] : block}
-                              onChange={(e) => setDocxEdits({...docxEdits, [idx]: e.target.value})}
-                              style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
-                           />
-                        </div>
-                     ))
-                 )}
-              </div>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
+               <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>DOCX CSV Board (Paragraphs)</h3>
+               {isExtractingDocx ? (
+                   <div style={{ fontSize: '12px', color: '#6b7280', padding: '10px', textAlign: 'center' }}>
+                       Extracting text...
+                   </div>
+               ) : docxExtractedBlocks.length === 0 ? (
+                   <div style={{ fontSize: '13px', color: '#ef4444', padding: '10px', textAlign: 'center', backgroundColor: '#fef2f2', borderRadius: '4px' }}>
+                       <strong>No text found!</strong>
+                   </div>
+               ) : (
+                   docxExtractedBlocks.map((block, idx) => (
+                      <div key={idx} style={{ marginBottom: '12px' }}>
+                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original: {block}</label>
+                         <textarea 
+                            rows={2}
+                            value={docxEdits[idx] !== undefined ? docxEdits[idx] : block}
+                            onChange={(e) => setDocxEdits({...docxEdits, [idx]: e.target.value})}
+                            style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                         />
+                      </div>
+                   ))
+               )}
             </div>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', marginTop: '14px' }}>

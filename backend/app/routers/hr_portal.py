@@ -4267,17 +4267,13 @@ async def preview_docx_text(
     out_file.seek(0)
     
     import docx
-    import base64
     parsed_doc = docx.Document(out_file)
     blocks = []
     for p in parsed_doc.paragraphs:
         if p.text.strip():
             blocks.append(p.text)
             
-    out_file.seek(0)
-    file_b64 = base64.b64encode(out_file.read()).decode('utf-8')
-            
-    return {"blocks": blocks, "file_b64": file_b64}
+    return {"blocks": blocks}
 
 @router.post("/onboarding/generate-edited-docx")
 async def generate_edited_docx(
