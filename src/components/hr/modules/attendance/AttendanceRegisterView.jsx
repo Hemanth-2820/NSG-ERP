@@ -451,7 +451,7 @@ export function AttendanceRegisterView() {
                   const emp = employees.find(e => String(e.id) === String(log.user_id)) || { name: 'Unknown' };
                   return (
                     <tr key={log.id} style={{ transition: 'background-color 0.2s', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc'}>
-                      <td style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '16px 24px', textAlign: 'left', borderBottom: '1px solid #f1f5f9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <img onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt || 'User')}&background=random`; }} src={emp.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', objectFit: 'cover' }} />
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -460,10 +460,10 @@ export function AttendanceRegisterView() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9', color: '#475569', fontSize: '14px' }}>{new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                      <td style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9', color: '#475569', fontSize: '14px', fontWeight: '500' }}>{log.clock_in ? new Date(log.clock_in).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : <span style={{ color: '#ef4444', backgroundColor: '#fef2f2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>Missed</span>}</td>
-                      <td style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9', color: '#475569', fontSize: '14px', fontWeight: '500' }}>{log.clock_out ? new Date(log.clock_out).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : <span style={{ color: '#ef4444', backgroundColor: '#fef2f2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>Missed</span>}</td>
-                      <td style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '16px 24px', textAlign: 'left', borderBottom: '1px solid #f1f5f9', color: '#475569', fontSize: '14px' }}>{new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td style={{ padding: '16px 24px', textAlign: 'left', borderBottom: '1px solid #f1f5f9', color: '#475569', fontSize: '14px', fontWeight: '500' }}>{log.clock_in ? new Date(log.clock_in).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : <span style={{ color: '#ef4444', backgroundColor: '#fef2f2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>Missed</span>}</td>
+                      <td style={{ padding: '16px 24px', textAlign: 'left', borderBottom: '1px solid #f1f5f9', color: '#475569', fontSize: '14px', fontWeight: '500' }}>{log.clock_out ? new Date(log.clock_out).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : <span style={{ color: '#ef4444', backgroundColor: '#fef2f2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>Missed</span>}</td>
+                      <td style={{ padding: '16px 24px', textAlign: 'left', borderBottom: '1px solid #f1f5f9' }}>
                         <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600', backgroundColor: log.work_mode === 'wfh' ? '#f0fdf4' : '#eff6ff', color: log.work_mode === 'wfh' ? '#166534' : '#1d4ed8', border: `1px solid ${log.work_mode === 'wfh' ? '#bbf7d0' : '#bfdbfe'}` }}>
                           {log.work_mode === 'wfh' ? 'WFH' : 'Office'}
                         </span>

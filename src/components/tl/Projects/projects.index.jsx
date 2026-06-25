@@ -496,26 +496,27 @@ const Projects = () => {
                         {currentSprints.map(sprint => (
                           <div key={sprint.id} style={{
                       background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px',
-                      padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                      padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+                      flexWrap: 'wrap', gap: '16px'
                     }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{sprint.name}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 250px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a', whiteSpace: 'nowrap' }}>{sprint.name}</span>
                           <span style={{
-                            fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px',
-                            background: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe'
+                            fontSize: '11px', fontWeight: 600, padding: '4px 8px', borderRadius: '6px',
+                            background: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', whiteSpace: 'nowrap'
                           }}>
                             {sprint.sprintId}
                           </span>
                         </div>
-                        {sprint.goal && <span style={{ fontSize: '12px', color: '#64748b' }}>{sprint.goal}</span>}
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
-                          {sprint.start && <span style={{ fontSize: '11px', color: '#94a3b8' }}>Start: {sprint.start}</span>}
-                          {sprint.end && <span style={{ fontSize: '11px', color: '#94a3b8' }}>End: {sprint.end}</span>}
-                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>SP Target: {sprint.sp}</span>
+                        {sprint.goal && <span style={{ fontSize: '13px', color: '#475569', lineHeight: '1.4' }}>{sprint.goal}</span>}
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '6px', flexWrap: 'wrap' }}>
+                          {sprint.start && <span style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}><strong>Start:</strong> {sprint.start}</span>}
+                          {sprint.end && <span style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}><strong>End:</strong> {sprint.end}</span>}
+                          <span style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}><strong>SP Target:</strong> {sprint.sp}</span>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => {
                             setEditingSprintId(sprint.id);
