@@ -274,10 +274,12 @@ export default function People() {
         body: JSON.stringify({
           name: editEmpData.name,
           email: editEmpData.email,
+          emp_id: editEmpData.emp_id,
+          phone: editEmpData.phone,
           department: editEmpData.dept,
           designation: editEmpData.role,
           role: editEmpData.sysRole,
-          status: editEmpData.status.toLowerCase(),
+          status: editEmpData.status,
           shift_timing: editEmpData.shift,
           manager_id: editEmpData.manager_id ? parseInt(editEmpData.manager_id) : null,
           manager: editEmpData.manager_id ? teamLeads.find(tl => tl.id === parseInt(editEmpData.manager_id))?.name : null
@@ -942,10 +944,20 @@ export default function People() {
               <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ceo-text-primary)' }}>Edit Profile</div>
               <button onClick={() => setIsEditProfileOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-muted)' }}><XCircle size={20} /></button>
             </div>
-            <form onSubmit={handleEditProfileSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <form onSubmit={handleEditProfileSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '75vh', overflowY: 'auto' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>FULL NAME</label>
                 <input required value={editEmpData.name} onChange={e => setEditEmpData({...editEmpData, name: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>EMPLOYEE ID</label>
+                  <input value={editEmpData.emp_id || ''} onChange={e => setEditEmpData({...editEmpData, emp_id: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="e.g. NSG-001" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>PHONE NUMBER</label>
+                  <input value={editEmpData.phone || ''} onChange={e => setEditEmpData({...editEmpData, phone: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="Phone number" />
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
