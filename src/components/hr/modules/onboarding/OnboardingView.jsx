@@ -468,157 +468,79 @@ export function OnboardingView({ queryParams, setQueryParams }) {
     fetchGlobalOfferTemplate();
   }, []);
 
-  const handlePreviewOfferLetter = (e) => {
+  const handlePreviewOfferLetter = async (e) => {
     e.preventDefault();
     if (!offerEmp) return;
     
-    const data = {
-      refNumber: offerRefStr,
-      offerDate: new Date().toLocaleDateString('en-GB'),
-      candidateName: offerEmp.name,
-      role: offerEmp.designation || 'EMPLOYEE',
-      joiningDate: new Date(offerEmp.join_date || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
-      reportingTime: offerReportingTime,
-      ctcLpa: offerCtcLpa,
-      monthlySalary: offerMonthlyTakeHome
-    };
-    
-    const html = getOfferLetterHTML(data);
-    setOfferPreviewHTML(html);
-    setShowOfferModal(false);
-    setShowOfferPreviewModal(true);
-    
-    setTimeout(() => {
-        if (globalOfferTemplateHtml && offerPreviewRef.current) {
-            offerPreviewRef.current.innerHTML = globalOfferTemplateHtml;
-        }
-    }, 100);
+    setIsLoadingOffer(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/hr-portal/onboarding/generate-offer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          candidateName: offerEmp.name,
+          offerRefStr: offerRefStr,
+          offerReportingTime: offerReportingTime,
+          offerCtcLpa: offerCtcLpa,
+          offerMonthlyTakeHome: offerMonthlyTakeHome
+        })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to generate');
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Offer_Letter_${offerEmp.name}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      
+      notify(`Offer Letter for ${offerEmp.name} generated successfully!`, 'success');
+      setShowOfferModal(false);
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingOffer(false);
+    }
   };
 
-  const handleOfferTemplateUpload = async (e, isGlobal = false) => {
+  const handleGlobalTemplateUploadDocx = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-        setCurrentUploadedFile(file);
-      setIsLoadingOffer(true);
-      let pagesHtml = '';
-      try {
-        
-        if (file.type === 'application/pdf') {
-            try {
-                setIsExtractingPdf(true);
-                const token = localStorage.getItem('nsg_jwt_token');
-                const formData = new FormData();
-                formData.append('file', file);
-                const res = await fetch('/api/hr-portal/onboarding/extract-pdf-text', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setPdfExtractedBlocks(data.blocks || []);
-                    setPdfEdits({});
-                }
-            } catch (err) { 
-                console.error('Extraction failed', err); 
-            } finally {
-                setIsExtractingPdf(false);
-            }
-
-          const loadPdfJs = () => new Promise((resolve, reject) => {
-              if (window.pdfjsLib) return resolve(window.pdfjsLib);
-              const script = document.createElement('script');
-              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-              script.onload = () => {
-                  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                  resolve(window.pdfjsLib);
-              };
-              script.onerror = reject;
-              document.head.appendChild(script);
-          });
-          const pdfjsLib = await loadPdfJs();
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const viewport = page.getViewport({ scale: 2.0 });
-              
-              const canvas = document.createElement('canvas');
-              const context = canvas.getContext('2d');
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-              
-              await page.render({ canvasContext: context, viewport }).promise;
-              const imgData = canvas.toDataURL('image/jpeg', 0.8);
-              const cssHeight = (viewport.height / viewport.width) * 100;
-              
-              pagesHtml += `
-                <div style="position: relative; width: 100%; padding-bottom: ${cssHeight}%; background-image: url('${imgData}'); background-size: cover; background-repeat: no-repeat; background-position: top center; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                  
-                </div>
-              `;
-          }
-        } else if (file.name.endsWith('.docx')) {
-          const token = localStorage.getItem('nsg_jwt_token');
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await fetch('/api/hr-portal/onboarding/convert-doc', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
-          });
-          const data = await res.json();
-          if (data.html_body) {
-              pagesHtml = `
-              <div style="display: flex; flex-direction: column; min-height: 297mm; width: 100%; padding: 40px; box-sizing: border-box; font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.6;">
-                  ${data.header_html ? `<div contentEditable="false" style="flex-shrink: 0; user-select: none;">${data.header_html}</div>` : ''}
-                  <div contentEditable="true" style="flex-grow: 1; outline: none;">${data.html_body}</div>
-                  ${data.footer_html ? `<div contentEditable="false" style="flex-shrink: 0; user-select: none; margin-top: auto;">${data.footer_html}</div>` : ''}
-              </div>`;
-          } else {
-              pagesHtml = data.html ? `<div contentEditable="true" style="width: 100%; min-height: 297mm; outline: none; padding: 40px; box-sizing: border-box; font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.6;">${data.html}</div>` : "<div>Failed to convert document</div>";
-          }
-        } else if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          pagesHtml = await new Promise((resolve) => {
-              reader.onload = (event) => resolve(`<div style="text-align: center;"><img src="${event.target.result}" style="max-width: 100%;" /></div>`);
-              reader.readAsDataURL(file);
-          });
-        } else {
-          pagesHtml = await file.text();
-        }
-
-        if (offerPreviewRef.current) {
-            offerPreviewRef.current.innerHTML = pagesHtml;
-        }
-
-        if (isGlobal) {
-            const token = localStorage.getItem('nsg_jwt_token');
-            const res = await fetch('/api/hr-portal/onboarding/global-template', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    template_type: 'offer_letter',
-                    html_content: pagesHtml
-                })
-            });
-            if (res.ok) {
-                setGlobalOfferTemplateHtml(pagesHtml);
-                notify('Global offer letter template saved successfully!', 'success');
-            } else {
-                notify('Failed to save global template', 'error');
-            }
-        }
-      } catch (e) {
-          console.error('PDF Upload Error:', e);
-          notify(`Failed to process uploaded file: ${e.message}`, 'error');
-      } finally {
-          setIsLoadingOffer(false);
+    if (!file) return;
+    
+    setIsLoadingOffer(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/hr-portal/onboarding/upload-template-docx', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      
+      if (res.ok) {
+        notify('Global DOCX Template updated successfully!', 'success');
+      } else {
+        const err = await res.json();
+        notify(`Upload failed: ${err.detail}`, 'error');
       }
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingOffer(false);
+      e.target.value = null;
     }
   };
 
@@ -1318,11 +1240,17 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '14px' }}>
-                <button type="button" onClick={() => setShowOfferModal(false)}>Cancel</button>
-                <button type="submit">
-                  Preview &amp; Edit Letter
-                </button>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', marginTop: '14px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--accent-blue)', textTransform: 'uppercase' }}>Update Global DOCX Template</label>
+                  <input type="file" accept=".docx" onChange={handleGlobalTemplateUploadDocx} style={{ fontSize: '11px', maxWidth: '200px' }} />
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => setShowOfferModal(false)}>Cancel</button>
+                  <button type="submit" disabled={isLoadingOffer}>
+                    {isLoadingOffer ? 'Generating...' : 'Generate Offer Letter (.docx)'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

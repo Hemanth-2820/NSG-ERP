@@ -4158,3 +4158,73 @@ async def convert_doc(
     except Exception as e:
         print(f"Error converting docx: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+from docxtpl import DocxTemplate
+import io
+from fastapi.responses import Response
+
+@router.post("/onboarding/upload-template-docx")
+async def upload_template_docx(
+    file: UploadFile = File(...),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if not file.filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Only .docx files are supported")
+    
+    content = await file.read()
+    
+    # Store in database
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "offer_letter").first()
+    if not template:
+        template = models.GlobalTemplate(template_type="offer_letter", html_content="")
+        db.add(template)
+    template.file_data = content
+    db.commit()
+    
+    return {"message": "Template uploaded successfully"}
+
+class OfferGenerationData(BaseModel):
+    candidateName: str
+    offerRefStr: str
+    offerReportingTime: str
+    offerCtcLpa: str
+    offerMonthlyTakeHome: str
+
+@router.post("/onboarding/generate-offer")
+async def generate_offer(
+    data: OfferGenerationData,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "offer_letter").first()
+    if not template or not template.file_data:
+        raise HTTPException(status_code=404, detail="No global DOCX template found. Please upload one first.")
+        
+    docx_file = io.BytesIO(template.file_data)
+    doc = DocxTemplate(docx_file)
+    
+    context = {
+        "candidate_name": data.candidateName,
+        "reference_number": data.offerRefStr,
+        "reporting_time": data.offerReportingTime,
+        "ctc_lpa": data.offerCtcLpa,
+        "monthly_take_home": data.offerMonthlyTakeHome,
+        "date": date.today().strftime("%d %B, %Y")
+    }
+    
+    doc.render(context)
+    
+    out_file = io.BytesIO()
+    doc.save(out_file)
+    out_file.seek(0)
+    
+    return Response(content=out_file.read(), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={
+        "Content-Disposition": f"attachment; filename=Offer_Letter_{data.candidateName}.docx"
+    })
+
