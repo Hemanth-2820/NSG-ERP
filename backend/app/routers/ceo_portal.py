@@ -64,6 +64,7 @@ class UserDetailResponse(BaseModel):
     manager_id: Optional[int] = None
     documents: Optional[str] = None
     plain_password: Optional[str] = None
+    current_salary: Optional[float] = None
 
     class Config:
         from_attributes = True

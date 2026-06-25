@@ -1083,9 +1083,11 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
                         <Edit3 size={14} />
                       </button>
 
-                      <button title="Delete Employee" onClick={() => handleDeleteEmployee(emp.id)} className={`${styles.actionBtn} ${styles.delete}`}>
-                        <Trash2 size={14} />
-                      </button>
+                      {String(emp.role).toLowerCase() !== 'ceo' && (
+                        <button title="Delete Employee" onClick={() => handleDeleteEmployee(emp.id)} className={`${styles.actionBtn} ${styles.delete}`}>
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1178,9 +1180,11 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
                   <button title="Edit Employee" onClick={() => openEditModal(selectedEmp)} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#60a5fa', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px' }}>
                     <Edit3 size={14} /> Edit
                   </button>
-                  <button title="Delete Employee" onClick={() => handleDeleteEmployee(selectedEmp.id)} style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px' }}>
-                    <Trash2 size={14} /> Delete
-                  </button>
+                  {String(selectedEmp.role).toLowerCase() !== 'ceo' && (
+                    <button title="Delete Employee" onClick={() => handleDeleteEmployee(selectedEmp.id)} style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px' }}>
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  )}
                   <button title="Reset Password" onClick={() => openResetModal(selectedEmp)} style={{ background: 'none', border: '1px solid var(--border-color)', color: '#f59e0b', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px' }}>
                     <Lock size={12} /> Reset
                   </button>
@@ -1682,7 +1686,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
                 <div style={{ position: 'relative' }}>
                   <input 
                     type={showOldPassword ? "text" : "password"} 
-                    value={showOldPassword ? (resetEmp ? (updatedPasswords[resetEmp.id] || "erp123") : "") : "••••••••"}
+                    value={showOldPassword ? (resetEmp ? (updatedPasswords[resetEmp.id] || resetEmp.plain_password || "N/A") : "") : "••••••••"}
                     readOnly
                     style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', padding: '8px', paddingRight: '40px', borderRadius: '6px', cursor: 'not-allowed' }} 
                   />

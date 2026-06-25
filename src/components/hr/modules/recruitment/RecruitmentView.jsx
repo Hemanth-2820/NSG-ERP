@@ -249,7 +249,7 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
       });
       if (!res.ok) throw new Error('Failed to create offer');
       
-      notify(`Offer generated: ₹${basicPay + hra + allowance}/month gross CTC and saved to database.`, 'success');
+      notify(`Offer generated: ₹${basicPay + hra + allowance + Math.floor(basicPay * 0.12)}/month gross CTC and saved to database.`, 'success');
       setShowOfferForm(false);
       
       // Auto-move to offer stage
@@ -589,7 +589,7 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', marginTop: '8px', color: 'var(--accent-pink)' }}>
                   <span>Gross Monthly CTC:</span>
-                  <span>₹{basicPay + hra + allowance}</span>
+                  <span>₹{basicPay + hra + allowance + Math.floor(basicPay * 0.12)}</span>
                 </div>
               </div>
             </div>

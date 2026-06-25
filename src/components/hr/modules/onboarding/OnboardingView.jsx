@@ -84,7 +84,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
       const fetchDocs = async () => {
         try {
           const token = localStorage.getItem('nsg_jwt_token');
-          const res = await fetch(`/api/hr-portal/onboarding/documents/${selectedDocInstance.id}`, {
+          const res = await fetch(`/api/hr-portal/onboarding/documents/${selectedDocInstance.real_emp_id || selectedDocInstance.id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -123,7 +123,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
       formData.append('name', newDocName);
       formData.append('file', newDocFile);
       
-      const res = await fetch(`/api/hr-portal/onboarding/documents/${selectedDocInstance.id}`, {
+      const res = await fetch(`/api/hr-portal/onboarding/documents/${selectedDocInstance.real_emp_id || selectedDocInstance.id}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
@@ -159,7 +159,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
       const fetchAssets = async () => {
         try {
           const token = localStorage.getItem('nsg_jwt_token');
-          const res = await fetch(`/api/hr-portal/onboarding/assets/${selectedInstance.id}`, {
+          const res = await fetch(`/api/hr-portal/onboarding/assets/${selectedInstance.real_emp_id || selectedInstance.id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -203,7 +203,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
         serialNumber: newAssetSerial,
         condition: 'New'
       };
-      const res = await fetch(`/api/hr-portal/onboarding/assets/${selectedInstance.id}`, {
+      const res = await fetch(`/api/hr-portal/onboarding/assets/${selectedInstance.real_emp_id || selectedInstance.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -250,8 +250,8 @@ export function OnboardingView({ queryParams, setQueryParams }) {
   const [offerEmp, setOfferEmp] = useState(null);
   const [offerRefStr, setOfferRefStr] = useState(`SS${new Date().getMonth()+1}${new Date().getFullYear().toString().slice(-2)}HYD${Math.floor(100 + Math.random() * 900)}`);
   const [offerReportingTime, setOfferReportingTime] = useState('11:00 AM');
-  const [offerCtcLpa, setOfferCtcLpa] = useState('4 LPA');
-  const [offerMonthlyTakeHome, setOfferMonthlyTakeHome] = useState('32,000');
+  const [offerCtcLpa, setOfferCtcLpa] = useState('');
+  const [offerMonthlyTakeHome, setOfferMonthlyTakeHome] = useState('');
 
   const [showOfferPreviewModal, setShowOfferPreviewModal] = useState(false);
   const [offerPreviewHTML, setOfferPreviewHTML] = useState('');
@@ -694,6 +694,9 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                       style={{ flex: 1, justifyContent: 'center', padding: '6px', fontSize: '11px', backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none' }}
                       onClick={() => {
                         setOfferEmp(emp);
+                        setOfferCtcLpa('');
+                        setOfferMonthlyTakeHome('');
+                        setOfferReportingTime('11:00 AM');
                         setOfferRefStr(`SS${new Date().getMonth()+1}${new Date().getFullYear().toString().slice(-2)}HYD${Math.floor(100 + Math.random() * 900)}`);
                         setShowOfferModal(true);
                       }}

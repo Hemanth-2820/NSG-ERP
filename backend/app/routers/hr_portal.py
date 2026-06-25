@@ -135,6 +135,8 @@ class EmployeeResponse(BaseModel):
     pan_number: Optional[str]
     location: Optional[str]
     bank_branch: Optional[str]
+    current_salary: Optional[float] = None
+    plain_password: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -829,7 +831,7 @@ def schedule_interview(req: InterviewCreate, current_user: models.User = Depends
 def create_job_offer(req: JobOfferCreate, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
     
-    gross = req.basic_pay + req.hra + req.allowance
+    gross = req.basic_pay + req.hra + req.allowance + int(req.basic_pay * 0.12)
     offer = models.JobOffer(
         candidate_id=req.candidate_id,
         basic_pay=req.basic_pay,
@@ -1071,6 +1073,29 @@ def reveal_bank_details(id: int, current_user: models.User = Depends(security.ge
     db.add(db_log)
     db.commit()
     return {"status": "success", "message": "Sensitive access logged to audit record."}
+@router.post("/employees/{id}/reset-password")
+def reset_employee_password(id: int, req: PasswordResetRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_hr_role(current_user)
+    
+    emp = db.query(models.User).filter(models.User.id == id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+        
+    hashed_pwd = security.hash_password(req.new_password)
+    emp.hashed_password = hashed_pwd
+    emp.plain_password = req.new_password
+    
+    db_log = models.AuditLog(
+        initiator_id=current_user.name,
+        module="Employees",
+        record_id=id,
+        action_type="update",
+        change_diff=json.dumps({"password_reset": True})
+    )
+    db.add(db_log)
+    db.commit()
+    
+    return {"message": "Password updated successfully."}
 
 @router.delete("/employees/{id}", status_code=status.HTTP_200_OK)
 def delete_employee(id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -1078,6 +1103,9 @@ def delete_employee(id: int, current_user: models.User = Depends(security.get_cu
     emp = db.query(models.User).filter(models.User.id == id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
+        
+    if emp.role and emp.role.lower() == 'ceo':
+        raise HTTPException(status_code=403, detail="Cannot delete the CEO record.")
         
     db_log = models.AuditLog(
         initiator_id=current_user.name,
