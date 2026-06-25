@@ -369,6 +369,15 @@
 /* ════════════════════════════════════════
    ATTENDANCE LOG TABLE
    ════════════════════════════════════════ */
+.att-log-table-wrap {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.att-log-table-wrap::-webkit-scrollbar { height: 6px; }
+.att-log-table-wrap::-webkit-scrollbar-track { background: var(--att-bg-inner); border-radius: 4px; }
+.att-log-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.att-log-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
 .att-log-table {
   width: 100%;
   border-collapse: collapse;
