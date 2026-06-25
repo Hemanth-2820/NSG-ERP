@@ -131,9 +131,9 @@ const TeamDirectory = () => {
 
   // Helpers
   const getWorkloadColor = (util) => {
-    if (util > 100) return 'var(--danger)';
-    if (util >= 80) return 'var(--warning)';
-    return 'var(--success)';
+    if (util > 100) return '#ef4444'; // red (danger)
+    if (util >= 80) return '#f59e0b'; // amber (warning)
+    return '#10b981'; // green (success)
   };
 
   const renderDots = (score) => {
