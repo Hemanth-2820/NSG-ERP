@@ -1396,19 +1396,26 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', marginTop: '14px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--accent-blue)', textTransform: 'uppercase' }}>Update Global DOCX Template</label>
-                  <input type="file" accept=".docx" onChange={handleGlobalTemplateUploadDocx} style={{ fontSize: '11px', maxWidth: '200px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--accent-blue)', textTransform: 'uppercase' }}>Update Global DOCX Template</label>
+                    <input type="file" accept=".docx" onChange={handleGlobalTemplateUploadDocx} style={{ fontSize: '11px', maxWidth: '220px', border: '1px solid #d1d5db', padding: '4px', borderRadius: '4px' }} />
+                  </div>
+                  <button type="button" onClick={handleGenerateDocxOffer} disabled={isLoadingOffer} style={{ background: '#10b981', color: '#fff', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {isLoadingOffer ? 'Generating...' : '📥 Generate DOCX Offer'}
+                  </button>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <button type="button" onClick={() => setShowOfferModal(false)} style={{ background: 'transparent', border: '1px solid #d1d5db', color: '#374151' }}>Cancel</button>
-                  <button type="button" onClick={handlePreviewOfferLetter} style={{ background: '#4b5563', color: '#fff' }}>
-                    Advanced PDF/HTML Editor
-                  </button>
-                  <button type="button" onClick={handleGenerateDocxOffer} disabled={isLoadingOffer} style={{ background: '#10b981', color: '#fff' }}>
-                    {isLoadingOffer ? 'Generating...' : 'Generate Offer Letter (.docx)'}
-                  </button>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-tertiary)', padding: '12px', borderRadius: '8px' }}>
+                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Want to upload or edit a PDF format instead?</div>
+                   <button type="button" onClick={handlePreviewOfferLetter} style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                     Open PDF / HTML Editor
+                   </button>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                  <button type="button" onClick={() => setShowOfferModal(false)} style={{ background: 'transparent', border: '1px solid #d1d5db', color: '#374151', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
                 </div>
               </div>
             </form>
