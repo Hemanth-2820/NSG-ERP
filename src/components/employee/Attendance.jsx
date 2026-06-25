@@ -345,44 +345,46 @@ function AttendanceLogTable() {
         </button>
       </div>
 
-      <table className="att-log-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Status</th>
-            <th>In</th>
-            <th>Out</th>
-            <th>Hours</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pageData.map((row, i) => {
-            const isToday = row.date.toDateString() === new Date().toDateString();
-            const cfg = STATUS_CONFIG[row.status] || STATUS_CONFIG.present;
-            return (
-              <tr key={i}>
-                <td>
-                  <span className={`att-log-date ${isToday ? 'att-log-today' : ''}`}>
-                    {row.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                    {isToday && ' ★'}
-                  </span>
-                </td>
-                <td>
-                  <span className={`att-log-pill ${cfg.cls}`}>{cfg.label}</span>
-                </td>
-                <td>{row.inTime  || '—'}</td>
-                <td>{row.outTime || '—'}</td>
-                <td>{row.hours  || '—'}</td>
-              </tr>
-            );
-          })}
-          {pageData.length === 0 && (
+      <div className="att-log-table-wrap" style={{ overflowX: 'auto' }}>
+        <table className="att-log-table">
+          <thead>
             <tr>
-              <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>No logs recorded for this month.</td>
+              <th>Date</th>
+              <th>Status</th>
+              <th>In</th>
+              <th>Out</th>
+              <th>Hours</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {pageData.map((row, i) => {
+              const isToday = row.date.toDateString() === new Date().toDateString();
+              const cfg = STATUS_CONFIG[row.status] || STATUS_CONFIG.present;
+              return (
+                <tr key={i}>
+                  <td>
+                    <span className={`att-log-date ${isToday ? 'att-log-today' : ''}`}>
+                      {row.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                      {isToday && ' ★'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`att-log-pill ${cfg.cls}`}>{cfg.label}</span>
+                  </td>
+                  <td>{row.inTime  || '—'}</td>
+                  <td>{row.outTime || '—'}</td>
+                  <td>{row.hours  || '—'}</td>
+                </tr>
+              );
+            })}
+            {pageData.length === 0 && (
+              <tr>
+                <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>No logs recorded for this month.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Pagination */}
       <div className="att-pagination">

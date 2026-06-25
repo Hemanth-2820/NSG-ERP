@@ -82,16 +82,22 @@
 /* ── Top grid: clock panel + status card ── */
 .att-top-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 16px;
+}
+.att-top-grid > div {
+  min-width: 0;
 }
 
 /* ── Bottom grid: log | WFH form | correction form ── */
 .att-bottom-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 16px;
   align-items: start;
+}
+.att-bottom-grid > div {
+  min-width: 0;
 }
 
 /* ── Card base (shared) ── */
@@ -656,19 +662,7 @@
 /* ════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════ */
-@media (max-width: 1280px) {
-  .att-bottom-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 @media (max-width: 768px) {
-  .att-top-grid {
-    grid-template-columns: 1fr;
-  }
-  .att-bottom-grid {
-    grid-template-columns: 1fr;
-  }
   .att-clock-btn-wrap,
   .att-clock-btn {
     width: 140px;
