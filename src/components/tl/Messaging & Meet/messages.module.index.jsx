@@ -195,11 +195,12 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   const currentChannel = chatChannels.find(c => c.id === selectedChannel);
 
   const messages = useMemo(() => {
-    if (currentChannel) {
-      return { [selectedChannel]: (currentChannel.messages || []) };
-    }
-    return localDmMessages;
-  }, [currentChannel, selectedChannel, localDmMessages]);
+    const allMsgs = { ...localDmMessages };
+    chatChannels.forEach(c => {
+      allMsgs[c.id] = c.messages || [];
+    });
+    return allMsgs;
+  }, [chatChannels, localDmMessages]);
 
   const [inputVal, setInputVal] = useState('');
   const [activeThreadMessage, setActiveThreadMessage] = useState(null);
@@ -391,11 +392,14 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                 if (m.isMe || m.sender === tlName) return m;
                 try {
                   let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
+                  if (!Array.isArray(seenArr)) seenArr = [];
                   if (!seenArr.includes(tlName)) {
                     seenArr.push(tlName);
                     return { ...m, seen_by: JSON.stringify(seenArr) };
                   }
-                } catch(e) {}
+                } catch(e) {
+                  return { ...m, seen_by: JSON.stringify([tlName]) };
+                }
                 return m;
               })
             };
@@ -410,12 +414,15 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             [selectedChannel]: prev[selectedChannel].map(m => {
               if (m.isMe || m.sender === tlName) return m;
               try {
-                let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
-                if (!seenArr.includes(tlName)) {
-                  seenArr.push(tlName);
-                  return { ...m, seen_by: JSON.stringify(seenArr) };
+                  let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
+                  if (!Array.isArray(seenArr)) seenArr = [];
+                  if (!seenArr.includes(tlName)) {
+                    seenArr.push(tlName);
+                    return { ...m, seen_by: JSON.stringify(seenArr) };
+                  }
+                } catch(e) {
+                  return { ...m, seen_by: JSON.stringify([tlName]) };
                 }
-              } catch(e) {}
               return m;
             })
           };
@@ -996,11 +1003,11 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
   const getUnreadCount = (channelId) => {
     const msgs = messages[channelId] || [];
     return msgs.filter(m => {
-       if (m.isMe || m.sender === tlName) return false;
-       try {
-         const seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
-         return !seenArr.includes(tlName);
-       } catch(e) { return true; }
+       if (m.isMe || m.sender === tlName || (m.sender && m.sender.includes('Employee'))) return false;
+       let seenArr = [];
+       try { if (m.seen_by) seenArr = JSON.parse(m.seen_by); } catch(e) {}
+       if (!Array.isArray(seenArr)) seenArr = [];
+       return !seenArr.includes(tlName);
     }).length;
   };
 
@@ -1338,15 +1345,17 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isMsgMe ? '#FFF' : 'var(--ceo-primary)', fontWeight: '600' }}>
                             <Video size={16} />
                             <span>{renderMessageText(msg.text)}</span>
-                            <button 
-                              type="button" 
-                              style={{ marginLeft: '12px', padding: '6px 16px', borderRadius: '6px', backgroundColor: isMsgMe ? '#FFF' : 'var(--ceo-primary)', color: isMsgMe ? 'var(--ceo-primary)' : 'white', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}
-                              onClick={() => {
-                                setHuddlePeer({ channelId: selectedChannel, roomName: selectedChannel, name: selectedChannel, displayName: 'TL (TL)' });
-                              }}
-                            >
-                              Join
-                            </button>
+                            {msg.text !== 'Video call ended' && (
+                              <button 
+                                type="button" 
+                                style={{ marginLeft: '12px', padding: '6px 16px', borderRadius: '6px', backgroundColor: isMsgMe ? '#FFF' : 'var(--ceo-primary)', color: isMsgMe ? 'var(--ceo-primary)' : 'white', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}
+                                onClick={() => {
+                                  setHuddlePeer({ channelId: selectedChannel, roomName: selectedChannel, name: selectedChannel, displayName: 'TL (TL)' });
+                                }}
+                              >
+                                Join
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
