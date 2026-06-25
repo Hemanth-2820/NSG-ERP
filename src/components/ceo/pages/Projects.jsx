@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
 import useSWR from 'swr';
 import { 
   Search, CheckCircle, AlertTriangle, Clock, Target, Plus, RefreshCw, AlertCircle, X, ChevronDown
@@ -64,7 +65,9 @@ export default function Projects({ currentUser }) {
   const [statusFilter, setStatusFilter] = useState('All');
 
   const [signoffProject, setSignoffProject] = useState(null);
-  const [signature, setSignature] = useState(false);
+  const [signature, setSignature] = useState(null);
+  const [signatureMode, setSignatureMode] = useState('draw');
+  const sigCanvasRef = useRef(null);
   const [signingOff, setSigningOff] = useState(false);
 
   const [editProject, setEditProject] = useState(null);
@@ -160,7 +163,8 @@ export default function Projects({ currentUser }) {
       const updated = await res.json();
       mutateProjects();
       setSignoffProject(null);
-      setSignature(false);
+      setSignature(null);
+      setSignatureMode('draw');
     } catch (err) {
       window.toast.error('Failed to sign off project: ' + err.message);
     } finally {
@@ -413,7 +417,7 @@ export default function Projects({ currentUser }) {
           <div className="ceo-command-panel" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="ceo-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="ceo-typography-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={20} color="var(--ceo-success)"/> Executive Sign-off</div>
-              <button onClick={() => { setSignoffProject(null); setSignature(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-muted)' }}><X size={20} /></button>
+              <button onClick={() => { setSignoffProject(null); setSignature(null); setSignatureMode('draw'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ceo-text-muted)' }}><X size={20} /></button>
             </div>
             <div className="ceo-command-content">
               <div style={{ marginBottom: '24px' }}>
@@ -450,31 +454,51 @@ export default function Projects({ currentUser }) {
               </div>
 
               <div style={{ marginBottom: '32px' }}>
-                <div className="ceo-typography-section-title" style={{ fontSize: '14px', marginBottom: '8px' }}>Digital Signature</div>
-                <div 
-                  onClick={() => setSignature(!signature)}
-                  style={{ 
-                    height: '100px', 
-                    background: 'var(--ceo-bg)', 
-                    border: `1px dashed ${signature ? 'var(--ceo-primary)' : 'var(--ceo-border)'}`, 
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.2s'
-                  }}
-                >
-                  {signature ? (
-                    <span style={{ fontFamily: 'cursive', fontSize: '32px', color: 'var(--ceo-primary)' }}>{currentUser?.name || 'CEO'} Approved ✓</span>
-                  ) : (
-                    <span className="ceo-typography-meta">Click to sign</span>
-                  )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div className="ceo-typography-section-title" style={{ fontSize: '14px' }}>Digital Signature</div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button className={`ceo-btn ${signatureMode === 'draw' ? 'ceo-btn-primary' : ''}`} onClick={() => { setSignatureMode('draw'); setSignature(null); }} style={{ padding: '2px 8px', fontSize: '11px', height: 'auto', minHeight: '0' }}>Draw</button>
+                    <button className={`ceo-btn ${signatureMode === 'upload' ? 'ceo-btn-primary' : ''}`} onClick={() => { setSignatureMode('upload'); setSignature(null); }} style={{ padding: '2px 8px', fontSize: '11px', height: 'auto', minHeight: '0' }}>Upload</button>
+                  </div>
                 </div>
+                
+                {signatureMode === 'draw' && (
+                  <div>
+                    <div style={{ background: 'var(--ceo-bg)', border: '1px dashed var(--ceo-border)', borderRadius: '8px', overflow: 'hidden' }}>
+                      <SignatureCanvas 
+                        ref={sigCanvasRef} 
+                        penColor="var(--ceo-primary)" 
+                        canvasProps={{width: 450, height: 150, className: 'sigCanvas'}} 
+                        onEnd={() => setSignature(sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png'))} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                      <button onClick={() => { sigCanvasRef.current.clear(); setSignature(null); }} className="ceo-btn" style={{ padding: '2px 8px', fontSize: '11px', height: 'auto', minHeight: '0' }}>Clear</button>
+                    </div>
+                  </div>
+                )}
+
+                {signatureMode === 'upload' && (
+                  <div>
+                    <input type="file" accept="image/*" onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setSignature(ev.target.result);
+                        reader.readAsDataURL(file);
+                      }
+                    }} className="ceo-form-input" style={{ width: '100%', padding: '8px' }} />
+                    {signature && (
+                      <div style={{ marginTop: '12px', background: 'var(--ceo-bg)', border: '1px solid var(--ceo-border)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                        <img src={signature} alt="Signature Preview" style={{ maxHeight: '100px', maxWidth: '100%' }} />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button className="ceo-btn" onClick={() => { setSignoffProject(null); setSignature(false); }}>Cancel</button>
+                <button className="ceo-btn" onClick={() => { setSignoffProject(null); setSignature(null); setSignatureMode('draw'); }}>Cancel</button>
                 <button 
                   className="ceo-btn ceo-btn-primary" 
                   onClick={handleSignoff} 
