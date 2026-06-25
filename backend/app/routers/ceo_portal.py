@@ -1877,6 +1877,190 @@ def get_global_template(template_type: str, db: Session = Depends(database.get_d
         raise HTTPException(status_code=404, detail="Template not found")
     return {"html_content": gt.html_content}
 
+@router.post("/payroll/upload-docx-template")
+async def upload_payslip_docx_template(
+    file: UploadFile = File(...),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    verify_ceo_role(current_user)
+    if not file.filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Only .docx files are supported")
+    
+    content = await file.read()
+    
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "payslip_docx").first()
+    if not template:
+        template = models.GlobalTemplate(template_type="payslip_docx", html_content="")
+        db.add(template)
+    template.file_data = content
+    db.commit()
+    
+    return {"message": "Payslip template uploaded successfully"}
+
+class PayslipGenerationData(BaseModel):
+    employee_id: str
+    employee_name: str
+    month: str
+    year: str
+    basic: float
+    hra: float
+    allowances: float
+    epf: float
+    tds: float
+    lop: float
+    net: float
+    worked_days: float
+    arrear_days: float = 0.0
+    lop_days: float = 0.0
+    pf_number: str = ""
+    uan: str = ""
+    esi_number: str = ""
+    pan_number: str = ""
+    designation: str = ""
+    location: str = ""
+
+@router.post("/payroll/generate-payslip-docx")
+async def generate_payslip_docx(
+    data: PayslipGenerationData,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    verify_ceo_role(current_user)
+        
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "payslip_docx").first()
+    if not template or not template.file_data:
+        raise HTTPException(status_code=404, detail="No global DOCX template found. Please upload one first.")
+        
+    import io
+    from docxtpl import DocxTemplate
+    
+    docx_file = io.BytesIO(template.file_data)
+    doc = DocxTemplate(docx_file)
+    
+    context = data.dict()
+    from datetime import date
+    context["generated_on"] = date.today().strftime("%d %B, %Y")
+    
+    doc.render(context)
+    
+    out_file = io.BytesIO()
+    doc.save(out_file)
+    out_file.seek(0)
+    
+    from fastapi.responses import Response
+    return Response(content=out_file.read(), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={
+        "Content-Disposition": f"attachment; filename=Payslip_{data.employee_name}_{data.month}_{data.year}.docx"
+    })
+
+class PayslipDocxEditData(BaseModel):
+    employee_id: str
+    employee_name: str
+    month: str
+    year: str
+    basic: float
+    hra: float
+    allowances: float
+    epf: float
+    tds: float
+    lop: float
+    net: float
+    worked_days: float
+    arrear_days: float = 0.0
+    lop_days: float = 0.0
+    pf_number: str = ""
+    uan: str = ""
+    esi_number: str = ""
+    pan_number: str = ""
+    designation: str = ""
+    location: str = ""
+    edits: dict = None
+
+@router.post("/payroll/preview-docx-text")
+async def preview_docx_text(
+    data: PayslipDocxEditData,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    verify_ceo_role(current_user)
+        
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "payslip_docx").first()
+    if not template or not template.file_data:
+        raise HTTPException(status_code=404, detail="No global DOCX template found. Please upload one first.")
+        
+    import io
+    from docxtpl import DocxTemplate
+    
+    docx_file = io.BytesIO(template.file_data)
+    doc = DocxTemplate(docx_file)
+    
+    context = data.dict()
+    from datetime import date
+    context["generated_on"] = date.today().strftime("%d %B, %Y")
+    
+    doc.render(context)
+    out_file = io.BytesIO()
+    doc.save(out_file)
+    out_file.seek(0)
+    
+    import docx
+    parsed_doc = docx.Document(out_file)
+    blocks = []
+    for p in parsed_doc.paragraphs:
+        if p.text.strip():
+            blocks.append(p.text)
+            
+    return {"blocks": blocks}
+
+@router.post("/payroll/generate-edited-docx")
+async def generate_edited_docx(
+    data: PayslipDocxEditData,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    verify_ceo_role(current_user)
+        
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "payslip_docx").first()
+    if not template or not template.file_data:
+        raise HTTPException(status_code=404, detail="No global DOCX template found.")
+        
+    import io
+    from docxtpl import DocxTemplate
+    
+    docx_file = io.BytesIO(template.file_data)
+    doc = DocxTemplate(docx_file)
+    
+    context = data.dict()
+    from datetime import date
+    context["generated_on"] = date.today().strftime("%d %B, %Y")
+    
+    doc.render(context)
+    out_file = io.BytesIO()
+    doc.save(out_file)
+    out_file.seek(0)
+    
+    import docx
+    parsed_doc = docx.Document(out_file)
+    
+    if data.edits:
+        block_idx = 0
+        for p in parsed_doc.paragraphs:
+            if p.text.strip():
+                if str(block_idx) in data.edits:
+                    p.text = data.edits[str(block_idx)]
+                block_idx += 1
+                
+    final_out = io.BytesIO()
+    parsed_doc.save(final_out)
+    final_out.seek(0)
+    
+    from fastapi.responses import Response
+    return Response(content=final_out.read(), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={
+        "Content-Disposition": f"attachment; filename=Payslip_{data.employee_name}_{data.month}_{data.year}.docx"
+    })
+
+
+
 @router.get("/payroll/history")
 def get_payroll_history(month: Optional[int] = None, year: Optional[int] = None, current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)

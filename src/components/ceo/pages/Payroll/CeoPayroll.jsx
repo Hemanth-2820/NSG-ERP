@@ -59,6 +59,18 @@ export default function CeoPayroll() {
   // Notification State
   const [notification, setNotification] = useState(null);
 
+  const [currentPdfFile, setCurrentPdfFile] = useState(null);
+  const [pdfExtractedBlocks, setPdfExtractedBlocks] = useState([]);
+  const [pdfEdits, setPdfEdits] = useState({});
+  const [isEditingPdf, setIsEditingPdf] = useState(false);
+  const [isExtractingPdf, setIsExtractingPdf] = useState(false);
+
+  const [showDocxPreviewModal, setShowDocxPreviewModal] = useState(false);
+  const [docxExtractedBlocks, setDocxExtractedBlocks] = useState([]);
+  const [docxEdits, setDocxEdits] = useState({});
+  const [isExtractingDocx, setIsExtractingDocx] = useState(false);
+
+
   const fetchGlobalTemplate = async () => {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
@@ -154,6 +166,7 @@ export default function CeoPayroll() {
     setLopDaysReversed('');
     setLetterheadUrl('/hmns-logo.png');
     setHasCustomTemplate(false);
+    setCurrentPdfFile(null);
     setTemplateKey(prev => prev + 1);
     setShowModal(true);
 
@@ -180,7 +193,29 @@ export default function CeoPayroll() {
       setLoading(true);
       let pagesHtml = '';
       try {
+        
         if (file.type === 'application/pdf') {
+          if (!isGlobal) {
+            setCurrentPdfFile(file);
+            setIsExtractingPdf(true);
+            try {
+                const token = localStorage.getItem('nsg_jwt_token');
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await fetch('/api/hr-portal/onboarding/extract-pdf-text', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setPdfExtractedBlocks(data.blocks || []);
+                    setPdfEdits({});
+                }
+            } catch (err) { console.error('Extraction failed', err); }
+            finally { setIsExtractingPdf(false); }
+          }
+
           const pdfjsLib = await import('pdfjs-dist');
           pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
           
@@ -254,8 +289,36 @@ export default function CeoPayroll() {
     }
   };
 
+  const handleDocxTemplateUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/ceo-portal/payroll/upload-docx-template', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        if (res.ok) {
+          showNotification('Global DOCX Template Updated Successfully!', 'success');
+        } else {
+          showNotification('Failed to upload DOCX template', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showNotification('Error uploading document', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const clearCustomTemplate = () => {
     setHasCustomTemplate(false);
+    setCurrentPdfFile(null);
     setTemplateKey(prev => prev + 1);
   };
 
@@ -285,7 +348,163 @@ export default function CeoPayroll() {
     }
   };
 
+  
+  const handleBatchPdfEdit = async () => {
+    if (!currentPdfFile) return;
+    
+    const replacements = [];
+    pdfExtractedBlocks.forEach((block, idx) => {
+        if (pdfEdits[idx] !== undefined && pdfEdits[idx] !== block) {
+            replacements.push({ search: block, replace: pdfEdits[idx] });
+        }
+    });
+
+    if (replacements.length === 0) {
+        showNotification('No changes made in the CSV board.', 'info');
+        return;
+    }
+
+    setIsEditingPdf(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const formData = new FormData();
+      formData.append('file', currentPdfFile);
+      formData.append('replacements', JSON.stringify(replacements));
+      
+      const res = await fetch('/api/hr-portal/onboarding/batch-edit-pdf-text', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to edit PDF');
+      }
+      
+      const blob = await res.blob();
+      const newFile = new File([blob], currentPdfFile.name, { type: 'application/pdf' });
+      
+      await handleTemplateUpload({ target: { files: [newFile] } }, false);
+      
+      showNotification(`Successfully applied ${replacements.length} updates!`, 'success');
+    } catch (error) {
+      showNotification(`Error: ${error.message}`, 'error');
+    } finally {
+      setIsEditingPdf(false);
+    }
+  };
+
+  const previewDocx = async () => {
+    showNotification('Extracting DOCX Payslip...', 'info');
+    setIsExtractingDocx(true);
+    setShowDocxPreviewModal(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const payload = {
+        employee_id: String(selectedUser.employee_id),
+        employee_name: selectedUser.employee_name,
+        month: String(month),
+        year: String(year),
+        basic: selectedUser.basic || 0,
+        hra: selectedUser.hra || 0,
+        allowances: (selectedUser.allowances || 0) + (selectedUser.bonus || 0),
+        epf: selectedUser.epf || 0,
+        tds: selectedUser.tds || 0,
+        lop: selectedUser.lop || 0,
+        net: selectedUser.net || 0,
+        worked_days: parseFloat(workedDays) || 22,
+        arrear_days: parseFloat(arrearDays) || 0,
+        lop_days: parseFloat(lopDays) || 0,
+        pf_number: selectedUser.pf_number || '',
+        uan: selectedUser.uan || '',
+        esi_number: selectedUser.esi_number || '',
+        pan_number: selectedUser.pan_number || '',
+        designation: selectedUser.role || '',
+        location: selectedUser.location || ''
+      };
+      
+      const res = await fetch('/api/ceo-portal/payroll/preview-docx-text', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+         const data = await res.json();
+         setDocxExtractedBlocks(data.blocks || []);
+         setDocxEdits({});
+      }
+    } catch(err) {
+      console.error(err);
+      showNotification(`Failed: ${err.message}`, 'error');
+    } finally {
+      setIsExtractingDocx(false);
+    }
+  };
+
+  const handleDocxDownload = async () => {
+    showNotification('Applying Edits & Generating DOCX...', 'info');
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const payload = {
+        employee_id: String(selectedUser.employee_id),
+        employee_name: selectedUser.employee_name,
+        month: String(month),
+        year: String(year),
+        basic: selectedUser.basic || 0,
+        hra: selectedUser.hra || 0,
+        allowances: (selectedUser.allowances || 0) + (selectedUser.bonus || 0),
+        epf: selectedUser.epf || 0,
+        tds: selectedUser.tds || 0,
+        lop: selectedUser.lop || 0,
+        net: selectedUser.net || 0,
+        worked_days: parseFloat(workedDays) || 22,
+        arrear_days: parseFloat(arrearDays) || 0,
+        lop_days: parseFloat(lopDays) || 0,
+        pf_number: selectedUser.pf_number || '',
+        uan: selectedUser.uan || '',
+        esi_number: selectedUser.esi_number || '',
+        pan_number: selectedUser.pan_number || '',
+        designation: selectedUser.role || '',
+        location: selectedUser.location || '',
+        edits: docxEdits
+      };
+      
+      const res = await fetch('/api/ceo-portal/payroll/generate-edited-docx', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) throw new Error('Failed to generate DOCX');
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Payslip_${selectedUser.employee_name}_${month}_${year}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      showNotification('DOCX Generated Successfully!', 'success');
+      setShowDocxPreviewModal(false);
+    } catch(err) {
+      console.error(err);
+      showNotification(`Failed: ${err.message}`, 'error');
+    }
+  };
+
   const processPayment = async () => {
+
     setLoading(true);
     try {
       const token = localStorage.getItem('nsg_jwt_token');
@@ -474,14 +693,26 @@ export default function CeoPayroll() {
         <h1 style={{ fontSize: '28px', color: '#1f2937', fontWeight: 'bold', margin: '0' }}>Payroll Processing</h1>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', backgroundColor: '#f3f4f6', padding: '8px 16px', borderRadius: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '4px' }}>Global Default PDF Format</span>
-            <input 
-              type="file" 
-              onChange={(e) => handleTemplateUpload(e, true)} 
-              title="Upload PDF or DOCX format that will apply to all new payslips automatically"
-              style={{ fontSize: '12px' }}
-            />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', backgroundColor: '#f3f4f6', padding: '8px 16px', borderRadius: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '4px' }}>Global Default PDF Format</span>
+              <input 
+                type="file" 
+                onChange={(e) => handleTemplateUpload(e, true)} 
+                title="Upload PDF or DOCX format that will apply to all new payslips automatically"
+                style={{ fontSize: '12px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', backgroundColor: '#f3f4f6', padding: '8px 16px', borderRadius: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '4px' }}>Global Word (.docx) Generator Template</span>
+              <input 
+                type="file" 
+                accept=".docx"
+                onChange={handleDocxTemplateUpload} 
+                title="Upload DOCX format with tags like {{ employee_name }} to generate word documents"
+                style={{ fontSize: '12px' }}
+              />
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -607,6 +838,49 @@ export default function CeoPayroll() {
         </>
       )}
 
+      
+      {showDocxPreviewModal && (
+        <div className="ceo-modal-overlay" style={{ alignItems: 'center', zIndex: 10000 }}>
+          <div className="ceo-modal" style={{ width: '600px', maxWidth: '95vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ✏️ Edit DOCX Payslip Content
+              </h3>
+              <button style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '20px' }} onClick={() => setShowDocxPreviewModal(false)}>✕</button>
+            </div>
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', backgroundColor: '#f9fafb', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+               <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>DOCX CSV Board (Paragraphs)</h3>
+               {isExtractingDocx ? (
+                   <div style={{ fontSize: '12px', color: '#6b7280', padding: '10px', textAlign: 'center' }}>
+                       Extracting text...
+                   </div>
+               ) : docxExtractedBlocks.length === 0 ? (
+                   <div style={{ fontSize: '13px', color: '#ef4444', padding: '10px', textAlign: 'center', backgroundColor: '#fef2f2', borderRadius: '4px' }}>
+                       <strong>No text found!</strong>
+                   </div>
+               ) : (
+                   docxExtractedBlocks.map((block, idx) => (
+                      <div key={idx} style={{ marginBottom: '12px' }}>
+                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original: {block}</label>
+                         <textarea 
+                            rows={2}
+                            value={docxEdits[idx] !== undefined ? docxEdits[idx] : block}
+                            onChange={(e) => setDocxEdits({...docxEdits, [idx]: e.target.value})}
+                            style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                         />
+                      </div>
+                   ))
+               )}
+            </div>
+            <div style={{ padding: '20px 24px', borderTop: '1px solid #e5e7eb', backgroundColor: '#fff', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+               <button onClick={() => setShowDocxPreviewModal(false)} style={{ padding: '10px 16px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}>Cancel</button>
+               <button onClick={handleDocxDownload} style={{ padding: '10px 16px', borderRadius: '6px', border: 'none', background: '#8b5cf6', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>Apply Edits & Download</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Modal */}
       {showModal && selectedUser && (
         <div className="ceo-modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '40px', overflowY: 'auto' }}>
@@ -719,8 +993,15 @@ export default function CeoPayroll() {
               </div>
 
               {/* Right Column: Live PDF WYSIWYG Editor */}
-              <div style={{ flex: '1', backgroundColor: '#e2e8f0', padding: '24px', borderRadius: '8px', overflowY: 'auto', maxHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: '100%', maxWidth: '210mm', display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', flexShrink: 0, paddingRight: '4px' }}>
+              <div style={{ flex: '1', display: 'flex', gap: '24px' }}>
+              <div style={{ flex: currentPdfFile ? '0 0 65%' : '1', backgroundColor: '#e2e8f0', padding: '24px', borderRadius: '8px', overflowY: 'auto', maxHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: '100%', maxWidth: '210mm', display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', flexShrink: 0, paddingRight: '4px', gap: '8px' }}>
+                   <button 
+                     onClick={previewDocx}
+                     style={{ padding: '8px 16px', backgroundColor: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                   >
+                     <FileText size={16} /> Download DOCX Format
+                   </button>
                    <button 
                      onClick={downloadPreview}
                      style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
@@ -892,6 +1173,42 @@ export default function CeoPayroll() {
                   )}
                 </div>
               </div>
+              
+              {/* CSV Board Right Panel */}
+              {currentPdfFile && (
+              <div className="custom-scroll" style={{ flex: '0 0 35%', overflowY: 'auto', maxHeight: '70vh', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
+                 <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>CSV Board (Text Extracted from PDF)</h3>
+                 {isExtractingPdf ? (
+                     <div style={{ fontSize: '12px', color: '#6b7280', padding: '10px', textAlign: 'center' }}>
+                         Extracting text...
+                     </div>
+                 ) : pdfExtractedBlocks.length === 0 ? (
+                     <div style={{ fontSize: '13px', color: '#ef4444', padding: '10px', textAlign: 'center', backgroundColor: '#fef2f2', borderRadius: '4px' }}>
+                         <strong>No editable text found!</strong>
+                     </div>
+                 ) : (
+                     pdfExtractedBlocks.map((block, idx) => (
+                        <div key={idx} style={{ marginBottom: '12px' }}>
+                           <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original: {block}</label>
+                           <textarea 
+                              rows={2}
+                              value={pdfEdits[idx] !== undefined ? pdfEdits[idx] : block}
+                              onChange={(e) => setPdfEdits({...pdfEdits, [idx]: e.target.value})}
+                              style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                           />
+                        </div>
+                     ))
+                 )}
+                 <button 
+                    onClick={handleBatchPdfEdit} 
+                    disabled={isEditingPdf}
+                    style={{ marginTop: '20px', padding: '10px', backgroundColor: isEditingPdf ? '#9ca3af' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: isEditingPdf ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+                 >
+                    {isEditingPdf ? 'Applying Updates...' : 'Apply All Updates to PDF'}
+                 </button>
+              </div>
+              )}
+
 
             </div>
           </div>
