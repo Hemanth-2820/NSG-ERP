@@ -467,11 +467,7 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                       <Calendar size={10} /> {new Date(cand.interview_scheduled_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
                   )}
-                  {cand.offer_amount && (st.id === 'offer' || st.id === 'joined') && (
-                    <div style={{ fontSize: '10px', color: 'var(--accent-green)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
-                      <span>💰</span> ₹{cand.offer_amount.toLocaleString()}/mo
-                    </div>
-                  )}
+
                   <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                     {st.id !== 'joined' && (
                       <button style={{ background: 'none', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-primary)' }} onClick={() => {
@@ -496,14 +492,7 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                         ✕ Reject
                       </button>
                     )}
-                    {st.id === 'offer' && (
-                      <button style={{ background: 'none', border: '1px solid var(--accent-pink)', color: 'var(--accent-pink)', cursor: 'pointer', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }} onClick={() => {
-                        setSelectedCandidate(cand);
-                        setShowOfferForm(true);
-                      }}>
-                        CTC Offer
-                      </button>
-                    )}
+
                     {st.id === 'joined' && (
                       <button style={{ background: 'var(--accent-pink)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }} onClick={() => {
                         window.location.hash = '#/HR/onboarding';
