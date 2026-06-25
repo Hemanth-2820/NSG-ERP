@@ -4109,7 +4109,7 @@ async def convert_doc(
                             if img not in header_html:
                                 header_html += f"<div style='text-align: center; margin-bottom: 20px;'>{img}</div>"
                     if header_text and header_text not in header_html:
-                        header_html += f"<div style='border-bottom: 2px solid #ea580c; padding-bottom: 10px; margin-bottom: 20px; color: #0284c7; font-weight: bold; text-align: left; font-size: 18px;'>{header_text}</div>"
+                        header_html += f"<div style='margin-bottom: 20px; font-weight: bold; text-align: center; font-size: 16px;'>{header_text}</div>"
                 
                 if section.footer and section.footer.part is not None:
                     footer_text = "<br>".join([p.text.strip() for p in section.footer.paragraphs if p.text.strip()])
@@ -4127,14 +4127,21 @@ async def convert_doc(
                             if img not in footer_html:
                                 footer_html += f"<div style='text-align: center; margin-top: 20px;'>{img}</div>"
                     if footer_text and footer_text not in footer_html:
-                        footer_html += f"<div style='border-top: 1px solid #d1d5db; padding-top: 10px; margin-top: 20px; font-size: 11px; text-align: center; color: #6b7280;'>{footer_text}</div>"
+                        footer_html += f"<div style='margin-top: 20px; font-size: 11px; text-align: center; color: #6b7280;'>{footer_text}</div>"
             
             final_html = f"{header_html}{html_body}{footer_html}"
         except Exception as ex:
             print("Error parsing header/footer:", ex)
             final_html = html_body
+            header_html = ""
+            footer_html = ""
             
-        return {"html": final_html}
+        return {
+            "html": final_html,
+            "header_html": header_html,
+            "html_body": html_body,
+            "footer_html": footer_html
+        }
     except Exception as e:
         print(f"Error converting docx: {e}")
         raise HTTPException(status_code=500, detail=str(e))

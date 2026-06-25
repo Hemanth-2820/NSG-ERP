@@ -569,7 +569,16 @@ export function OnboardingView({ queryParams, setQueryParams }) {
             body: formData
           });
           const data = await res.json();
-          pagesHtml = data.html ? `<div contentEditable="true" style="width: 100%; min-height: 100%; outline: none; padding: 40px; box-sizing: border-box; font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.6;">${data.html}</div>` : "<div>Failed to convert document</div>";
+          if (data.html_body) {
+              pagesHtml = `
+              <div style="display: flex; flex-direction: column; min-height: 100%; width: 100%; padding: 40px; box-sizing: border-box; font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.6;">
+                  ${data.header_html ? `<div contentEditable="false" style="flex-shrink: 0; user-select: none;">${data.header_html}</div>` : ''}
+                  <div contentEditable="true" style="flex-grow: 1; outline: none;">${data.html_body}</div>
+                  ${data.footer_html ? `<div contentEditable="false" style="flex-shrink: 0; user-select: none; margin-top: auto;">${data.footer_html}</div>` : ''}
+              </div>`;
+          } else {
+              pagesHtml = data.html ? `<div contentEditable="true" style="width: 100%; min-height: 100%; outline: none; padding: 40px; box-sizing: border-box; font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.6;">${data.html}</div>` : "<div>Failed to convert document</div>";
+          }
         } else if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           pagesHtml = await new Promise((resolve) => {
