@@ -2717,16 +2717,12 @@ async def add_onboarding_document(
     import uuid
     from datetime import datetime
     
-    # Save file
-    os.makedirs("uploads", exist_ok=True)
-    file_ext = file.filename.split(".")[-1] if "." in file.filename else "pdf"
-    file_name = f"{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join("uploads", file_name)
-    
-    with open(file_path, "wb") as buffer:
-        content = await file.read()
-        buffer.write(content)
+    from app.core.cloudinary_utils import upload_to_cloudinary_async
+    secure_url = await upload_to_cloudinary_async(file, folder="nsg_erp/hr_docs", resource_type="auto")
+    if not secure_url:
+        raise HTTPException(status_code=500, detail="Failed to upload document to Cloudinary")
         
+    file_name = file.filename
     existing_docs = []
     doc_dict = None
     if user.documents:
@@ -2740,7 +2736,7 @@ async def add_onboarding_document(
     new_doc = {
         "id": str(uuid.uuid4()),
         "name": name,
-        "link": f"/uploads/{file_name}",
+        "link": secure_url,
         "type": "Document",
         "status": "Uploaded",
         "date": datetime.now().isoformat(),
@@ -3830,20 +3826,14 @@ def hr_delete_channel(channel_id: str, db: Session = Depends(database.get_db), c
 async def hr_upload_file(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user)):
     verify_hr_role(current_user)
     try:
-        import os, uuid
-        file_ext = os.path.splitext(file.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
-        os.makedirs(os.path.join("uploads", "chat"), exist_ok=True)
-        filepath = os.path.join("uploads", "chat", unique_filename)
-        
-        with open(filepath, "wb") as f:
-            content = await file.read()
-            f.write(content)
+        from app.core.cloudinary_utils import upload_to_cloudinary_async
+        secure_url = await upload_to_cloudinary_async(file, folder="nsg_erp/hr_docs", resource_type="auto")
+        if not secure_url:
+            raise HTTPException(status_code=500, detail="Failed to upload document to Cloudinary")
             
-        file_url = f"/uploads/chat/{unique_filename}"
         file_type = "image" if file.content_type.startswith("image/") else ("video" if file.content_type.startswith("video/") else "document")
         
-        return {"url": file_url, "type": file_type}
+        return {"url": secure_url, "type": file_type}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -1432,13 +1432,12 @@ def create_project_milestone(project_id: int, req: MilestoneCreateRequest, curre
 async def upload_task_file(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user)):
     verify_manager_role(current_user)
     try:
-        os.makedirs(os.path.join("uploads", "tasks"), exist_ok=True)
-        unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-        filepath = os.path.join("uploads", "tasks", unique_filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file_url = f"/uploads/tasks/{unique_filename}"
-        return {"filename": file.filename, "file_url": file_url}
+        from app.core.cloudinary_utils import upload_to_cloudinary_async
+        secure_url = await upload_to_cloudinary_async(file, folder="nsg_erp/tasks", resource_type="auto")
+        if not secure_url:
+            raise HTTPException(status_code=500, detail="Failed to upload task file to Cloudinary")
+            
+        return {"filename": file.filename, "file_url": secure_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 

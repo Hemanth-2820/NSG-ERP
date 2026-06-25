@@ -616,11 +616,12 @@ def update_project(project_id: int, req: ProjectUpdate, current_user: models.Use
 async def upload_project_file(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user)):
     verify_ceo_role(current_user)
     try:
-        os.makedirs("uploads/projects", exist_ok=True)
-        file_path = f"uploads/projects/{uuid.uuid4()}_{file.filename}"
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return {"url": f"/api/files/{file_path}"}
+        from app.core.cloudinary_utils import upload_to_cloudinary_async
+        secure_url = await upload_to_cloudinary_async(file, folder="nsg_erp/projects", resource_type="auto")
+        if not secure_url:
+            raise HTTPException(status_code=500, detail="Failed to upload project file to Cloudinary")
+            
+        return {"url": secure_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1216,19 +1217,14 @@ def update_system_setting(req: ConfigValueRequest, current_user: models.User = D
 @router.post("/configs/upload-logo")
 def upload_company_logo(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)
-    import os
-    import time
-    upload_dir = os.path.join("uploads", "logo")
-    os.makedirs(upload_dir, exist_ok=True)
     
-    unique_filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
-    file_path = os.path.join(upload_dir, unique_filename)
+    from app.core.cloudinary_utils import upload_to_cloudinary_sync
     
-    with open(file_path, "wb") as buffer:
-        import shutil
-        shutil.copyfileobj(file.file, buffer)
+    secure_url = upload_to_cloudinary_sync(file, folder="nsg_erp/logos", resource_type="image")
+    if not secure_url:
+        raise HTTPException(status_code=500, detail="Failed to upload logo to Cloudinary")
         
-    file_url = f"/{file_path.replace(os.sep, '/')}"
+    file_url = secure_url
     
     # Save to configs
     setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "company_logo").first()
@@ -3249,25 +3245,23 @@ def upload_vault_doc(
     if db.query(models.VaultDocument).filter(models.VaultDocument.doc_id == doc_id).first():
         raise HTTPException(status_code=400, detail="Document ID already exists")
 
-    # Save physical file
-    upload_dir = os.path.join("uploads", "vault")
-    os.makedirs(upload_dir, exist_ok=True)
+    # Read file content for hashing
+    content = file.file.read()
     
-    file_ext = os.path.splitext(file.filename)[1]
-    safe_filename = f"{doc_id}{file_ext}"
-    file_path = os.path.join(upload_dir, safe_filename)
-    
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
     # Calculate SHA-256 hash for cryptographic security
     sha256_hash = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
-    
+    sha256_hash.update(content)
     file_hash = sha256_hash.hexdigest()
-    file_url = f"/uploads/vault/{safe_filename}"
+    
+    # Reset file pointer for Cloudinary upload
+    file.file.seek(0)
+    
+    from app.core.cloudinary_utils import upload_to_cloudinary_sync
+    secure_url = upload_to_cloudinary_sync(file, folder="nsg_erp/vault", resource_type="auto")
+    if not secure_url:
+        raise HTTPException(status_code=500, detail="Failed to upload vault document to Cloudinary")
+        
+    file_url = secure_url
     
     new_doc = models.VaultDocument(
         doc_id=doc_id,

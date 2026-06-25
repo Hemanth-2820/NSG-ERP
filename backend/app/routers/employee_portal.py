@@ -800,15 +800,12 @@ async def upload_document(
 
     user = db.query(models.User).filter(models.User.id == current_user.id).first()
     
-    os.makedirs("uploads", exist_ok=True)
-    file_ext = file.filename.split(".")[-1] if "." in file.filename else "pdf"
-    file_name = f"{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join("uploads", file_name)
-    
-    with open(file_path, "wb") as buffer:
-        content = await file.read()
-        buffer.write(content)
+    from app.core.cloudinary_utils import upload_to_cloudinary_async
+    secure_url = await upload_to_cloudinary_async(file, folder="nsg_erp/employee_docs", resource_type="auto")
+    if not secure_url:
+        raise HTTPException(status_code=500, detail="Failed to upload document to Cloudinary")
         
+    file_name = file.filename
     existing_docs = []
     doc_dict = None
     if user.documents:
@@ -823,7 +820,7 @@ async def upload_document(
         "id": str(uuid.uuid4()),
         "name": name,
         "docType": name,
-        "link": f"/uploads/{file_name}",
+        "link": secure_url,
         "type": "Document",
         "status": "Uploaded",
         "original_filename": file.filename,
@@ -1262,18 +1259,11 @@ import uuid
 @router.post("/chat/upload")
 async def upload_chat_file(file: UploadFile = File(...)):
     try:
-        # Save file to uploads directory
-        file_ext = os.path.splitext(file.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
-        filepath = os.path.join("uploads", unique_filename)
+        from app.core.cloudinary_utils import upload_to_cloudinary_async
+        secure_url = await upload_to_cloudinary_async(file, folder="nsg_erp/chat", resource_type="auto")
+        if not secure_url:
+            raise HTTPException(status_code=500, detail="Failed to upload chat file to Cloudinary")
         
-        with open(filepath, "wb") as f:
-            content = await file.read()
-            f.write(content)
-            
-        file_url = f"/uploads/{unique_filename}"
-        
-        # Determine type
         content_type = file.content_type or ""
         if content_type.startswith('image/'):
             attachment_type = 'image'
@@ -1282,8 +1272,8 @@ async def upload_chat_file(file: UploadFile = File(...)):
         else:
             attachment_type = 'file'
             
-        print(f"DEBUG UPLOAD SUCCESS: {file_url}, {attachment_type}")
-        return {"url": file_url, "type": attachment_type, "name": file.filename}
+        print(f"DEBUG UPLOAD SUCCESS: {secure_url}, {attachment_type}")
+        return {"url": secure_url, "type": attachment_type, "name": file.filename}
     except Exception as e:
         print(f"DEBUG UPLOAD FAILED: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1294,8 +1284,12 @@ class DpUploadRequest(BaseModel):
 @router.post("/profile/upload-dp")
 def upload_dp(req: DpUploadRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     try:
-        # Save the base64 string directly to the user's photo column
-        current_user.photo = req.file
+        from app.core.cloudinary_utils import upload_base64_to_cloudinary
+        secure_url = upload_base64_to_cloudinary(req.file, folder="nsg_erp/avatars", resource_type="image")
+        if not secure_url:
+            raise HTTPException(status_code=500, detail="Failed to upload avatar to Cloudinary")
+            
+        current_user.photo = secure_url
         db.commit()
         db.refresh(current_user)
         
@@ -1713,13 +1707,12 @@ def get_company_holidays(current_user: models.User = Depends(security.get_curren
 @router.post("/tasks/upload")
 async def upload_task_file(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user)):
     try:
-        os.makedirs(os.path.join("uploads", "tasks"), exist_ok=True)
-        unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-        filepath = os.path.join("uploads", "tasks", unique_filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file_url = f"/uploads/tasks/{unique_filename}"
-        return {"filename": file.filename, "file_url": file_url}
+        from app.core.cloudinary_utils import upload_to_cloudinary_async
+        secure_url = await upload_to_cloudinary_async(file, folder="nsg_erp/tasks", resource_type="auto")
+        if not secure_url:
+            raise HTTPException(status_code=500, detail="Failed to upload task file to Cloudinary")
+            
+        return {"filename": file.filename, "file_url": secure_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
