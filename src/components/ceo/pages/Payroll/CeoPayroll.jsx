@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader, CheckCircle, Search, AlertCircle, FileText, IndianRupee, History, DollarSign, X, Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import { generatePayslipPDF } from '../../../../utils/pdfGenerator';
 import PayrollEntryRow from './PayrollEntryRow';
 import './CeoPayroll.css';

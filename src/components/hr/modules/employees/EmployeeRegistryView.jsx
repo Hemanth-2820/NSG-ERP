@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Plus, Search, Download, Lock, RefreshCw, Trash2, Edit3, Filter, Shield, Users, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { notify } from '../../utils/notify';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import styles from './employeeRegistry.module.css';
 import { useCompany } from '../../../common/CompanyContext';

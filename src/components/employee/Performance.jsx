@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import useSWR from 'swr';
 import { Target, CheckCircle, Award, UserCheck, Download, Search, Filter } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCompany } from '../common/CompanyContext';
 import './Performance.css';

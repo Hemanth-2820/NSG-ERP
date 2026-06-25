@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarDays, Filter, Download, CalendarCheck } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCompany } from '../../common/CompanyContext';
 import styles from './teamHistory.module.css'; 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Download, XCircle, Mail, Phone, Award, UserPlus, FileText, CalendarDays, Users, Building, ShieldCheck, TrendingUp, Eye, EyeOff, AlertCircle, ChevronDown } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import '../CEO.css';
 import { useCompany } from '../../common/CompanyContext';
 
@@ -392,7 +392,7 @@ export default function People() {
         emp.joinDate || ''
       ]);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 38,
         head: headers,
         body: data,

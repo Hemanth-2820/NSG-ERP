@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Calendar, List, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { notify } from '../../utils/notify';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { useCompany } from '../../../common/CompanyContext';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { notify } from '../../utils/notify';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Download, Search, Filter, AlertCircle } from 'lucide-react';
 import { useCompany } from '../../../common/CompanyContext';

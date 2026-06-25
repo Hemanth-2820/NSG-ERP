@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './performance.module.css';
 import { Award, ClipboardSignature, Send, ListTodo, Loader2, AlertCircle, Download, Search, Filter } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCompany } from '../../common/CompanyContext';
 

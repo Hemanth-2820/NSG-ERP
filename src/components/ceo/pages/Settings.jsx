@@ -3,7 +3,7 @@ import {
   ShieldAlert, History, Bell, Settings as SettingsIcon, Users, 
   Search, Download, CheckCircle, Save, Globe, Zap, CheckSquare, Square
 } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCompany } from '../../common/CompanyContext';
 import '../CEO.css';

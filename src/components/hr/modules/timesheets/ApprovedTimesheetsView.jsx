@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileCheck2, CalendarDays, Check, Filter, FileText, X, Eye, Download } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import styles from './approvedTimesheets.module.css';
 import '../../../employee/pagination.css'; 
