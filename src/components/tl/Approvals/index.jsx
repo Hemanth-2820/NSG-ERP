@@ -234,13 +234,7 @@ const Approvals = () => {
           <FileText size={16} /> WFH
           {wfhs.length > 0 && <span className={styles.badge}>{wfhs.length}</span>}
         </button>
-        <button 
-          className={`${styles.tabBtn} ${activeTab === 'expense' ? styles.tabBtnActive : ''}`}
-          onClick={() => handleTabChange('expense')}
-        >
-          <DollarSign size={16} /> Expenses
-          {expenses.length > 0 && <span className={styles.badge}>{expenses.length}</span>}
-        </button>
+        {/* Expenses tab removed by request */}
       </div>
 
       {/* 2-PANE LAYOUT */}
