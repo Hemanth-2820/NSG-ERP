@@ -386,7 +386,7 @@ export const getOfferLetterHTML = (data) => {
   `);
 
   return `
-    <div style="background-color: #fff; color: #000; font-family: 'Times New Roman', Times, serif; width: 210mm;">
+    <div contentEditable=\"true\" style=\"background-color: #fff; color: #000; font-family: 'Times New Roman', Times, serif; width: 210mm; outline: none;\">
       ${page1}${page2}${page3}${page4}${page5}
     </div>
   `;

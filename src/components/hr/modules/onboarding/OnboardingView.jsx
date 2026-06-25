@@ -255,10 +255,199 @@ export function OnboardingView({ queryParams, setQueryParams }) {
 
   const [showOfferPreviewModal, setShowOfferPreviewModal] = useState(false);
   const [offerPreviewHTML, setOfferPreviewHTML] = useState('');
+  const [currentUploadedFile, setCurrentUploadedFile] = useState(null);
+
+  const [pdfExtractedBlocks, setPdfExtractedBlocks] = useState([]);
+  const [pdfEdits, setPdfEdits] = useState({});
+  const [isExtractingPdf, setIsExtractingPdf] = useState(false);
+
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [isEditingPdf, setIsEditingPdf] = useState(false);
+
+  useEffect(() => {
+    if (offerPreviewRef.current && offerPreviewHTML) {
+      offerPreviewRef.current.innerHTML = offerPreviewHTML;
+    }
+  }, [offerPreviewHTML]);
+
+  useEffect(() => {
+    const container = offerPreviewRef.current;
+    if (!container) return;
+    
+    const handleClick = (e) => {
+       if (e.target.isContentEditable) return;
+       
+       // If clicking on a page with background image (the pdf page wrapper) or the container itself
+       if (e.target.style.backgroundImage || e.target.style.width === '210mm') {
+           const newSpan = document.createElement('span');
+           newSpan.contentEditable = "true";
+           newSpan.style.position = "absolute";
+           newSpan.style.left = e.offsetX + "px";
+           newSpan.style.top = e.offsetY + "px";
+           newSpan.style.minWidth = "60px";
+           newSpan.style.minHeight = "24px";
+           newSpan.style.display = "inline-block";
+           newSpan.style.outline = "2px dashed #3b82f6";
+           newSpan.style.padding = "2px 4px";
+           newSpan.style.cursor = "text";
+           newSpan.style.color = "#000";
+           newSpan.style.fontSize = "15px";
+           newSpan.style.whiteSpace = "pre-wrap";
+           newSpan.style.zIndex = "50";
+           newSpan.style.backgroundColor = "#fff"; // slight background to see it
+           
+           newSpan.onblur = function() {
+               newSpan.style.outline = "none";
+               newSpan.style.backgroundColor = "#fff";
+               if (!newSpan.innerText.trim()) {
+                   newSpan.remove();
+               }
+           };
+           newSpan.onfocus = function() {
+               newSpan.style.outline = "2px dashed #3b82f6";
+               newSpan.style.backgroundColor = "#fff";
+           };
+           
+           // Allow dragging the text box by holding Shift
+           newSpan.onmousedown = function(event) {
+               if (event.shiftKey) {
+                   event.preventDefault();
+                   let shiftX = event.clientX - newSpan.getBoundingClientRect().left;
+                   let shiftY = event.clientY - newSpan.getBoundingClientRect().top;
+                   
+                   function moveAt(pageX, pageY) {
+                       const containerRect = e.target.getBoundingClientRect();
+                       newSpan.style.left = (pageX - containerRect.left - shiftX) / 0.85 + 'px';
+                       newSpan.style.top = (pageY - containerRect.top - shiftY) / 0.85 + 'px';
+                   }
+                   
+                   function onMouseMove(event) {
+                       moveAt(event.clientX, event.clientY);
+                   }
+                   
+                   document.addEventListener('mousemove', onMouseMove);
+                   document.onmouseup = function() {
+                       document.removeEventListener('mousemove', onMouseMove);
+                       document.onmouseup = null;
+                   };
+               }
+           };
+           
+           newSpan.onkeydown = function(event) {
+               if (event.key === 'Backspace' && newSpan.innerText.trim() === '') {
+                   newSpan.remove();
+               }
+           };
+
+           e.target.appendChild(newSpan);
+           // Delay focus to ensure it's in the DOM
+           setTimeout(() => { newSpan.focus(); }, 10);
+       }
+    };
+
+    container.addEventListener('click', handleClick);
+    return () => container.removeEventListener('click', handleClick);
+  }, [offerPreviewHTML, showOfferPreviewModal]);
+
   const offerPreviewRef = useRef(null);
   
   const [globalOfferTemplateHtml, setGlobalOfferTemplateHtml] = useState(null);
   const [isLoadingOffer, setIsLoadingOffer] = useState(false);
+
+  
+  
+  const handleBatchPdfEdit = async () => {
+    if (!currentUploadedFile) return;
+    
+    const replacements = [];
+    pdfExtractedBlocks.forEach((block, idx) => {
+        if (pdfEdits[idx] !== undefined && pdfEdits[idx] !== block) {
+            replacements.push({ search: block, replace: pdfEdits[idx] });
+        }
+    });
+
+    if (replacements.length === 0) {
+        notify('No changes made in the CSV board.', 'info');
+        return;
+    }
+
+    setIsEditingPdf(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const formData = new FormData();
+      formData.append('file', currentUploadedFile);
+      formData.append('replacements', JSON.stringify(replacements));
+      
+      const res = await fetch('/api/hr-portal/onboarding/batch-edit-pdf-text', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to edit PDF');
+      }
+      
+      const blob = await res.blob();
+      const newFile = new File([blob], currentUploadedFile.name, { type: 'application/pdf' });
+      
+      await handleOfferTemplateUpload({ target: { files: [newFile] } }, false);
+      
+      notify(`Successfully applied ${replacements.length} updates!`, 'success');
+    } catch (error) {
+      notify(`Error: ${error.message}`, 'error');
+    } finally {
+      setIsEditingPdf(false);
+    }
+  };
+
+  const handlePdfEdit = async () => {
+    if (!currentUploadedFile || currentUploadedFile.type !== 'application/pdf') {
+      notify('Find & Replace only works with PDF files.', 'error');
+      return;
+    }
+    if (!findText) {
+      notify('Please enter text to find.', 'error');
+      return;
+    }
+    
+    setIsEditingPdf(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const formData = new FormData();
+      formData.append('file', currentUploadedFile);
+      formData.append('search_text', findText);
+      formData.append('replace_text', replaceText);
+      
+      const res = await fetch('/api/hr-portal/onboarding/edit-pdf-text', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to edit PDF');
+      }
+      
+      const blob = await res.blob();
+      const newFile = new File([blob], currentUploadedFile.name, { type: 'application/pdf' });
+      setCurrentUploadedFile(newFile);
+      
+      // Re-trigger the render
+      await handleOfferTemplateUpload({ target: { files: [newFile] } }, false);
+      
+      notify('PDF text replaced successfully!', 'success');
+      setFindText('');
+      setReplaceText('');
+    } catch (error) {
+      notify(`Error: ${error.message}`, 'error');
+    } finally {
+      setIsEditingPdf(false);
+    }
+  };
 
   const fetchGlobalOfferTemplate = async () => {
     try {
@@ -309,10 +498,33 @@ export function OnboardingView({ queryParams, setQueryParams }) {
   const handleOfferTemplateUpload = async (e, isGlobal = false) => {
     const file = e.target.files[0];
     if (file) {
+        setCurrentUploadedFile(file);
       setIsLoadingOffer(true);
       let pagesHtml = '';
       try {
+        
         if (file.type === 'application/pdf') {
+            try {
+                setIsExtractingPdf(true);
+                const token = localStorage.getItem('nsg_jwt_token');
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await fetch('/api/hr-portal/onboarding/extract-pdf-text', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setPdfExtractedBlocks(data.blocks || []);
+                    setPdfEdits({});
+                }
+            } catch (err) { 
+                console.error('Extraction failed', err); 
+            } finally {
+                setIsExtractingPdf(false);
+            }
+
           const pdfjsLib = await import('pdfjs-dist');
           pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
           
@@ -334,9 +546,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
               
               pagesHtml += `
                 <div style="position: relative; width: 100%; padding-bottom: ${cssHeight}%; background-image: url('${imgData}'); background-size: cover; background-repeat: no-repeat; background-position: top center; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                  <div contentEditable="true" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 40px; outline: none; z-index: 10; font-family: sans-serif; min-height: 100%;">
-                    <div><br/></div>
-                  </div>
+                  
                 </div>
               `;
           }
@@ -344,13 +554,13 @@ export function OnboardingView({ queryParams, setQueryParams }) {
           const token = localStorage.getItem('nsg_jwt_token');
           const formData = new FormData();
           formData.append('file', file);
-          const res = await fetch('/api/ceo-portal/payroll/convert-document', {
+          const res = await fetch('/api/hr-portal/onboarding/convert-doc', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
           });
           const data = await res.json();
-          pagesHtml = data.html || "<div>Failed to convert document</div>";
+          pagesHtml = data.html ? `<div contentEditable="true" style="width: 100%; min-height: 100%; outline: none; padding: 40px; box-sizing: border-box; font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.6;">${data.html}</div>` : "<div>Failed to convert document</div>";
         } else if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           pagesHtml = await new Promise((resolve) => {
@@ -400,7 +610,8 @@ export function OnboardingView({ queryParams, setQueryParams }) {
         candidateName: offerEmp.name,
       };
       // Pass the edited innerHTML as customHTML
-      await generateOfferLetterPDF(data, offerPreviewRef.current.innerHTML);
+      const cleanHTML = offerPreviewRef.current.innerHTML.replace(/contenteditable=\"true\"/gi, '');
+        await generateOfferLetterPDF(data, cleanHTML);
       notify(`Offer Letter PDF for ${offerEmp.name} generated successfully.`, 'success');
       setShowOfferPreviewModal(false);
     } catch (err) {
@@ -1103,7 +1314,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
       {/* 📄 OFFER LETTER EDIT PREVIEW OVERLAY */}
       {showOfferPreviewModal && offerEmp && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }} onClick={(e) => { if (e.target === e.currentTarget) { setShowOfferPreviewModal(false) } }}>
-          <div className="card" style={{ width: '900px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '90vh' }}>
+          <div className="card" style={{ width: '95vw', maxWidth: '1600px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '95vh' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 ✏️ Edit Offer Letter
@@ -1122,7 +1333,10 @@ export function OnboardingView({ queryParams, setQueryParams }) {
               </div>
             </div>
 
-            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', backgroundColor: '#e5e7eb', padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '20px', width: '100%', height: 'calc(100vh - 140px)' }}>
+              <div className="custom-scroll" style={{ flex: currentUploadedFile && currentUploadedFile.type === 'application/pdf' ? '0 0 65%' : 1, overflowY: 'auto', backgroundColor: '#e5e7eb', padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+>
               <div style={{ width: '100%', maxWidth: '210mm', display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', flexShrink: 0 }}>
                  <button 
                    onClick={handleDownloadEditedOffer}
@@ -1131,16 +1345,50 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                    📥 Download PDF Preview
                  </button>
               </div>
-               <div 
-                  ref={offerPreviewRef} 
-                  contentEditable 
-                  suppressContentEditableWarning 
-                  dangerouslySetInnerHTML={{ __html: offerPreviewHTML }}
-                  style={{ width: '210mm', outline: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minHeight: '297mm', backgroundColor: '#fff', zoom: '0.85' }}
-               />
+               
+              
+<div ref={offerPreviewRef} style={{ width: '210mm', outline: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minHeight: '297mm', backgroundColor: '#fff', zoom: '0.85' , color: '#000', fontSize: '15px'}} />
             </div>
 
+            
+              {currentUploadedFile && currentUploadedFile.type === 'application/pdf' && (
+              <div className="custom-scroll" style={{ flex: '0 0 35%', overflowY: 'auto', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
+                 <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>CSV Board (Text Extracted from PDF)</h3>
+                 {isExtractingPdf ? (
+                     <div style={{ fontSize: '12px', color: '#6b7280', padding: '10px', textAlign: 'center' }}>
+                         Extracting text...
+                     </div>
+                 ) : pdfExtractedBlocks.length === 0 ? (
+                     <div style={{ fontSize: '13px', color: '#ef4444', padding: '10px', textAlign: 'center', backgroundColor: '#fef2f2', borderRadius: '4px' }}>
+                         <strong>No editable text found!</strong><br/>
+                         This PDF appears to be a scanned image or photograph. The extraction engine cannot read text from flat images. Please upload a digitally generated PDF or a Word Document instead.
+                     </div>
+                 ) : (
+                     pdfExtractedBlocks.map((block, idx) => (
+                        <div key={idx} style={{ marginBottom: '12px' }}>
+                           <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original: {block}</label>
+                           <textarea 
+                              rows={2}
+                              value={pdfEdits[idx] !== undefined ? pdfEdits[idx] : block}
+                              onChange={(e) => setPdfEdits({...pdfEdits, [idx]: e.target.value})}
+                              style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                           />
+                        </div>
+                     ))
+                 )}
+                 <button 
+                    onClick={handleBatchPdfEdit} 
+                    disabled={isEditingPdf}
+                    style={{ marginTop: '20px', padding: '10px', backgroundColor: isEditingPdf ? '#9ca3af' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: isEditingPdf ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+                 >
+                    {isEditingPdf ? 'Applying Updates...' : 'Apply All Updates to PDF'}
+                 </button>
+              </div>
+              )}
+            </div>
+            
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', marginTop: '14px' }}>
+
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
                 💡 You can click directly on the letter text above to edit any contents before downloading.
               </div>

@@ -3877,3 +3877,187 @@ def get_global_template(template_type: str, db: Session = Depends(database.get_d
     if not gt:
         raise HTTPException(status_code=404, detail="Template not found")
     return {"html_content": gt.html_content}
+
+
+import fitz
+import io
+from fastapi.responses import Response
+
+@router.post("/onboarding/edit-pdf-text")
+async def edit_pdf_text(
+    file: UploadFile = File(...),
+    search_text: str = Form(...),
+    replace_text: str = Form(...),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        pdf_bytes = await file.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        
+        for page in doc:
+            # Search for the exact string
+            text_instances = page.search_for(search_text)
+            
+            for inst in text_instances:
+                # Redact the old text
+                page.add_redact_annot(inst, fill=(1, 1, 1)) # White background
+                page.apply_redactions()
+                
+                # Insert the new text. Try to match standard font sizes based on rect height.
+                # height of rect is approximately the font size
+                fontsize = inst.y1 - inst.y0
+                page.insert_text(
+                    (inst.x0, inst.y1 - (fontsize * 0.2)), # adjust y-baseline slightly
+                    replace_text,
+                    fontsize=fontsize * 0.9,
+                    color=(0, 0, 0)
+                )
+                
+        # Return as modified PDF bytes
+        modified_pdf = doc.write()
+        doc.close()
+        
+        return Response(content=modified_pdf, media_type="application/pdf")
+        
+    except Exception as e:
+        print(f"Error editing PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/onboarding/extract-pdf-text")
+async def extract_pdf_text(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        pdf_bytes = await file.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        extracted_blocks = []
+        
+        for page in doc:
+            blocks = page.get_text("blocks")
+            for b in blocks:
+                if b[6] == 0:  # Text block
+                    text = b[4].strip()
+                    if text and len(text) > 1: # Filter out empty or single-character noise
+                        # check if already added to avoid exact duplicates
+                        if text not in extracted_blocks:
+                            extracted_blocks.append(text)
+                            
+        doc.close()
+        return {"blocks": extracted_blocks}
+        
+    except Exception as e:
+        print(f"Error extracting PDF text: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/onboarding/batch-edit-pdf-text")
+async def batch_edit_pdf_text(
+    file: UploadFile = File(...),
+    replacements: str = Form(...),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        import json
+        replacements_list = json.loads(replacements)
+        
+        pdf_bytes = await file.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        
+        for page in doc:
+            for rep in replacements_list:
+                search_text = rep.get("search")
+                replace_text = rep.get("replace")
+                
+                if not search_text or not replace_text:
+                    continue
+                    
+                text_instances = page.search_for(search_text)
+                for inst in text_instances:
+                    page.add_redact_annot(inst, fill=(1, 1, 1))
+                    page.apply_redactions()
+                    
+                    fontsize = inst.y1 - inst.y0
+                    page.insert_text(
+                        (inst.x0, inst.y1 - (fontsize * 0.2)),
+                        replace_text,
+                        fontsize=fontsize * 0.9,
+                        color=(0, 0, 0)
+                    )
+                    
+        modified_pdf = doc.write()
+        doc.close()
+        
+        return Response(content=modified_pdf, media_type="application/pdf")
+        
+    except Exception as e:
+        print(f"Error batch editing PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+import mammoth
+import docx
+
+@router.post("/onboarding/convert-doc")
+async def convert_doc(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    if not file.filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Only .docx files are supported")
+        
+    try:
+        content = await file.read()
+        import io
+        docx_file = io.BytesIO(content)
+        
+        # Extract main body
+        result = mammoth.convert_to_html(docx_file)
+        html_body = result.value
+        
+        # Try to extract headers/footers text
+        try:
+            docx_file.seek(0)
+            doc = docx.Document(docx_file)
+            header_html = ""
+            footer_html = ""
+            
+            for section in doc.sections:
+                if section.header:
+                    header_text = "<br>".join([p.text.strip() for p in section.header.paragraphs if p.text.strip()])
+                    if header_text and header_text not in header_html:
+                        header_html += f"<div style='border-bottom: 2px solid #ea580c; padding-bottom: 10px; margin-bottom: 20px; color: #0284c7; font-weight: bold; text-align: left; font-size: 18px;'>{header_text}</div>"
+                    elif not header_text and len(section.header.paragraphs) > 0:
+                        # Probably an image letterhead
+                        if "Logo" not in header_html:
+                            header_html += f"<div style='border-bottom: 2px solid #ea580c; padding-bottom: 10px; margin-bottom: 20px; color: #9ca3af; font-style: italic; text-align: center;'>[Image Letterhead / Logo]</div>"
+                
+                if section.footer:
+                    footer_text = "<br>".join([p.text.strip() for p in section.footer.paragraphs if p.text.strip()])
+                    if footer_text and footer_text not in footer_html:
+                        footer_html += f"<div style='border-top: 1px solid #d1d5db; padding-top: 10px; margin-top: 20px; font-size: 11px; text-align: center; color: #6b7280;'>{footer_text}</div>"
+                    elif not footer_text and len(section.footer.paragraphs) > 0:
+                        if "Footer" not in footer_html:
+                            footer_html += f"<div style='border-top: 1px solid #d1d5db; padding-top: 10px; margin-top: 20px; font-size: 11px; text-align: center; color: #9ca3af; font-style: italic;'>[Image Footer]</div>"
+            
+            final_html = f"{header_html}{html_body}{footer_html}"
+        except Exception as ex:
+            print("Error parsing header/footer:", ex)
+            final_html = html_body
+            
+        return {"html": final_html}
+    except Exception as e:
+        print(f"Error converting docx: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
