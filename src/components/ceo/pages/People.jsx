@@ -108,7 +108,7 @@ export default function People() {
           role: emp.designation || 'Employee',
           dept: emp.department || 'Operations',
           joinDate: emp.join_date || 'N/A',
-          status: emp.status === 'active' ? 'Active' : (emp.status || 'Active'),
+          status: emp.status ? emp.status.charAt(0).toUpperCase() + emp.status.slice(1).toLowerCase() : 'Active',
           avatar: emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`,
           sysRole: emp.role,
           email: emp.email,
@@ -245,7 +245,7 @@ export default function People() {
           role: emp.designation || 'Employee',
           dept: emp.department || 'Operations',
           joinDate: emp.join_date || 'N/A',
-          status: emp.status === 'active' ? 'Active' : (emp.status || 'Active'),
+          status: emp.status ? emp.status.charAt(0).toUpperCase() + emp.status.slice(1).toLowerCase() : 'Active',
           avatar: emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`,
           sysRole: emp.role
         }));
