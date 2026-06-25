@@ -525,11 +525,20 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                 setIsExtractingPdf(false);
             }
 
-          const pdfjsLib = await import('pdfjs-dist');
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
-          
+          const loadPdfJs = () => new Promise((resolve, reject) => {
+              if (window.pdfjsLib) return resolve(window.pdfjsLib);
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+              script.onload = () => {
+                  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                  resolve(window.pdfjsLib);
+              };
+              script.onerror = reject;
+              document.head.appendChild(script);
+          });
+          const pdfjsLib = await loadPdfJs();
           const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
           
           for (let i = 1; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i);
@@ -596,8 +605,8 @@ export function OnboardingView({ queryParams, setQueryParams }) {
             }
         }
       } catch (e) {
-          console.error(e);
-          notify('Failed to process uploaded file', 'error');
+          console.error('PDF Upload Error:', e);
+          notify(`Failed to process uploaded file: ${e.message}`, 'error');
       } finally {
           setIsLoadingOffer(false);
       }
