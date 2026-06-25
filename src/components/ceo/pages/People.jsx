@@ -410,15 +410,26 @@ export default function People() {
     img.onerror = () => renderPDF(null);
   };
 
-  const handleDownload = (filename) => {
-    // Keep this for document downloads inside full profile modal
+  const handleDownload = (doc) => {
+    if (doc.link && doc.link !== 'N/A') {
+      const a = document.createElement('a');
+      a.href = doc.link;
+      a.download = doc.original_filename || doc.name;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+    
+    // Fallback if no real file link exists
     if (filteredEmployees.length === 0) return;
     const csvContent = "Sample Document Download";
     const blob = new Blob([csvContent], { type: 'text/plain;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = (doc.name || 'document') + '.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -689,7 +700,7 @@ export default function People() {
                                 <div style={{ fontSize: '11px', color: 'var(--ceo-text-muted)', marginTop: '4px' }}>{doc.name}</div>
                               </div>
                               <button
-                                onClick={() => handleDownload(doc.name)}
+                                onClick={() => handleDownload(doc)}
                                 style={{
                                   backgroundColor: 'transparent',
                                   color: '#3b82f6',

@@ -2690,7 +2690,11 @@ def get_onboarding_documents(employee_id: int, current_user: models.User = Depen
         raise HTTPException(status_code=404, detail="Employee not found")
     if user.documents:
         import json
-        return json.loads(user.documents)
+        parsed = json.loads(user.documents)
+        if isinstance(parsed, list):
+            return parsed
+        elif isinstance(parsed, dict):
+            return parsed.get("docs_list", [])
     return []
 
 from fastapi import Form, UploadFile, File
@@ -2724,8 +2728,14 @@ async def add_onboarding_document(
         buffer.write(content)
         
     existing_docs = []
+    doc_dict = None
     if user.documents:
-        existing_docs = json.loads(user.documents)
+        parsed = json.loads(user.documents)
+        if isinstance(parsed, list):
+            existing_docs = parsed
+        elif isinstance(parsed, dict):
+            doc_dict = parsed
+            existing_docs = parsed.get("docs_list", [])
     
     new_doc = {
         "id": str(uuid.uuid4()),
@@ -2738,7 +2748,11 @@ async def add_onboarding_document(
     }
     existing_docs.append(new_doc)
     
-    user.documents = json.dumps(existing_docs)
+    if doc_dict is not None:
+        doc_dict["docs_list"] = existing_docs
+        user.documents = json.dumps(doc_dict)
+    else:
+        user.documents = json.dumps(existing_docs)
     db.commit()
     
     return new_doc
