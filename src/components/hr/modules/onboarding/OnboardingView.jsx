@@ -1341,11 +1341,11 @@ export function OnboardingView({ queryParams, setQueryParams }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', backgroundColor: 'var(--bg-tertiary)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <label style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 'bold' }}>⭐ Global Default PDF Format</label>
-                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx" onChange={(e) => handleOfferTemplateUpload(e, true)} style={{ fontSize: '11px', maxWidth: '180px', color: 'var(--text-primary)' }} />
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => handleOfferTemplateUpload(e, true)} style={{ fontSize: '11px', maxWidth: '180px', color: 'var(--text-primary)' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <label style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Upload Custom Format (Any File)</label>
-                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx" onChange={(e) => handleOfferTemplateUpload(e, false)} style={{ fontSize: '12px', maxWidth: '200px', backgroundColor: 'var(--bg-primary)', padding: '4px', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} />
+                  <label style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Upload Custom Format (PDF Only)</label>
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => handleOfferTemplateUpload(e, false)} style={{ fontSize: '12px', maxWidth: '200px', backgroundColor: 'var(--bg-primary)', padding: '4px', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} />
                 </div>
                 <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }} onClick={() => setShowOfferPreviewModal(false)}>✕</button>
               </div>
