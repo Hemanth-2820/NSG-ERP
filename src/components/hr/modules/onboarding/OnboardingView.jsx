@@ -73,6 +73,11 @@ export function OnboardingView({ queryParams, setQueryParams }) {
   const [isAssigningDoc, setIsAssigningDoc] = useState(false);
   const [docErrors, setDocErrors] = useState({});
 
+  // DOCX Editing State
+  const [showDocxPreviewModal, setShowDocxPreviewModal] = useState(false);
+  const [docxExtractedBlocks, setDocxExtractedBlocks] = useState([]);
+  const [docxEdits, setDocxEdits] = useState({});
+  const [isExtractingDocx, setIsExtractingDocx] = useState(false);
   useEffect(() => {
     if (selectedDocInstance) {
       let ignore = false;
@@ -496,15 +501,15 @@ export function OnboardingView({ queryParams, setQueryParams }) {
   };
 
 
-  const handleGenerateDocxOffer = async (e) => {
+  const handlePreviewDocxOffer = async (e) => {
     e.preventDefault();
     if (!offerEmp) return;
 
-    
     setIsLoadingOffer(true);
+    setIsExtractingDocx(true);
     try {
       const token = localStorage.getItem('nsg_jwt_token');
-      const res = await fetch('/api/hr-portal/onboarding/generate-offer', {
+      const res = await fetch('/api/hr-portal/onboarding/preview-docx-text', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -516,6 +521,46 @@ export function OnboardingView({ queryParams, setQueryParams }) {
           offerReportingTime: offerReportingTime,
           offerCtcLpa: offerCtcLpa,
           offerMonthlyTakeHome: offerMonthlyTakeHome
+        })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to generate preview');
+      }
+      
+      const data = await res.json();
+      setDocxExtractedBlocks(data.blocks || []);
+      setDocxEdits({});
+      setShowOfferModal(false);
+      setShowDocxPreviewModal(true);
+      
+    } catch (err) {
+      notify(`Error: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingOffer(false);
+      setIsExtractingDocx(false);
+    }
+  };
+
+  const handleDownloadEditedDocxOffer = async () => {
+    if (!offerEmp) return;
+    setIsLoadingOffer(true);
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/hr-portal/onboarding/generate-edited-docx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          candidateName: offerEmp.name,
+          offerRefStr: offerRefStr,
+          offerReportingTime: offerReportingTime,
+          offerCtcLpa: offerCtcLpa,
+          offerMonthlyTakeHome: offerMonthlyTakeHome,
+          edits: docxEdits
         })
       });
       
@@ -534,8 +579,8 @@ export function OnboardingView({ queryParams, setQueryParams }) {
       window.URL.revokeObjectURL(url);
       a.remove();
       
-      notify(`Offer Letter for ${offerEmp.name} generated successfully!`, 'success');
-      setShowOfferModal(false);
+      notify(`Edited DOCX Offer Letter for ${offerEmp.name} generated successfully!`, 'success');
+      setShowDocxPreviewModal(false);
     } catch (err) {
       notify(`Error: ${err.message}`, 'error');
     } finally {
@@ -1402,8 +1447,8 @@ export function OnboardingView({ queryParams, setQueryParams }) {
                     <label style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--accent-blue)', textTransform: 'uppercase' }}>Update Global DOCX Template</label>
                     <input type="file" accept=".docx" onChange={handleGlobalTemplateUploadDocx} style={{ fontSize: '11px', maxWidth: '220px', border: '1px solid #d1d5db', padding: '4px', borderRadius: '4px' }} />
                   </div>
-                  <button type="button" onClick={handleGenerateDocxOffer} disabled={isLoadingOffer} style={{ background: '#10b981', color: '#fff', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    {isLoadingOffer ? 'Generating...' : '📥 Generate DOCX Offer'}
+                  <button type="button" onClick={handlePreviewDocxOffer} disabled={isLoadingOffer} style={{ background: '#10b981', color: '#fff', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {isLoadingOffer ? 'Generating...' : '📥 Preview & Edit DOCX'}
                   </button>
                 </div>
                 
@@ -1796,6 +1841,57 @@ export function OnboardingView({ queryParams, setQueryParams }) {
               </button>
             </div>
           </form>
+        </div>
+      )}
+      {/* 📄 DOCX CSV EDITOR MODAL */}
+      {showDocxPreviewModal && offerEmp && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }} onClick={(e) => { if (e.target === e.currentTarget) { setShowDocxPreviewModal(false) } }}>
+          <div className="card" style={{ width: '800px', maxWidth: '95vw', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '95vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ✏️ Edit Generated DOCX Content
+                {isLoadingOffer && <span style={{ fontSize: '12px', color: 'var(--accent-pink)' }}>(Processing...)</span>}
+              </h3>
+              <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }} onClick={() => setShowDocxPreviewModal(false)}>✕</button>
+            </div>
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
+               <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>DOCX CSV Board (Paragraphs)</h3>
+               {isExtractingDocx ? (
+                   <div style={{ fontSize: '12px', color: '#6b7280', padding: '10px', textAlign: 'center' }}>
+                       Extracting text...
+                   </div>
+               ) : docxExtractedBlocks.length === 0 ? (
+                   <div style={{ fontSize: '13px', color: '#ef4444', padding: '10px', textAlign: 'center', backgroundColor: '#fef2f2', borderRadius: '4px' }}>
+                       <strong>No text found!</strong>
+                   </div>
+               ) : (
+                   docxExtractedBlocks.map((block, idx) => (
+                      <div key={idx} style={{ marginBottom: '12px' }}>
+                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original: {block}</label>
+                         <textarea 
+                            rows={2}
+                            value={docxEdits[idx] !== undefined ? docxEdits[idx] : block}
+                            onChange={(e) => setDocxEdits({...docxEdits, [idx]: e.target.value})}
+                            style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                         />
+                      </div>
+                   ))
+               )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', marginTop: '14px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                💡 Your exact formatting (headers, footers, logos) will be preserved natively in Word.
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="button" onClick={() => { setShowDocxPreviewModal(false); setShowOfferModal(true); }}>Back to Details</button>
+                <button type="button" onClick={handleDownloadEditedDocxOffer} disabled={isLoadingOffer} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  {isLoadingOffer ? 'Saving...' : 'Generate & Download DOCX'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

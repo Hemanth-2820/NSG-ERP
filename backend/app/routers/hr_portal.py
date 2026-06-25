@@ -4228,3 +4228,98 @@ async def generate_offer(
         "Content-Disposition": f"attachment; filename=Offer_Letter_{data.candidateName}.docx"
     })
 
+class OfferDocxEditData(BaseModel):
+    candidateName: str
+    offerRefStr: str
+    offerReportingTime: str
+    offerCtcLpa: str
+    offerMonthlyTakeHome: str
+    edits: dict = None
+
+@router.post("/onboarding/preview-docx-text")
+async def preview_docx_text(
+    data: OfferDocxEditData,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "offer_letter").first()
+    if not template or not template.file_data:
+        raise HTTPException(status_code=404, detail="No global DOCX template found. Please upload one first.")
+        
+    docx_file = io.BytesIO(template.file_data)
+    doc = DocxTemplate(docx_file)
+    
+    context = {
+        "candidate_name": data.candidateName,
+        "reference_number": data.offerRefStr,
+        "reporting_time": data.offerReportingTime,
+        "ctc_lpa": data.offerCtcLpa,
+        "monthly_take_home": data.offerMonthlyTakeHome,
+        "date": date.today().strftime("%d %B, %Y")
+    }
+    
+    doc.render(context)
+    out_file = io.BytesIO()
+    doc.save(out_file)
+    out_file.seek(0)
+    
+    import docx
+    parsed_doc = docx.Document(out_file)
+    blocks = []
+    for p in parsed_doc.paragraphs:
+        if p.text.strip():
+            blocks.append(p.text)
+            
+    return {"blocks": blocks}
+
+@router.post("/onboarding/generate-edited-docx")
+async def generate_edited_docx(
+    data: OfferDocxEditData,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_user)
+):
+    if current_user.role.lower() not in ["hr", "ceo", "admin", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    template = db.query(models.GlobalTemplate).filter(models.GlobalTemplate.template_type == "offer_letter").first()
+    if not template or not template.file_data:
+        raise HTTPException(status_code=404, detail="No global DOCX template found.")
+        
+    docx_file = io.BytesIO(template.file_data)
+    doc = DocxTemplate(docx_file)
+    
+    context = {
+        "candidate_name": data.candidateName,
+        "reference_number": data.offerRefStr,
+        "reporting_time": data.offerReportingTime,
+        "ctc_lpa": data.offerCtcLpa,
+        "monthly_take_home": data.offerMonthlyTakeHome,
+        "date": date.today().strftime("%d %B, %Y")
+    }
+    
+    doc.render(context)
+    out_file = io.BytesIO()
+    doc.save(out_file)
+    out_file.seek(0)
+    
+    import docx
+    parsed_doc = docx.Document(out_file)
+    
+    if data.edits:
+        block_idx = 0
+        for p in parsed_doc.paragraphs:
+            if p.text.strip():
+                if str(block_idx) in data.edits:
+                    p.text = data.edits[str(block_idx)]
+                block_idx += 1
+                
+    final_out = io.BytesIO()
+    parsed_doc.save(final_out)
+    final_out.seek(0)
+    
+    return Response(content=final_out.read(), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={
+        "Content-Disposition": f"attachment; filename=Offer_Letter_{data.candidateName}.docx"
+    })
