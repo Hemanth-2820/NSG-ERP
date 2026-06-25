@@ -526,9 +526,11 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
           {STATUSES.map(s => (
             <div
               key={s}
-              className={`tk-status-btn ${status === s ? 'tk-status-btn--active' : ''}`}
-              style={status === s ? { borderColor: STATUS_COLOR[s], color: STATUS_COLOR[s], background: `${STATUS_COLOR[s]}18` } : {}}
-              onClick={() => changeStatus(s)}
+              className={`tk-status-btn ${task.status === s ? 'tk-status-btn--active' : ''}`}
+              style={{
+                ...(task.status === s ? { borderColor: STATUS_COLOR[s], color: STATUS_COLOR[s], background: `${STATUS_COLOR[s]}18` } : { opacity: 0.5, borderColor: 'transparent' }),
+                cursor: 'default'
+              }}
             >
               {STATUS_LABEL[s]}
             </div>
@@ -579,31 +581,31 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
         <SubtaskChecklist subtasks={subtasks} onToggle={toggleSubtask} />
 
         {/* Status Notes */}
-        {(status === 'pending' || status === 'todo' || status === 'in-progress' || status === 'testing' || status === 'blocked' || status === 'reject' || status === 'pr') && (
+        {(task.status === 'pending' || task.status === 'todo' || task.status === 'in-progress' || task.status === 'testing' || task.status === 'blocked' || task.status === 'reject' || task.status === 'pr') && (
           <div style={{ marginTop: 20 }}>
             <div className="tk-detail-section-label" style={{ marginBottom: 6 }}>
-              {status === 'pending' || status === 'todo' ? 'Todo Status Notes / Description' :
-               status === 'in-progress' ? 'In-Progress Status Notes / Description' :
-               status === 'testing' ? 'Testing Status Notes / Description' :
-               status === 'pr' ? 'PR Status Notes / Description' :
-               status === 'assignee' ? 'Assignee Notes / Description' : 'Reject Reason / Description'}
+              {task.status === 'pending' || task.status === 'todo' ? 'Todo Status Notes / Description' :
+               task.status === 'in-progress' ? 'In-Progress Status Notes / Description' :
+               task.status === 'testing' ? 'Testing Status Notes / Description' :
+               task.status === 'pr' ? 'PR Status Notes / Description' :
+               task.status === 'assignee' ? 'Assignee Notes / Description' : 'Reject Reason / Description'}
             </div>
             <textarea
               className="tk-textarea"
               rows={3}
-              placeholder={`Enter description for ${STATUS_LABEL[status]} status...`}
-              value={statusNotes[status] || ''}
-              onChange={e => handleStatusNotesChange(status, e.target.value)}
+              placeholder={`Enter description for ${STATUS_LABEL[task.status]} status...`}
+              value={statusNotes[task.status] || ''}
+              onChange={e => handleStatusNotesChange(task.status, e.target.value)}
             />
 
             {/* Status Attachments */}
             <div className="tk-detail-section-label" style={{ marginTop: 16, marginBottom: 6 }}>
-              {STATUS_LABEL[status]} Attachments ({(statusAttachments[status] || []).length} / 10)
+              {STATUS_LABEL[task.status]} Attachments ({(statusAttachments[task.status] || []).length} / 10)
             </div>
             <div className="tk-attachments-section" style={{ marginBottom: 12 }}>
-              {(statusAttachments[status] || []).length > 0 ? (
+              {(statusAttachments[task.status] || []).length > 0 ? (
                 <div className="tk-attachments-list">
-                  {(statusAttachments[status] || []).map((att, idx) => {
+                  {(statusAttachments[task.status] || []).map((att, idx) => {
                     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(att.file_url);
                     return (
                       <div key={idx} className="tk-attachment-card">
@@ -655,7 +657,7 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
             className="tk-confirm-btn"
             style={{ flex: 1 }}
             onClick={() => {
-              if (status === 'assignee') {
+              if (task.status === 'assignee') {
                 onUpdate(task.id, { status: 'pending' }); // Explicitly save to pending
                 if (onClose) onClose();
               } else {
@@ -664,9 +666,9 @@ function TaskDetailPanel({ task, onClose, onUpdate }) {
             }}
             disabled={savingNotes}
           >
-            {savingNotes ? 'Saving...' : (status === 'assignee' ? 'TO GO TODO' : 'Save')}
+            {savingNotes ? 'Saving...' : (task.status === 'assignee' ? 'TO GO TODO' : 'Save')}
           </button>
-          {status === 'assignee' && (
+          {task.status === 'assignee' && (
             <button
               className="tk-confirm-btn"
               style={{ flex: 1, background: '#ef4444', borderColor: '#ef4444' }}
