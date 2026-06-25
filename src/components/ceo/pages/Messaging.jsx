@@ -613,8 +613,10 @@ export default function Messaging({ initialSelectedChannel, currentUser }) {
 
 
 
+  const [activeCallMessageId, setActiveCallMessageId] = useState(null);
+
   // Start Call WebRTC
-  const handleStartCall = () => {
+  const handleStartCall = async () => {
     if (!isOnline) {
       window.toast.error("You are offline. Cannot start video call without an internet connection.");
       return;
@@ -649,25 +651,25 @@ export default function Messaging({ initialSelectedChannel, currentUser }) {
 
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(callPayload));
-      return;
-    }
-
-    if (isCorporateChannel) {
-      const updatedChannels = chatChannels.map(c => {
-        if (c.id === selectedChannel) {
-          return {
-            ...c,
-            messages: [...(c.messages || []), callMsg]
-          };
-        }
-        return c;
-      });
-      setDbChannels(updatedChannels);
     } else {
-      setLocalDmMessages(prev => ({
-        ...prev,
-        [selectedChannel]: [...(prev[selectedChannel] || []), callMsg]
-      }));
+      if (isCorporateChannel) {
+        const updatedChannels = chatChannels.map(c => {
+          if (c.id === selectedChannel) {
+            return {
+              ...c,
+              messages: [...(c.messages || []), callMsg]
+            };
+          }
+          return c;
+        });
+        setDbChannels(updatedChannels);
+      } else {
+        setLocalDmMessages(prev => ({
+          ...prev,
+          [selectedChannel]: [...(prev[selectedChannel] || []), callMsg]
+        }));
+      }
+      setActiveCallMessageId(callMsg.id);
     }
   };
 
@@ -699,6 +701,27 @@ export default function Messaging({ initialSelectedChannel, currentUser }) {
     setIsInCall(false);
     setIsCallExpanded(false);
     setCallScreenShare(false);
+
+    let msgIdToUpdate = activeCallMessageId;
+    if (!msgIdToUpdate) {
+       const msgs = messages[selectedChannel] || [];
+       const myCallMsgs = msgs.filter(m => (m.isCallStatus || m.attachment_type === 'call_status') && (m.isMe || m.sender === ceoName));
+       if (myCallMsgs.length > 0) {
+           msgIdToUpdate = myCallMsgs[myCallMsgs.length - 1].id;
+       }
+    }
+
+    if (msgIdToUpdate) {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        fetch(`/api/ceo-portal/chat/messages/${msgIdToUpdate}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: "Video call ended", attachment_type: null })
+        });
+      } catch (e) {}
+    }
+    setActiveCallMessageId(null);
   };
 
   const toggleScreenShare = async () => {
@@ -1122,8 +1145,8 @@ export default function Messaging({ initialSelectedChannel, currentUser }) {
               const bId = getDmId(b.name);
               const aMsgs = messages[aId] || [];
               const bMsgs = messages[bId] || [];
-              const aLast = aMsgs.length > 0 ? new Date(aMsgs[aMsgs.length - 1].timestamp).getTime() : 0;
-              const bLast = bMsgs.length > 0 ? new Date(bMsgs[bMsgs.length - 1].timestamp).getTime() : 0;
+              const aLast = aMsgs.length > 0 ? (new Date(aMsgs[aMsgs.length - 1].timestamp || 0).getTime() || 0) : 0;
+              const bLast = bMsgs.length > 0 ? (new Date(bMsgs[bMsgs.length - 1].timestamp || 0).getTime() || 0) : 0;
               return bLast - aLast;
             }).map(emp => {
               const dmId = getDmId(emp.name);

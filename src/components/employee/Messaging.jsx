@@ -520,9 +520,43 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       
       const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
       if (isCorporateChannel) {
-        setDbChannels(prev => prev.map(c => c.id === selectedChannel ? { ...c, messages: [...(c.messages || []), offlineMsg] } : c));
+        setDbChannels(prev => prev.map(c => {
+          if (c.id === selectedChannel) {
+            return {
+              ...c,
+              messages: (c.messages || []).map(m => {
+                if (m.isMe || m.sender === empName) return m;
+                try {
+                  let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
+                  if (!seenArr.includes(empName)) {
+                    seenArr.push(empName);
+                    return { ...m, seen_by: JSON.stringify(seenArr) };
+                  }
+                } catch(e) {}
+                return m;
+              })
+            };
+          }
+          return c;
+        }));
       } else {
-        setLocalDmMessages(prev => ({ ...prev, [selectedChannel]: [...(prev[selectedChannel] || []), offlineMsg] }));
+        setLocalDmMessages(prev => {
+          if (!prev[selectedChannel]) return prev;
+          return {
+            ...prev,
+            [selectedChannel]: prev[selectedChannel].map(m => {
+              if (m.isMe || m.sender === empName) return m;
+              try {
+                let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
+                if (!seenArr.includes(empName)) {
+                  seenArr.push(empName);
+                  return { ...m, seen_by: JSON.stringify(seenArr) };
+                }
+              } catch(e) {}
+              return m;
+            })
+          };
+        });
       }
       setInputVal('');
       return;
@@ -570,8 +604,10 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
 
 
+  const [activeCallMessageId, setActiveCallMessageId] = useState(null);
+
   // Start Call WebRTC
-  const handleStartCall = () => {
+  const handleStartCall = async () => {
     if (!isOnline) {
       window.toast.error("You are offline. Cannot start video call without an internet connection.");
       return;
@@ -585,32 +621,37 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     });
 
     const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
-    const callMsg = {
-      displayName: empName,
+    
+    // We send via websocket/api immediately so we get a real message ID back.
+    const callPayload = {
+      type: 'new_message',
+      channel_id: selectedChannel,
       sender: empName,
-      avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=1e293b&color=fff',
-      text: `Started a video call`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text: 'Started a video call',
       isCallStatus: true,
       isMe: true
     };
 
-    if (isCorporateChannel) {
-      const updatedChannels = chatChannels.map(c => {
-        if (c.id === selectedChannel) {
-          return {
-            ...c,
-            messages: [...(c.messages || []), callMsg]
-          };
-        }
-        return c;
-      });
-      setDbChannels(updatedChannels);
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(callPayload));
     } else {
-      setLocalDmMessages(prev => ({
-        ...prev,
-        [selectedChannel]: [...(prev[selectedChannel] || []), callMsg]
-      }));
+      // fallback if needed
+      const callMsg = {
+        id: Date.now(),
+        displayName: empName,
+        sender: empName,
+        avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=1e293b&color=fff',
+        text: `Started a video call`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isCallStatus: true,
+        isMe: true
+      };
+      if (isCorporateChannel) {
+        setDbChannels(prev => prev.map(c => c.id === selectedChannel ? { ...c, messages: [...(c.messages || []), callMsg] } : c));
+      } else {
+        setLocalDmMessages(prev => ({ ...prev, [selectedChannel]: [...(prev[selectedChannel] || []), callMsg] }));
+      }
+      setActiveCallMessageId(callMsg.id);
     }
   };
 
@@ -642,6 +683,28 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     setIsInCall(false);
     setIsCallExpanded(false);
     setCallScreenShare(false);
+
+    // Find the call message id if not set
+    let msgIdToUpdate = activeCallMessageId;
+    if (!msgIdToUpdate) {
+       const msgs = messages[selectedChannel] || [];
+       const myCallMsgs = msgs.filter(m => (m.isCallStatus || m.attachment_type === 'call_status') && (m.isMe || m.sender === empName));
+       if (myCallMsgs.length > 0) {
+           msgIdToUpdate = myCallMsgs[myCallMsgs.length - 1].id;
+       }
+    }
+
+    if (msgIdToUpdate) {
+      try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        fetch(`/api/employee-portal/chat/messages/${msgIdToUpdate}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: "Video call ended", attachment_type: null })
+        });
+      } catch (e) {}
+    }
+    setActiveCallMessageId(null);
   };
 
   const toggleScreenShare = async () => {
@@ -1019,7 +1082,18 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', paddingLeft: '8px', letterSpacing: '0.5px' }}>DIRECT MESSAGES</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {employees.filter(e => !e.isMe).map(emp => {
+            {employees
+              .filter(e => !e.isMe)
+              .sort((a, b) => {
+                const dmIdA = getDmId(a.name);
+                const dmIdB = getDmId(b.name);
+                const msgsA = messages[dmIdA] || [];
+                const msgsB = messages[dmIdB] || [];
+                const latestA = msgsA.length > 0 ? new Date(msgsA[msgsA.length - 1].timestamp || 0).getTime() : 0;
+                const latestB = msgsB.length > 0 ? new Date(msgsB[msgsB.length - 1].timestamp || 0).getTime() : 0;
+                return latestB - latestA;
+              })
+              .map(emp => {
               const dmId = getDmId(emp.name);
               const isSelected = selectedChannel === dmId;
               return (
