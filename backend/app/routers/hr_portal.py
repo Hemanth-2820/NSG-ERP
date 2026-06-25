@@ -4091,10 +4091,22 @@ async def convert_doc(
             header_html = ""
             footer_html = ""
             import base64
+            import re
+            
+            def clean_hf_text(text):
+                # Remove standalone page numbers or simple pagination strings
+                lines = [l.strip() for l in text.split('<br>') if l.strip()]
+                cleaned = []
+                for l in lines:
+                    if re.match(r'^Page\s+\d+.*$', l, re.IGNORECASE) or re.match(r'^\d+\.?$', l):
+                        continue
+                    cleaned.append(l)
+                return '<br>'.join(cleaned)
             
             for section in doc.sections:
                 if section.header and section.header.part is not None:
-                    header_text = "<br>".join([p.text.strip() for p in section.header.paragraphs if p.text.strip()])
+                    raw_header = "<br>".join([p.text.strip() for p in section.header.paragraphs if p.text.strip()])
+                    header_text = clean_hf_text(raw_header)
                     
                     header_images = []
                     for rel in section.header.part.rels.values():
@@ -4102,17 +4114,18 @@ async def convert_doc(
                             blob = rel.target_part.blob
                             ctype = rel.target_part.content_type
                             b64 = base64.b64encode(blob).decode('utf-8')
-                            header_images.append(f"<img src='data:{ctype};base64,{b64}' style='max-width: 100%; max-height: 140px;' />")
+                            header_images.append(f"<img src='data:{ctype};base64,{b64}' style='max-width: 100%; max-height: 140px; display: block; margin: 0 auto;' />")
                     
                     if header_images:
                         for img in header_images:
                             if img not in header_html:
-                                header_html += f"<div style='text-align: center; margin-bottom: 20px;'>{img}</div>"
+                                header_html += f"<div style='text-align: center;'>{img}</div>"
                     if header_text and header_text not in header_html:
-                        header_html += f"<div style='margin-bottom: 20px; font-weight: bold; text-align: center; font-size: 16px;'>{header_text}</div>"
+                        header_html += f"<div style='margin-bottom: 10px; font-weight: bold; text-align: center; font-size: 14px;'>{header_text}</div>"
                 
                 if section.footer and section.footer.part is not None:
-                    footer_text = "<br>".join([p.text.strip() for p in section.footer.paragraphs if p.text.strip()])
+                    raw_footer = "<br>".join([p.text.strip() for p in section.footer.paragraphs if p.text.strip()])
+                    footer_text = clean_hf_text(raw_footer)
                     
                     footer_images = []
                     for rel in section.footer.part.rels.values():
@@ -4120,14 +4133,14 @@ async def convert_doc(
                             blob = rel.target_part.blob
                             ctype = rel.target_part.content_type
                             b64 = base64.b64encode(blob).decode('utf-8')
-                            footer_images.append(f"<img src='data:{ctype};base64,{b64}' style='max-width: 100%; max-height: 100px;' />")
+                            footer_images.append(f"<img src='data:{ctype};base64,{b64}' style='max-width: 100%; max-height: 80px; display: block; margin: 0 auto;' />")
                     
                     if footer_images:
                         for img in footer_images:
                             if img not in footer_html:
-                                footer_html += f"<div style='text-align: center; margin-top: 20px;'>{img}</div>"
+                                footer_html += f"<div style='text-align: center;'>{img}</div>"
                     if footer_text and footer_text not in footer_html:
-                        footer_html += f"<div style='margin-top: 20px; font-size: 11px; text-align: center; color: #6b7280;'>{footer_text}</div>"
+                        footer_html += f"<div style='margin-top: 10px; font-size: 12px; text-align: center; color: #4b5563;'>{footer_text}</div>"
             
             final_html = f"{header_html}{html_body}{footer_html}"
         except Exception as ex:
