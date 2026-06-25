@@ -496,7 +496,7 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                         ✕ Reject
                       </button>
                     )}
-                    {st.id === 'interview' && (
+                    {st.id === 'offer' && (
                       <button style={{ background: 'none', border: '1px solid var(--accent-pink)', color: 'var(--accent-pink)', cursor: 'pointer', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }} onClick={() => {
                         setSelectedCandidate(cand);
                         setShowOfferForm(true);
