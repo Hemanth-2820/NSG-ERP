@@ -379,7 +379,16 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     if (selectedChannel && getUnreadCount(selectedChannel) > 0) {
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ type: 'mark_read', channel_id: selectedChannel, user_name: tlName }));
+        const unreadMsgs = (messages[selectedChannel] || []).filter(m => {
+            if (m.isMe || m.sender === tlName || (m.sender && m.sender.includes('Employee'))) return false;
+            let seenArr = [];
+            try { if (m.seen_by) seenArr = JSON.parse(m.seen_by); } catch(e) {}
+            if (!Array.isArray(seenArr)) seenArr = [];
+            return !seenArr.includes(tlName);
+        });
+        unreadMsgs.forEach(m => {
+            socketRef.current.send(JSON.stringify({ type: 'read', msg_id: m.id }));
+        });
       }
       
       const isCorporateChannel = chatChannels.some(c => c.id === selectedChannel);
@@ -2118,7 +2127,25 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       {huddlePeer && (
         <HuddleModal 
           peer={huddlePeer} 
-          onClose={() => setHuddlePeer(null)} 
+          onClose={async () => {
+             try {
+                const msgs = messages[huddlePeer.channelId] || [];
+                const lastCallMsg = msgs.slice().reverse().find(m => m.isCallStatus || m.text === 'Started a video call');
+                if (lastCallMsg && lastCallMsg.text !== 'Video call ended') {
+                   const token = localStorage.getItem('nsg_jwt_token');
+                   const baseUrl = '/api/employee-portal'; // All portals use the same edit endpoint in this app
+                   await fetch(`${baseUrl}/chat/messages/${lastCallMsg.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ text: 'Video call ended' })
+                   });
+                   if (typeof fetchChannelsAndMessages === 'function') {
+                      fetchChannelsAndMessages();
+                   }
+                }
+             } catch(e) { console.error(e); }
+             setHuddlePeer(null);
+          }} 
         />
       )}
 

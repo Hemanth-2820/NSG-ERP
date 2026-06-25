@@ -2114,7 +2114,25 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
       {huddlePeer && (
         <HuddleModal 
           peer={huddlePeer} 
-          onClose={() => setHuddlePeer(null)} 
+          onClose={async () => {
+             try {
+                const msgs = messages[huddlePeer.channelId] || [];
+                const lastCallMsg = msgs.slice().reverse().find(m => m.isCallStatus || m.text === 'Started a video call');
+                if (lastCallMsg && lastCallMsg.text !== 'Video call ended') {
+                   const token = localStorage.getItem('nsg_jwt_token');
+                   const baseUrl = '/api/employee-portal'; // All portals use the same edit endpoint in this app
+                   await fetch(`${baseUrl}/chat/messages/${lastCallMsg.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ text: 'Video call ended' })
+                   });
+                   if (typeof fetchChannelsAndMessages === 'function') {
+                      fetchChannelsAndMessages();
+                   }
+                }
+             } catch(e) { console.error(e); }
+             setHuddlePeer(null);
+          }} 
         />
       )}
 
