@@ -217,21 +217,28 @@ export function ApprovedTimesheetsView() {
       <div className={styles.mainContent}>
         <div className={styles.card}>
           <div className={styles.cardHeader} style={{flexDirection: 'column', alignItems: 'stretch', gap: '24px'}}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
               <h2 className={styles.cardTitle}>Approved Timesheets Master Log</h2>
-              <div style={{display: 'flex', gap: '12px'}}>
-                {!isCEO && (
-                  <button 
-                    className={styles.downloadButton} 
-                    style={{background: 'white', color: '#ec4899', border: '1px solid #ec4899'}}
-                    onClick={() => setIsManagingApprovals(true)}
-                  >
-                    <Check size={16} /> Manage Approvals
+              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px'}}>
+                <div style={{display: 'flex', gap: '12px'}}>
+                  {!isCEO && (
+                    <button 
+                      className={styles.downloadButton} 
+                      style={{background: 'white', color: '#ec4899', border: '1px solid #ec4899'}}
+                      onClick={() => setIsManagingApprovals(true)}
+                    >
+                      <Check size={16} /> Manage Approvals
+                    </button>
+                  )}
+                  <button className={styles.downloadButton} onClick={exportToPDF}>
+                    <Download size={16} /> Download PDF
                   </button>
+                </div>
+                {!isCEO && (
+                  <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', marginTop: '2px' }}>
+                    * Timesheets not approved by TLs are shown here to manage their approvals
+                  </div>
                 )}
-                <button className={styles.downloadButton} onClick={exportToPDF}>
-                  <Download size={16} /> Download PDF
-                </button>
               </div>
             </div>
             
