@@ -731,11 +731,13 @@ export default function CeoPayroll() {
                 <div
                   key={templateKey}
                   ref={payslipContentRef}
-                  contentEditable
+                  contentEditable={!hasCustomTemplate}
                   suppressContentEditableWarning
-                  style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#fff', padding: '20mm', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', fontFamily: 'Times New Roman, Times, serif', fontSize: '13px', color: '#000', outline: 'none' }}
+                  style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#fff', padding: hasCustomTemplate ? '0' : '20mm', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', fontFamily: 'Times New Roman, Times, serif', fontSize: '13px', color: '#000', outline: 'none' }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottom: '2px solid #4CAF50', paddingBottom: '16px', marginBottom: '24px' }}>
+                  {!hasCustomTemplate && (
+                    <>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottom: '2px solid #4CAF50', paddingBottom: '16px', marginBottom: '24px' }}>
                     <img src={letterheadUrl} alt="Logo" style={{ maxHeight: '60px', objectFit: 'contain', marginBottom: '12px' }} crossorigin="anonymous" />
                   </div>
                   
@@ -886,7 +888,8 @@ export default function CeoPayroll() {
                     <div>workzone, 5th Floor, Cabin#1&4, PlotNo.63, Phase-1, Kavurihills, Madhapur-500033</div>
                     <div style={{ color: 'blue', marginTop: '4px' }}>www.hmnssoftware.com &nbsp;&nbsp;&nbsp;&nbsp; hr@hmnssoftware.in</div>
                   </div>
-
+                  </>
+                  )}
                 </div>
               </div>
 
