@@ -413,9 +413,6 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
           <button className="strategic-list-item" style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', color: 'var(--accent-pink)', border: '1px solid var(--accent-pink)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { setAnalyzerCandidate(null); setUploadedFileName(''); setUploadedCandidateName(''); setParsedResult(null); setShowAnalyzer(true); }}>
             <FileText size={16} /> AI Resume Analyzer
           </button>
-          <button className="strategic-list-item" style={{ backgroundColor: 'var(--accent-pink)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowScheduler(true)}>
-            <Calendar size={16} /> Schedule Interview
-          </button>
         </div>
       </div>
 
