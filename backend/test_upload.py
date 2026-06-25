@@ -1,18 +1,36 @@
-import requests
-import json
+import os
+import sys
+import asyncio
+from fastapi import UploadFile
 
-# We need a valid token. Let's get one by logging in as Rohan Deshmukh
-# Wait, I don't know the password. I can bypass auth by hitting the backend directly if I mock the dependency.
-# Actually, I can just create a small base64 string and see if we get 401, 422, or 500!
-url = "http://127.0.0.1:8000/employee-portal/profile/upload-dp"
-payload = {
-    "file": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/"
-}
-headers = {
-    'Content-Type': 'application/json'
-    # Without Authorization header
-}
+sys.path.append(os.getcwd())
 
-response = requests.post(url, json=payload, headers=headers)
-print("Status Code:", response.status_code)
-print("Response:", response.text)
+from app.database import SessionLocal
+from app.models import User
+from app.routers.employee_portal import upload_document
+
+async def test():
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.role == "employee").first()
+        if not user:
+            print("No employee found")
+            return
+            
+        # Create a dummy file
+        with open("dummy.pdf", "wb") as f:
+            f.write(b"dummy")
+            
+        with open("dummy.pdf", "rb") as f:
+            upload_file = UploadFile(filename="dummy.pdf", file=f)
+            print("Uploading document...")
+            res = await upload_document(name="Test Doc", file=upload_file, current_user=user, db=db)
+            print(res)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    asyncio.run(test())

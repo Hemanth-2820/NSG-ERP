@@ -256,7 +256,14 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           ifsc_code: emp.ifsc_code || '',
           grade: emp.grade || 3,
           manager: emp.manager || '',
-          documents: emp.documents ? (typeof emp.documents === 'string' ? JSON.parse(emp.documents) : emp.documents) : []
+          documents: emp.documents ? (() => {
+            try {
+              const parsed = typeof emp.documents === 'string' ? JSON.parse(emp.documents) : emp.documents;
+              if (Array.isArray(parsed)) return parsed;
+              if (parsed && typeof parsed === 'object' && parsed.docs_list) return parsed.docs_list;
+              return [];
+            } catch { return []; }
+          })() : []
         }));
         setApiEmployees(enriched);
         onUpdateDb({
@@ -575,7 +582,14 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
         ifsc_code: createdEmp.ifsc_code || '',
         grade: createdEmp.grade || 3,
         manager: createdEmp.manager || '',
-        documents: createdEmp.documents ? JSON.parse(createdEmp.documents) : []
+        documents: createdEmp.documents ? (() => {
+            try {
+              const parsed = typeof createdEmp.documents === 'string' ? JSON.parse(createdEmp.documents) : createdEmp.documents;
+              if (Array.isArray(parsed)) return parsed;
+              if (parsed && typeof parsed === 'object' && parsed.docs_list) return parsed.docs_list;
+              return [];
+            } catch { return []; }
+          })() : []
       };
       
       // Add default training progress for the employee

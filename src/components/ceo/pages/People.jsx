@@ -114,7 +114,14 @@ export default function People() {
           email: emp.email,
           manager_id: emp.manager_id,
           shift: emp.shift_timing || '',
-          documents: emp.documents ? (typeof emp.documents === 'string' ? JSON.parse(emp.documents) : emp.documents) : []
+          documents: emp.documents ? (() => {
+            try {
+              const parsed = typeof emp.documents === 'string' ? JSON.parse(emp.documents) : emp.documents;
+              if (Array.isArray(parsed)) return parsed;
+              if (parsed && typeof parsed === 'object' && parsed.docs_list) return parsed.docs_list;
+              return [];
+            } catch { return []; }
+          })() : []
         }));
         setEmployees(formatted);
       }

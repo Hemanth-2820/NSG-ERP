@@ -810,8 +810,14 @@ async def upload_document(
         buffer.write(content)
         
     existing_docs = []
+    doc_dict = None
     if user.documents:
-        existing_docs = json.loads(user.documents)
+        parsed = json.loads(user.documents)
+        if isinstance(parsed, list):
+            existing_docs = parsed
+        elif isinstance(parsed, dict):
+            doc_dict = parsed
+            existing_docs = parsed.get("docs_list", [])
     
     new_doc = {
         "id": str(uuid.uuid4()),
@@ -824,7 +830,12 @@ async def upload_document(
         "uploaded_at": datetime.utcnow().isoformat()
     }
     existing_docs.append(new_doc)
-    user.documents = json.dumps(existing_docs)
+    
+    if doc_dict is not None:
+        doc_dict["docs_list"] = existing_docs
+        user.documents = json.dumps(doc_dict)
+    else:
+        user.documents = json.dumps(existing_docs)
     
     notif = models.Notification(
         user_id=current_user.id,
