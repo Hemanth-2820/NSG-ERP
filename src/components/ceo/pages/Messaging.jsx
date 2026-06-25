@@ -29,6 +29,7 @@ export default function Messaging({ initialSelectedChannel, currentUser }) {
   const [dbChannels, setDbChannels] = useState([]);
 
   const socketRef = useRef(null);
+  const [wsReconnectTrigger, setWsReconnectTrigger] = useState(0);
 
   const fetchChannelsAndMessages = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
@@ -378,11 +379,16 @@ export default function Messaging({ initialSelectedChannel, currentUser }) {
     socket.onerror = (e) => {
       console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
     };
+    socket.onclose = () => {
+      setTimeout(() => {
+         setWsReconnectTrigger(prev => prev + 1);
+      }, 5000);
+    };
 
     return () => {
       socket.close();
     };
-  }, [employees]);
+  }, [employees, wsReconnectTrigger]);
 
   // Auto-scroll chat and mark read
   useEffect(() => {

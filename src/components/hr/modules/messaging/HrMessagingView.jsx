@@ -29,6 +29,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
   const [dbChannels, setDbChannels] = useState([]);
 
   const socketRef = useRef(null);
+  const [wsReconnectTrigger, setWsReconnectTrigger] = useState(0);
 
   const fetchChannelsAndMessages = async () => {
     const token = localStorage.getItem('nsg_jwt_token');
@@ -378,11 +379,16 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
     socket.onerror = (e) => {
       console.warn("WebSocket connection error. Operating in offline simulation mode:", e);
     };
+    socket.onclose = () => {
+      setTimeout(() => {
+         setWsReconnectTrigger(prev => prev + 1);
+      }, 5000);
+    };
 
     return () => {
       socket.close();
     };
-  }, [employees]);
+  }, [employees, wsReconnectTrigger]);
 
   // Auto-scroll chat and mark read
   useEffect(() => {
@@ -390,11 +396,11 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
     if (selectedChannel && getUnreadCount(selectedChannel) > 0) {
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
         const unreadMsgs = (messages[selectedChannel] || []).filter(m => {
-            if (m.isMe || m.sender === hrName || (m.sender && m.sender.includes('Employee'))) return false;
+            if (m.isMe || m.sender === userName || (m.sender && m.sender.includes('Employee'))) return false;
             let seenArr = [];
             try { if (m.seen_by) seenArr = JSON.parse(m.seen_by); } catch(e) {}
             if (!Array.isArray(seenArr)) seenArr = [];
-            return !seenArr.includes(hrName);
+            return !seenArr.includes(userName);
         });
         unreadMsgs.forEach(m => {
             socketRef.current.send(JSON.stringify({ type: 'read', msg_id: m.id }));
@@ -412,12 +418,12 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
                 try {
                   let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
                   if (!Array.isArray(seenArr)) seenArr = [];
-                  if (!seenArr.includes(hrName)) {
-                    seenArr.push(hrName);
+                  if (!seenArr.includes(userName)) {
+                    seenArr.push(userName);
                     return { ...m, seen_by: JSON.stringify(seenArr) };
                   }
                 } catch(e) {
-                  return { ...m, seen_by: JSON.stringify([hrName]) };
+                  return { ...m, seen_by: JSON.stringify([userName]) };
                 }
                 return m;
               })
@@ -435,12 +441,12 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
               try {
                   let seenArr = m.seen_by ? JSON.parse(m.seen_by) : [];
                   if (!Array.isArray(seenArr)) seenArr = [];
-                  if (!seenArr.includes(hrName)) {
-                    seenArr.push(hrName);
+                  if (!seenArr.includes(userName)) {
+                    seenArr.push(userName);
                     return { ...m, seen_by: JSON.stringify(seenArr) };
                   }
                 } catch(e) {
-                  return { ...m, seen_by: JSON.stringify([hrName]) };
+                  return { ...m, seen_by: JSON.stringify([userName]) };
                 }
               return m;
             })
@@ -1062,11 +1068,11 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
   const getUnreadCount = (channelId) => {
     const msgs = messages[channelId] || [];
     return msgs.filter(m => {
-       if (m.isMe || m.sender === hrName || (m.sender && m.sender.includes('Employee'))) return false;
+       if (m.isMe || m.sender === userName || (m.sender && m.sender.includes('Employee'))) return false;
        let seenArr = [];
        try { if (m.seen_by) seenArr = JSON.parse(m.seen_by); } catch(e) {}
        if (!Array.isArray(seenArr)) seenArr = [];
-       return !seenArr.includes(hrName);
+       return !seenArr.includes(userName);
     }).length;
   };
 
