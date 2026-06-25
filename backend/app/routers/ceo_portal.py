@@ -2173,22 +2173,24 @@ def upload_vault_document(
     if existing:
         raise HTTPException(status_code=400, detail="Document ID already exists")
 
-    file_path = f"{UPLOAD_DIR}/{doc_id}_{file.filename}"
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
-    # Calculate hash
+    content = file.file.read()
     hasher = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        hasher.update(f.read())
+    hasher.update(content)
     file_hash = hasher.hexdigest()
     
+    file.file.seek(0)
+    
+    from app.core.cloudinary_utils import upload_to_cloudinary_sync
+    secure_url = upload_to_cloudinary_sync(file, folder="nsg_erp/vault", resource_type="auto")
+    if not secure_url:
+        raise HTTPException(status_code=500, detail="Failed to upload vault document to Cloudinary")
+        
     new_doc = models.VaultDocument(
         doc_id=doc_id,
         name=name,
         type=type,
         sign_status="Pending",
-        file_url=f"/{file_path}",
+        file_url=secure_url,
         file_hash=file_hash,
         parties=parties
     )
@@ -2381,22 +2383,24 @@ def upload_vault_document(
     if existing:
         raise HTTPException(status_code=400, detail="Document ID already exists")
 
-    file_path = f"{UPLOAD_DIR}/{doc_id}_{file.filename}"
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
-    # Calculate hash
+    content = file.file.read()
     hasher = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        hasher.update(f.read())
+    hasher.update(content)
     file_hash = hasher.hexdigest()
     
+    file.file.seek(0)
+    
+    from app.core.cloudinary_utils import upload_to_cloudinary_sync
+    secure_url = upload_to_cloudinary_sync(file, folder="nsg_erp/vault", resource_type="auto")
+    if not secure_url:
+        raise HTTPException(status_code=500, detail="Failed to upload vault document to Cloudinary")
+        
     new_doc = models.VaultDocument(
         doc_id=doc_id,
         name=name,
         type=type,
         sign_status="Pending",
-        file_url=f"/{file_path}",
+        file_url=secure_url,
         file_hash=file_hash,
         parties=parties
     )
