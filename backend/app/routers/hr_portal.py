@@ -4090,24 +4090,44 @@ async def convert_doc(
             doc = docx.Document(docx_file)
             header_html = ""
             footer_html = ""
+            import base64
             
             for section in doc.sections:
-                if section.header:
+                if section.header and section.header.part is not None:
                     header_text = "<br>".join([p.text.strip() for p in section.header.paragraphs if p.text.strip()])
+                    
+                    header_images = []
+                    for rel in section.header.part.rels.values():
+                        if "image" in rel.reltype:
+                            blob = rel.target_part.blob
+                            ctype = rel.target_part.content_type
+                            b64 = base64.b64encode(blob).decode('utf-8')
+                            header_images.append(f"<img src='data:{ctype};base64,{b64}' style='max-width: 100%; max-height: 140px;' />")
+                    
+                    if header_images:
+                        for img in header_images:
+                            if img not in header_html:
+                                header_html += f"<div style='text-align: center; margin-bottom: 20px;'>{img}</div>"
                     if header_text and header_text not in header_html:
                         header_html += f"<div style='border-bottom: 2px solid #ea580c; padding-bottom: 10px; margin-bottom: 20px; color: #0284c7; font-weight: bold; text-align: left; font-size: 18px;'>{header_text}</div>"
-                    elif not header_text and len(section.header.paragraphs) > 0:
-                        # Probably an image letterhead
-                        if "Logo" not in header_html:
-                            header_html += f"<div style='border-bottom: 2px solid #ea580c; padding-bottom: 10px; margin-bottom: 20px; color: #9ca3af; font-style: italic; text-align: center;'>[Image Letterhead / Logo]</div>"
                 
-                if section.footer:
+                if section.footer and section.footer.part is not None:
                     footer_text = "<br>".join([p.text.strip() for p in section.footer.paragraphs if p.text.strip()])
+                    
+                    footer_images = []
+                    for rel in section.footer.part.rels.values():
+                        if "image" in rel.reltype:
+                            blob = rel.target_part.blob
+                            ctype = rel.target_part.content_type
+                            b64 = base64.b64encode(blob).decode('utf-8')
+                            footer_images.append(f"<img src='data:{ctype};base64,{b64}' style='max-width: 100%; max-height: 100px;' />")
+                    
+                    if footer_images:
+                        for img in footer_images:
+                            if img not in footer_html:
+                                footer_html += f"<div style='text-align: center; margin-top: 20px;'>{img}</div>"
                     if footer_text and footer_text not in footer_html:
                         footer_html += f"<div style='border-top: 1px solid #d1d5db; padding-top: 10px; margin-top: 20px; font-size: 11px; text-align: center; color: #6b7280;'>{footer_text}</div>"
-                    elif not footer_text and len(section.footer.paragraphs) > 0:
-                        if "Footer" not in footer_html:
-                            footer_html += f"<div style='border-top: 1px solid #d1d5db; padding-top: 10px; margin-top: 20px; font-size: 11px; text-align: center; color: #9ca3af; font-style: italic;'>[Image Footer]</div>"
             
             final_html = f"{header_html}{html_body}{footer_html}"
         except Exception as ex:
