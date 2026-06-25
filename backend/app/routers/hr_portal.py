@@ -3997,6 +3997,9 @@ async def batch_edit_pdf_text(
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         
         for page in doc:
+            redactions_added = False
+            insertions = []
+            
             for rep in replacements_list:
                 search_text = rep.get("search")
                 replace_text = rep.get("replace")
@@ -4005,18 +4008,50 @@ async def batch_edit_pdf_text(
                     continue
                     
                 text_instances = page.search_for(search_text)
-                for inst in text_instances:
-                    page.add_redact_annot(inst, fill=(1, 1, 1))
-                    page.apply_redactions()
+                if not text_instances:
+                    continue
                     
-                    fontsize = inst.y1 - inst.y0
-                    page.insert_text(
-                        (inst.x0, inst.y1 - (fontsize * 0.2)),
-                        replace_text,
-                        fontsize=fontsize * 0.9,
-                        color=(0, 0, 0)
-                    )
+                text_instances.sort(key=lambda r: (r.y0, r.x0))
+                matches = []
+                current_match = [text_instances[0]]
+                
+                for inst in text_instances[1:]:
+                    prev = current_match[-1]
+                    if inst.y0 - prev.y1 < 25:
+                        current_match.append(inst)
+                    else:
+                        matches.append(current_match)
+                        current_match = [inst]
+                matches.append(current_match)
+                
+                for match_rects in matches:
+                    u_rect = fitz.Rect(match_rects[0])
+                    for r in match_rects[1:]:
+                        u_rect = u_rect | fitz.Rect(r)
+                        
+                    page.add_redact_annot(u_rect, fill=(1, 1, 1))
+                    redactions_added = True
                     
+                    fontsize = match_rects[0].y1 - match_rects[0].y0
+                    text_rect = fitz.Rect(u_rect.x0, u_rect.y0, max(u_rect.x1, page.rect.x1 - 50), page.rect.y1 - 40)
+                    insertions.append({
+                        "rect": text_rect,
+                        "text": replace_text,
+                        "fontsize": fontsize * 0.9
+                    })
+                    
+            if redactions_added:
+                page.apply_redactions()
+                
+            for ins in insertions:
+                page.insert_textbox(
+                    ins["rect"],
+                    ins["text"],
+                    fontsize=ins["fontsize"],
+                    color=(0, 0, 0),
+                    align=0
+                )
+                
         modified_pdf = doc.write()
         doc.close()
         
