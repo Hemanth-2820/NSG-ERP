@@ -467,8 +467,8 @@ export default function Projects({ currentUser }) {
                     <div style={{ background: 'var(--ceo-bg)', border: '1px dashed var(--ceo-border)', borderRadius: '8px', overflow: 'hidden' }}>
                       <SignatureCanvas 
                         ref={sigCanvasRef} 
-                        penColor="var(--ceo-primary)" 
-                        canvasProps={{width: 450, height: 150, className: 'sigCanvas'}} 
+                        penColor="#3b82f6" 
+                        canvasProps={{width: 450, height: 150, className: 'sigCanvas'}}
                         onEnd={() => setSignature(sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png'))} 
                       />
                     </div>
