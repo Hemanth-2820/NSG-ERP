@@ -365,24 +365,21 @@ export default function People() {
     }
     const doc = new jsPDF('landscape');
     
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.src = companyLogo || '/hmns-logo.png';
-    img.onload = () => {
-      doc.addImage(img, 'PNG', 14, 10, 30, 10);
+    const renderPDF = (image) => {
+      if (image) doc.addImage(image, 'PNG', 14, 10, 30, 10);
       doc.setFontSize(18);
-      doc.text(`${companyName || 'HMNS'} - Employees Export`, 14, 30);
+      doc.text(`${companyName || 'Company'} - Employees Export`, 14, 30);
 
       const headers = [["Employee ID", "Name", "Email", "Department", "Designation", "System Role", "Status", "Join Date"]];
       const data = filteredEmployees.map(emp => [
-        emp.id,
-        emp.name,
-        emp.email,
-        emp.dept,
-        emp.role,
-        emp.sysRole,
-        emp.status,
-        emp.joinDate
+        emp.id || '',
+        emp.name || '',
+        emp.email || '',
+        emp.dept || '',
+        emp.role || '',
+        emp.sysRole || '',
+        emp.status || '',
+        emp.joinDate || ''
       ]);
 
       doc.autoTable({
@@ -395,6 +392,12 @@ export default function People() {
 
       doc.save('employees_export.pdf');
     };
+
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = companyLogo || '/hmns-logo.png';
+    img.onload = () => renderPDF(img);
+    img.onerror = () => renderPDF(null);
   };
 
   const handleDownload = (filename) => {
