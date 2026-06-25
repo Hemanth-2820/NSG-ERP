@@ -634,16 +634,8 @@ def approve_leave(id: int, current_user: models.User = Depends(security.get_curr
     if req.status != "pending":
          raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
          
-    req.status = "approved"
+    req.status = "tl_approved"
     req.tl_approved_at = datetime.now()
-    
-    # Deduct leave balance upon approval
-    bal = db.query(models.LeaveBalance).filter(models.LeaveBalance.user_id == req.user_id).first()
-    if bal:
-        if req.leave_type == "CL": bal.CL -= req.days
-        elif req.leave_type == "SL": bal.SL -= req.days
-        elif req.leave_type == "EL": bal.EL -= req.days
-        elif req.leave_type == "Maternity": bal.Maternity -= req.days
     
     notification = models.Notification(
         user_id=req.user_id,

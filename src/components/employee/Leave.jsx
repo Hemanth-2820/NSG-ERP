@@ -295,7 +295,7 @@ function LeaveHistoryTable({ history, onCancelRequest }) {
   const totalPages = Math.ceil(history.length / itemsPerPage);
   const paginatedHistory = history.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const statusClass = { Approved: 'lv-status-approved', Pending: 'lv-status-pending', Rejected: 'lv-status-rejected', Cancelled: 'lv-status-cancelled' };
+  const statusClass = { Approved: 'lv-status-approved', 'Approved by TL': 'lv-status-pending', Pending: 'lv-status-pending', Rejected: 'lv-status-rejected', Cancelled: 'lv-status-cancelled' };
 
   return (
     <div className="lv-history">
@@ -386,8 +386,8 @@ export default function Leave() {
       from: r.from_date,
       to: r.to_date,
       days: r.days,
-      status: r.status === 'approved' ? 'Approved' : r.status === 'rejected' ? 'Rejected' : r.status === 'cancelled' ? 'Cancelled' : r.status.charAt(0).toUpperCase() + r.status.slice(1),
-      approver: r.status === 'approved' ? 'Management' : '—'
+      status: (r.status === 'approved' || r.status === 'hr_approved') ? 'Approved' : r.status === 'tl_approved' ? 'Approved by TL' : r.status === 'rejected' ? 'Rejected' : r.status === 'cancelled' ? 'Cancelled' : r.status.charAt(0).toUpperCase() + r.status.slice(1),
+      approver: (r.status === 'approved' || r.status === 'hr_approved') ? 'Management' : r.status === 'tl_approved' ? 'Team Lead' : '—'
   }));
 
   const fetchData = () => {

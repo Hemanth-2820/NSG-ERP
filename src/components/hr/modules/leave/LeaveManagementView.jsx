@@ -206,10 +206,10 @@ export function LeaveManagementView() {
     } catch(e) { console.error(e); window.toast.error('Error'); }
   };
 
-  const pendingRequests = leaveRequests.filter(r => r.status === 'pending');
+  const pendingRequests = leaveRequests.filter(r => r.status === 'pending' || r.status === 'tl_approved');
   const displayedRequests = leaveRequests.filter(r => {
-    if (requestFilter === 'pending') return r.status === 'pending';
-    if (requestFilter === 'approved') return r.status === 'approved';
+    if (requestFilter === 'pending') return r.status === 'pending' || r.status === 'tl_approved';
+    if (requestFilter === 'approved') return r.status === 'approved' || r.status === 'hr_approved';
     if (requestFilter === 'denied') return r.status === 'rejected';
     return true; // 'all'
   });
@@ -272,7 +272,7 @@ export function LeaveManagementView() {
       const tableBody = filteredHistory.map(log => {
         const emp = employees.find(e => String(e.id) === String(log.user_id)) || { name: 'Unknown' };
         const durationStr = `${new Date(log.from_date).toLocaleDateString('en-GB')} - ${new Date(log.to_date).toLocaleDateString('en-GB')}`;
-        const statusStr = log.status === 'approved' ? 'Approved' : log.status === 'rejected' ? 'Rejected' : 'Pending';
+        const statusStr = (log.status === 'approved' || log.status === 'hr_approved') ? 'Approved' : log.status === 'tl_approved' ? 'Approved by TL' : log.status === 'rejected' ? 'Rejected' : 'Pending';
         return [emp.name, log.leave_type, durationStr, log.days, log.reason, statusStr];
       });
 
@@ -552,11 +552,11 @@ export function LeaveManagementView() {
                       <td style={{ padding: '20px 24px', color: '#475569', fontSize: '13px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '500' }} title={log.reason}>{log.reason}</td>
                       <td style={{ padding: '20px 24px' }}>
                         <span style={{ padding: '6px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.03em', display: 'inline-flex', alignItems: 'center', gap: '6px',
-                           backgroundColor: log.status === 'approved' ? '#ecfdf5' : log.status === 'rejected' ? '#fef2f2' : '#fffbeb', 
-                           color: log.status === 'approved' ? '#059669' : log.status === 'rejected' ? '#dc2626' : '#d97706', 
-                           border: `1px solid ${log.status === 'approved' ? '#a7f3d0' : log.status === 'rejected' ? '#fecaca' : '#fde68a'}` }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: log.status === 'approved' ? '#10b981' : log.status === 'rejected' ? '#ef4444' : '#f59e0b' }}></span>
-                          {log.status === 'approved' ? 'Approved' : log.status === 'rejected' ? 'Rejected' : 'Pending'}
+                           backgroundColor: (log.status === 'approved' || log.status === 'hr_approved') ? '#ecfdf5' : log.status === 'tl_approved' ? '#f0f9ff' : log.status === 'rejected' ? '#fef2f2' : '#fffbeb', 
+                           color: (log.status === 'approved' || log.status === 'hr_approved') ? '#059669' : log.status === 'tl_approved' ? '#0284c7' : log.status === 'rejected' ? '#dc2626' : '#d97706', 
+                           border: `1px solid ${(log.status === 'approved' || log.status === 'hr_approved') ? '#a7f3d0' : log.status === 'tl_approved' ? '#bae6fd' : log.status === 'rejected' ? '#fecaca' : '#fde68a'}` }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: (log.status === 'approved' || log.status === 'hr_approved') ? '#10b981' : log.status === 'tl_approved' ? '#0284c7' : log.status === 'rejected' ? '#ef4444' : '#f59e0b' }}></span>
+                          {(log.status === 'approved' || log.status === 'hr_approved') ? 'Approved' : log.status === 'tl_approved' ? 'Approved by TL' : log.status === 'rejected' ? 'Rejected' : 'Pending'}
                         </span>
                       </td>
                     </tr>
@@ -643,19 +643,23 @@ export function LeaveManagementView() {
                           borderRadius: '12px', 
                           fontWeight: 'bold', 
                           backgroundColor: 
-                            r.status === 'approved' ? '#ecfdf5' : 
+                            (r.status === 'approved' || r.status === 'hr_approved') ? '#ecfdf5' : 
+                            r.status === 'tl_approved' ? '#f0f9ff' :
                             r.status === 'rejected' ? '#fef2f2' : 
                             '#fffbeb', 
                           color: 
-                            r.status === 'approved' ? '#059669' : 
+                            (r.status === 'approved' || r.status === 'hr_approved') ? '#059669' : 
+                            r.status === 'tl_approved' ? '#0284c7' :
                             r.status === 'rejected' ? '#dc2626' : 
                             '#d97706',
                           border: `1px solid ${
-                            r.status === 'approved' ? '#a7f3d0' : 
+                            (r.status === 'approved' || r.status === 'hr_approved') ? '#a7f3d0' : 
+                            r.status === 'tl_approved' ? '#bae6fd' :
                             r.status === 'rejected' ? '#fecaca' : 
                             '#fde68a'}`
                         }}>
-                          {r.status === 'approved' ? '✅ Approved' : 
+                          {(r.status === 'approved' || r.status === 'hr_approved') ? '✅ Approved' : 
+                           r.status === 'tl_approved' ? '👍 Approved by TL' :
                            r.status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
                         </span>
                       </div>
@@ -720,7 +724,7 @@ export function LeaveManagementView() {
                           </div>
 
                           {/* Right-side action: Approve/Deny (only for pending) */}
-                          {(r.status === 'pending') && (
+                          {(r.status === 'pending' || r.status === 'tl_approved') && (
                             <div style={{ display: 'flex', gap: '12px' }}>
                               <button 
                                 style={{ padding: '8px 20px', fontSize: '12px', backgroundColor: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}
