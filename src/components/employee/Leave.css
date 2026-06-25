@@ -63,12 +63,10 @@
 }
 .lv-balances-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 16px;
   margin-bottom: 28px;
 }
-@media (max-width: 1100px) { .lv-balances-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px)  { .lv-balances-grid { grid-template-columns: 1fr 1fr; } }
 
 /* ── Balance Card ────────────────────────────────────────────────────────────── */
 .lv-balance-card {
@@ -167,7 +165,10 @@
   gap: 20px;
   align-items: start;
 }
-@media (max-width: 960px) { .lv-bottom-grid { grid-template-columns: 1fr; } }
+.lv-bottom-grid > div {
+  min-width: 0;
+}
+@media (max-width: 1200px) { .lv-bottom-grid { grid-template-columns: 1fr; } }
 
 /* ── Apply Form ──────────────────────────────────────────────────────────────── */
 .lv-apply-form {
