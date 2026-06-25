@@ -386,10 +386,24 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
     };
   }, [chatChannels, employees]);
 
-  // Auto-scroll chat
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedChannel]);
+    // Auto-scroll chat and mark read
+    useEffect(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (selectedChannel && getUnreadCount(selectedChannel) > 0) {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          const unreadMsgs = (messages[selectedChannel] || []).filter(m => {
+            if (m.isMe || m.sender === empName || (m.sender && m.sender.includes('Employee'))) return false;
+            let seenArr = [];
+            try { if (m.seen_by) seenArr = JSON.parse(m.seen_by); } catch(e) {}
+            if (!Array.isArray(seenArr)) seenArr = [];
+            return !seenArr.includes(empName);
+          });
+          unreadMsgs.forEach(m => {
+              socketRef.current.send(JSON.stringify({ type: 'read', msg_id: m.id }));
+          });
+        }
+      }
+    }, [messages, selectedChannel]);
 
   // Call duration timer
   useEffect(() => {
