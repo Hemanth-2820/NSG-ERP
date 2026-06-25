@@ -1069,7 +1069,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
           )}
           </div>
           
-          {totalPages > 1 && (
+          {totalPages > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '8px' }}>
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -1135,7 +1135,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
             </tbody>
           </table>
           
-          {totalPages > 1 && (
+          {totalPages > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '16px', marginBottom: '16px' }}>
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -1201,7 +1201,7 @@ export function OnboardingView({ queryParams, setQueryParams }) {
             </tbody>
           </table>
           
-          {totalPages > 1 && (
+          {totalPages > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '16px', marginBottom: '16px' }}>
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

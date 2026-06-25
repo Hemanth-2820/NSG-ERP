@@ -1110,7 +1110,7 @@ export function EmployeeRegistryView({ queryParams, setQueryParams }) {
           </table>
           
           {/* Pagination Controls */}
-          {totalPages > 1 && (
+          {totalPages > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
               <span style={{ fontSize: '13px', color: '#64748b' }}>
                 Showing <strong>{startIndex + 1}</strong> to <strong>{Math.min(startIndex + itemsPerPage, filtered.length)}</strong> of <strong>{filtered.length}</strong> entries

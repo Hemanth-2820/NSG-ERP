@@ -503,7 +503,7 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                   </div>
                 </div>
               ))}
-              {totalPages > 1 && (
+              {totalPages > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)' }}>
                   <button 
                     disabled={currentPage === 1}

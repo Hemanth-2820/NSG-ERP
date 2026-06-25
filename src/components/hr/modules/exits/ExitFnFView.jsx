@@ -485,7 +485,7 @@ export function ExitFnFView() {
                 })}
               </tbody>
             </table>
-            {totalPages > 1 && (
+            {totalPages > 0 && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', padding: '16px 40px' }}>
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
