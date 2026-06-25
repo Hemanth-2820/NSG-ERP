@@ -281,6 +281,7 @@ export default function People() {
           role: editEmpData.sysRole,
           status: editEmpData.status,
           shift_timing: editEmpData.shift,
+          current_salary: editEmpData.current_salary ? parseFloat(editEmpData.current_salary) : null,
           manager_id: editEmpData.manager_id ? parseInt(editEmpData.manager_id) : null,
           manager: editEmpData.manager_id ? teamLeads.find(tl => tl.id === parseInt(editEmpData.manager_id))?.name : null
         })
@@ -1022,6 +1023,10 @@ export default function People() {
                       <option key={s.id} value={s.name}>{s.name} ({s.start_time} - {s.end_time})</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--ceo-text-secondary)', marginBottom: '8px' }}>CURRENT SALARY (CTC)</label>
+                  <input type="number" step="0.01" value={editEmpData.current_salary || ''} onChange={e => setEditEmpData({...editEmpData, current_salary: e.target.value})} className="ceo-form-input" style={{ width: '100%', padding: '12px' }} placeholder="e.g. 50000" />
                 </div>
               </div>
               <div style={{ marginTop: '12px', display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--ceo-divider)', paddingTop: '24px' }}>

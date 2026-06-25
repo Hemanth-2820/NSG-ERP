@@ -1181,7 +1181,6 @@ def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.Us
         
     if req.current_salary is not None:
         try:
-            import json
             docs = json.loads(emp.documents) if emp.documents else {}
             docs["ctc"] = req.current_salary
             emp.documents = json.dumps(docs)

@@ -467,7 +467,7 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                       <Calendar size={10} /> {new Date(cand.interview_scheduled_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
                   )}
-                  {cand.offer_amount && (
+                  {cand.offer_amount && (st.id === 'offer' || st.id === 'joined') && (
                     <div style={{ fontSize: '10px', color: 'var(--accent-green)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
                       <span>💰</span> ₹{cand.offer_amount.toLocaleString()}/mo
                     </div>
