@@ -152,7 +152,24 @@ export default function Projects({ currentUser }) {
   };
 
   const handleSignoff = async () => {
-    if (!signature || !signoffProject) return;
+    let finalSignature = signature;
+    if (signatureMode === 'draw' && sigCanvasRef.current) {
+      if (sigCanvasRef.current.isEmpty()) {
+        if (typeof alert !== "undefined" && window.toast) {
+          window.toast.error('Please provide a signature.');
+        } else if (typeof alert !== "undefined") {
+          alert('Please provide a signature.');
+        }
+        return;
+      }
+      finalSignature = sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png');
+    }
+
+    if (!finalSignature || !signoffProject) {
+       if (typeof alert !== "undefined" && window.toast) window.toast.error('Please provide a signature.');
+       return;
+    }
+
     setSigningOff(true);
     try {
       const res = await fetch(`/api/ceo-portal/projects/${signoffProject.id}/signoff`, {
@@ -165,8 +182,9 @@ export default function Projects({ currentUser }) {
       setSignoffProject(null);
       setSignature(null);
       setSignatureMode('draw');
+      if (typeof alert !== "undefined" && window.toast) window.toast.success('Project signed off successfully.');
     } catch (err) {
-      window.toast.error('Failed to sign off project: ' + err.message);
+      if (typeof alert !== "undefined" && window.toast) window.toast.error('Failed to sign off project: ' + err.message);
     } finally {
       setSigningOff(false);
     }
@@ -502,7 +520,7 @@ export default function Projects({ currentUser }) {
                 <button 
                   className="ceo-btn ceo-btn-primary" 
                   onClick={handleSignoff} 
-                  disabled={!signature || signingOff}
+                  disabled={signingOff}
                 >
                   {signingOff ? 'Processing...' : 'Authorize Sign-off'}
                 </button>

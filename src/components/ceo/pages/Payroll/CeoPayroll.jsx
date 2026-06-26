@@ -53,6 +53,7 @@ export default function CeoPayroll() {
   const [lopDaysReversed, setLopDaysReversed] = useState('');
   const [letterheadUrl, setLetterheadUrl] = useState('/hmns-logo.png');
   const [hasCustomTemplate, setHasCustomTemplate] = useState(false);
+  const [customHtmlContent, setCustomHtmlContent] = useState('');
   const [templateKey, setTemplateKey] = useState(0); // Used to force re-render of the editor
   const [globalTemplateHtml, setGlobalTemplateHtml] = useState(null);
   
@@ -165,17 +166,18 @@ export default function CeoPayroll() {
     setLopDays('');
     setLopDaysReversed('');
     setLetterheadUrl('/hmns-logo.png');
-    setHasCustomTemplate(false);
+    
+    const hasGlobal = !!globalTemplateHtml;
+    setHasCustomTemplate(hasGlobal);
+    if (hasGlobal) {
+        setCustomHtmlContent(globalTemplateHtml);
+    } else {
+        setCustomHtmlContent('');
+    }
+    
     setCurrentPdfFile(null);
     setTemplateKey(prev => prev + 1);
     setShowModal(true);
-
-    setTimeout(() => {
-        if (globalTemplateHtml && payslipContentRef.current) {
-            payslipContentRef.current.innerHTML = globalTemplateHtml;
-            setHasCustomTemplate(true);
-        }
-    }, 100);
   };
 
   const handleLetterheadUpload = (e) => {
@@ -275,10 +277,9 @@ export default function CeoPayroll() {
             showNotification('Global Default Template Updated Successfully!', 'success');
             e.target.value = null;
         } else {
-            if (payslipContentRef.current) {
-                payslipContentRef.current.innerHTML = pagesHtml;
-                setHasCustomTemplate(true);
-            }
+            setCustomHtmlContent(pagesHtml);
+            setHasCustomTemplate(true);
+            setTemplateKey(prev => prev + 1);
         }
       } catch (err) {
         console.error(err);
@@ -1009,15 +1010,23 @@ export default function CeoPayroll() {
                      <Download size={16} /> Download PDF Preview
                    </button>
                 </div>
-                <div
-                  key={templateKey}
-                  ref={payslipContentRef}
-                  contentEditable={!hasCustomTemplate}
-                  suppressContentEditableWarning
-                  style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#fff', padding: hasCustomTemplate ? '0' : '20mm', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', fontFamily: 'Times New Roman, Times, serif', fontSize: '13px', color: '#000', outline: 'none' }}
-                >
-                  {!hasCustomTemplate && (
-                    <>
+                {hasCustomTemplate ? (
+                  <div
+                    key={`custom-${templateKey}`}
+                    ref={payslipContentRef}
+                    contentEditable={true}
+                    suppressContentEditableWarning
+                    dangerouslySetInnerHTML={{ __html: customHtmlContent }}
+                    style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#fff', padding: '0', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', fontFamily: 'Times New Roman, Times, serif', fontSize: '13px', color: '#000', outline: 'none' }}
+                  />
+                ) : (
+                  <div
+                    key={`default-${templateKey}`}
+                    ref={payslipContentRef}
+                    contentEditable={true}
+                    suppressContentEditableWarning
+                    style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#fff', padding: '20mm', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', fontFamily: 'Times New Roman, Times, serif', fontSize: '13px', color: '#000', outline: 'none' }}
+                  >
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottom: '2px solid #4CAF50', paddingBottom: '16px', marginBottom: '24px' }}>
                     <img src={letterheadUrl} alt="Logo" style={{ maxHeight: '60px', objectFit: 'contain', marginBottom: '12px' }} crossorigin="anonymous" />
                   </div>
@@ -1169,9 +1178,8 @@ export default function CeoPayroll() {
                     <div>workzone, 5th Floor, Cabin#1&4, PlotNo.63, Phase-1, Kavurihills, Madhapur-500033</div>
                     <div style={{ color: 'blue', marginTop: '4px' }}>www.hmnssoftware.com &nbsp;&nbsp;&nbsp;&nbsp; hr@hmnssoftware.in</div>
                   </div>
-                  </>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
               
               {/* CSV Board Right Panel */}
