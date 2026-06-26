@@ -162,7 +162,7 @@ export default function Projects({ currentUser }) {
         }
         return;
       }
-      finalSignature = sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png');
+      finalSignature = sigCanvasRef.current.getCanvas().toDataURL('image/png');
     }
 
     if (!finalSignature || !signoffProject) {
@@ -487,7 +487,7 @@ export default function Projects({ currentUser }) {
                         ref={sigCanvasRef} 
                         penColor="#3b82f6" 
                         canvasProps={{width: 450, height: 150, className: 'sigCanvas'}}
-                        onEnd={() => setSignature(sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png'))} 
+                        onEnd={() => setSignature(sigCanvasRef.current.getCanvas().toDataURL('image/png'))} 
                       />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
