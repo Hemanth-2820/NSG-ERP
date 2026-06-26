@@ -3,6 +3,7 @@ import useSWR from 'swr';
 
 const fetcher = url => fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem('nsg_jwt_token')}` } }).then(res => res.json());
 import { Download, AlertTriangle, FileText, Loader } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import { generatePayslipPDF } from '../../utils/pdfGenerator';
 import './Payroll.css';
 
@@ -55,8 +56,26 @@ function PayslipsTab({ employeeId }) {
         ...empDetails,
         employee_name: empDetails.name || 'Unknown',
       };
-      
-      await generatePayslipPDF(recordToPass);
+      if (recordToPass.custom_payslip_html) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = recordToPass.custom_payslip_html;
+        tempDiv.style.padding = '20px';
+        tempDiv.style.fontFamily = 'Arial, sans-serif';
+        document.body.appendChild(tempDiv);
+        
+        const opt = {
+          margin: 10,
+          filename: `Payslip_${recordToPass.employee_name}_${recordToPass.month}_${recordToPass.year}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        await html2pdf().set(opt).from(tempDiv).save();
+        document.body.removeChild(tempDiv);
+      } else {
+        await generatePayslipPDF(recordToPass);
+      }
     } catch(err) {
       console.error("PDF Generator Error:", err);
       if (window.showToast) {
@@ -136,110 +155,119 @@ function PayslipsTab({ employeeId }) {
               className="pay-slip-card"
               style={{ background: '#fff', border: '1px solid var(--pay-border)', borderRadius: 12, padding: 24, marginBottom: 20, overflowX: 'auto' }}
             >
-               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                 <h2 style={{ margin: 0, color: '#004A8B', fontSize: 24, fontWeight: 'bold' }}>HMNS Software Solution Pvt Ltd</h2>
-               </div>
-               
-               <div style={{ border: '1px solid #000', minWidth: 700, fontFamily: 'serif' }}>
-                 <h3 style={{ textAlign: 'center', margin: '15px 0', fontSize: 16, color: '#000', fontWeight: 'normal' }}>Pay slip for the month of {monthLabel}</h3>
-                 
-                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
-                      <tr>
-                        <td style={{...tdStyle, width: '25%'}}>Employee Code:</td>
-                        <td style={{...tdStyle, width: '25%'}}>{merged.id || 'N/A'}</td>
-                        <td style={{...tdStyle, width: '25%'}}>PF Number:</td>
-                        <td style={{...tdStyle, width: '25%'}}>{merged.pf_number || ''}</td>
-                      </tr>
-                      <tr>
-                        <td style={tdStyle}>Employee Name:</td>
-                        <td style={tdStyle}>{merged.name || merged.employee_name || 'N/A'}</td>
-                        <td style={tdStyle}>UAN:</td>
-                        <td style={tdStyle}>{merged.uan || ''}</td>
-                      </tr>
-                      <tr>
-                        <td style={tdStyle}>Designation:</td>
-                        <td style={tdStyle}>{merged.designation || 'N/A'}</td>
-                        <td style={tdStyle}>ESI Number:</td>
-                        <td style={tdStyle}>{merged.esi_number || ''}</td>
-                      </tr>
-                      <tr>
-                        <td style={tdStyle}>Location:</td>
-                        <td style={tdStyle}>{merged.location || 'N/A'}</td>
-                        <td style={tdStyle}>PAN:</td>
-                        <td style={tdStyle}>{merged.pan_number || merged.pan || ''}</td>
-                      </tr>
-                    </tbody>
-                 </table>
+               {p.custom_payslip_html ? (
+                 <div 
+                   dangerouslySetInnerHTML={{ __html: p.custom_payslip_html }} 
+                   style={{ width: '100%', minHeight: '297mm', backgroundColor: '#fff', padding: '0', fontFamily: 'Times New Roman, Times, serif', fontSize: '13px', color: '#000' }}
+                 />
+               ) : (
+                 <>
+                   <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                     <h2 style={{ margin: 0, color: '#004A8B', fontSize: 24, fontWeight: 'bold' }}>HMNS Software Solution Pvt Ltd</h2>
+                   </div>
+                   
+                   <div style={{ border: '1px solid #000', minWidth: 700, fontFamily: 'serif' }}>
+                     <h3 style={{ textAlign: 'center', margin: '15px 0', fontSize: 16, color: '#000', fontWeight: 'normal' }}>Pay slip for the month of {monthLabel}</h3>
+                     
+                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{...tdStyle, width: '25%'}}>Employee Code:</td>
+                            <td style={{...tdStyle, width: '25%'}}>{merged.id || 'N/A'}</td>
+                            <td style={{...tdStyle, width: '25%'}}>PF Number:</td>
+                            <td style={{...tdStyle, width: '25%'}}>{merged.pf_number || ''}</td>
+                          </tr>
+                          <tr>
+                            <td style={tdStyle}>Employee Name:</td>
+                            <td style={tdStyle}>{merged.name || merged.employee_name || 'N/A'}</td>
+                            <td style={tdStyle}>UAN:</td>
+                            <td style={tdStyle}>{merged.uan || ''}</td>
+                          </tr>
+                          <tr>
+                            <td style={tdStyle}>Designation:</td>
+                            <td style={tdStyle}>{merged.designation || 'N/A'}</td>
+                            <td style={tdStyle}>ESI Number:</td>
+                            <td style={tdStyle}>{merged.esi_number || ''}</td>
+                          </tr>
+                          <tr>
+                            <td style={tdStyle}>Location:</td>
+                            <td style={tdStyle}>{merged.location || 'N/A'}</td>
+                            <td style={tdStyle}>PAN:</td>
+                            <td style={tdStyle}>{merged.pan_number || merged.pan || ''}</td>
+                          </tr>
+                        </tbody>
+                     </table>
 
-                 <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: 'none' }}>
-                    <tbody>
-                      <tr>
-                        <td style={{...tdStyle, width: '25%'}}>DOJ:</td>
-                        <td style={{...tdStyle, width: '25%'}}>{merged.doj || 'N/A'}</td>
-                        <td style={{...tdStyle, width: '25%'}}>Arrear Days:</td>
-                        <td style={{...tdStyle, width: '25%'}}>{Number(merged.arrear_days || 0).toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td style={tdStyle}>Days In Month:</td>
-                        <td style={tdStyle}>22</td>
-                        <td style={tdStyle}>LOP Days:</td>
-                        <td style={tdStyle}>{Number(merged.lop_days || merged.lop || 0).toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td style={tdStyle}>Worked Days:</td>
-                        <td style={tdStyle}>{merged.worked_days != null ? merged.worked_days : '22'}</td>
-                        <td style={tdStyle}>LOP Days Reversed:</td>
-                        <td style={tdStyle}>{Number(merged.lop_days_reversed || 0).toFixed(2)}</td>
-                      </tr>
-                    </tbody>
-                 </table>
+                     <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: 'none' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{...tdStyle, width: '25%'}}>DOJ:</td>
+                            <td style={{...tdStyle, width: '25%'}}>{merged.doj || 'N/A'}</td>
+                            <td style={{...tdStyle, width: '25%'}}>Arrear Days:</td>
+                            <td style={{...tdStyle, width: '25%'}}>{Number(merged.arrear_days || 0).toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td style={tdStyle}>Days In Month:</td>
+                            <td style={tdStyle}>22</td>
+                            <td style={tdStyle}>LOP Days:</td>
+                            <td style={tdStyle}>{Number(merged.lop_days || merged.lop || 0).toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td style={tdStyle}>Worked Days:</td>
+                            <td style={tdStyle}>{merged.worked_days != null ? merged.worked_days : '22'}</td>
+                            <td style={tdStyle}>LOP Days Reversed:</td>
+                            <td style={tdStyle}>{Number(merged.lop_days_reversed || 0).toFixed(2)}</td>
+                          </tr>
+                        </tbody>
+                     </table>
 
-                 <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: 'none' }}>
-                    <thead>
-                      <tr>
-                        <th style={{...thStyle, width: '30%'}}>Earnings</th>
-                        <th style={{...thStyle, width: '15%'}}>Actual</th>
-                        <th style={{...thStyle, width: '15%'}}>Earned</th>
-                        <th colSpan="2" style={{...thStyle, width: '40%'}}>Deductions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                       <tr>
-                         <td style={tdStyle}>Basic Salary</td>
-                         <td style={tdStyle}>{Number(merged.basic || 0).toFixed(2)}</td>
-                         <td style={tdStyle}>{Number(merged.basic || 0).toFixed(2)}</td>
-                         <td style={{...tdStyle, borderRight: 'none', width: '20%'}}>EPF</td>
-                         <td style={{...tdStyle, borderLeft: 'none', width: '20%', textAlign: 'right'}}>{Number(merged.epf || 0).toFixed(2)}</td>
-                       </tr>
-                       <tr>
-                         <td style={tdStyle}>HRA</td>
-                         <td style={tdStyle}>{Number(merged.hra || 0).toFixed(2)}</td>
-                         <td style={tdStyle}>{Number(merged.hra || 0).toFixed(2)}</td>
-                         <td style={{...tdStyle, borderRight: 'none'}}>TDS</td>
-                         <td style={{...tdStyle, borderLeft: 'none', textAlign: 'right'}}>{Number(merged.tds || 0).toFixed(2)}</td>
-                       </tr>
-                       <tr>
-                         <td style={tdStyle}>Allowances</td>
-                         <td style={tdStyle}>{Number(merged.allowances || 0).toFixed(2)}</td>
-                         <td style={tdStyle}>{Number(merged.allowances || 0).toFixed(2)}</td>
-                         <td style={{...tdStyle, borderRight: 'none'}}>LOP</td>
-                         <td style={{...tdStyle, borderLeft: 'none', textAlign: 'right'}}>{Number(merged.lop || 0).toFixed(2)}</td>
-                       </tr>
-                       <tr>
-                         <td style={thStyle}>Totals:</td>
-                         <td style={thStyle}>{Number((merged.basic||0) + (merged.hra||0) + (merged.allowances||0)).toFixed(2)}</td>
-                         <td style={thStyle}>{Number((merged.basic||0) + (merged.hra||0) + (merged.allowances||0)).toFixed(2)}</td>
-                         <td style={{...thStyle, borderRight: 'none'}}></td>
-                         <td style={{...thStyle, borderLeft: 'none', textAlign: 'right'}}>{Number((merged.epf||0) + (merged.tds||0) + (merged.lop||0)).toFixed(2)}</td>
-                       </tr>
-                    </tbody>
-                 </table>
+                     <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: 'none' }}>
+                        <thead>
+                          <tr>
+                            <th style={{...thStyle, width: '30%'}}>Earnings</th>
+                            <th style={{...thStyle, width: '15%'}}>Actual</th>
+                            <th style={{...thStyle, width: '15%'}}>Earned</th>
+                            <th colSpan="2" style={{...thStyle, width: '40%'}}>Deductions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                           <tr>
+                             <td style={tdStyle}>Basic Salary</td>
+                             <td style={tdStyle}>{Number(merged.basic || 0).toFixed(2)}</td>
+                             <td style={tdStyle}>{Number(merged.basic || 0).toFixed(2)}</td>
+                             <td style={{...tdStyle, borderRight: 'none', width: '20%'}}>EPF</td>
+                             <td style={{...tdStyle, borderLeft: 'none', width: '20%', textAlign: 'right'}}>{Number(merged.epf || 0).toFixed(2)}</td>
+                           </tr>
+                           <tr>
+                             <td style={tdStyle}>HRA</td>
+                             <td style={tdStyle}>{Number(merged.hra || 0).toFixed(2)}</td>
+                             <td style={tdStyle}>{Number(merged.hra || 0).toFixed(2)}</td>
+                             <td style={{...tdStyle, borderRight: 'none'}}>TDS</td>
+                             <td style={{...tdStyle, borderLeft: 'none', textAlign: 'right'}}>{Number(merged.tds || 0).toFixed(2)}</td>
+                           </tr>
+                           <tr>
+                             <td style={tdStyle}>Allowances</td>
+                             <td style={tdStyle}>{Number(merged.allowances || 0).toFixed(2)}</td>
+                             <td style={tdStyle}>{Number(merged.allowances || 0).toFixed(2)}</td>
+                             <td style={{...tdStyle, borderRight: 'none'}}>LOP</td>
+                             <td style={{...tdStyle, borderLeft: 'none', textAlign: 'right'}}>{Number(merged.lop || 0).toFixed(2)}</td>
+                           </tr>
+                           <tr>
+                             <td style={thStyle}>Totals:</td>
+                             <td style={thStyle}>{Number((merged.basic||0) + (merged.hra||0) + (merged.allowances||0)).toFixed(2)}</td>
+                             <td style={thStyle}>{Number((merged.basic||0) + (merged.hra||0) + (merged.allowances||0)).toFixed(2)}</td>
+                             <td style={{...thStyle, borderRight: 'none'}}></td>
+                             <td style={{...thStyle, borderLeft: 'none', textAlign: 'right'}}>{Number((merged.epf||0) + (merged.tds||0) + (merged.lop||0)).toFixed(2)}</td>
+                           </tr>
+                        </tbody>
+                     </table>
 
-                 <div style={{ padding: '12px 16px', fontWeight: 'bold', fontSize: 14, color: '#000' }}>
-                   Net Pay: {Number(merged.net || 0).toFixed(2)}
-                 </div>
-               </div>
+                     <div style={{ padding: '12px 16px', fontWeight: 'bold', fontSize: 14, color: '#000' }}>
+                       Net Pay: {Number(merged.net || 0).toFixed(2)}
+                     </div>
+                   </div>
+                 </>
+               )}
 
                <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
                  <button
