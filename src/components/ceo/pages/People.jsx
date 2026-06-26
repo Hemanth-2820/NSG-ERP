@@ -249,12 +249,24 @@ export default function People() {
         const formatted = data.map(emp => ({
           ...emp,
           id: emp.emp_id || `EMP-${emp.id}`,
+          dbId: emp.id,
           role: emp.designation || 'Employee',
           dept: emp.department || 'Operations',
           joinDate: emp.join_date || 'N/A',
           status: emp.status ? emp.status.charAt(0).toUpperCase() + emp.status.slice(1).toLowerCase() : 'Active',
           avatar: emp.photo || `https://ui-avatars.com/api/?name=${emp.name.replace(/ /g, '+')}&background=0F172A&color=fff`,
-          sysRole: emp.role
+          sysRole: emp.role,
+          email: emp.email,
+          manager_id: emp.manager_id,
+          shift: emp.shift_timing || '',
+          documents: emp.documents ? (() => {
+            try {
+              const parsed = typeof emp.documents === 'string' ? JSON.parse(emp.documents) : emp.documents;
+              if (Array.isArray(parsed)) return parsed;
+              if (parsed && typeof parsed === 'object' && parsed.docs_list) return parsed.docs_list;
+              return [];
+            } catch { return []; }
+          })() : []
         }));
         setEmployees(formatted);
       }
