@@ -916,6 +916,7 @@ def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends
         name=req.name,
         email=req.email,
         hashed_password=default_pwd,
+        plain_password=default_pwd_plain,
         role=req.role or "employee",
         department=req.department,
         designation=req.designation,
