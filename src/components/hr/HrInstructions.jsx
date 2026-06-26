@@ -110,6 +110,21 @@ const simpleHrData = [
         step4: 'This change will reflect immediately in their monthly payroll calculation.'
       }
     ]
+  },
+  {
+    id: 'settings',
+    title: 'HR Settings & Tools',
+    icon: <Settings size={20} />,
+    description: 'Manage HR settings, leave policies, holidays, and generate offer letters for existing employees.',
+    flows: [
+      {
+        actionName: 'Generate Offer Letter for Existing Employee',
+        step1: 'Navigate to the Settings tab in the left menu.',
+        step2: 'Scroll down to the "Offer Letter Generation" section at the bottom.',
+        step3: 'Select any active employee from the dropdown and fill in their salary details.',
+        step4: 'Click "Preview & Edit DOCX" or "Open PDF Editor" to customize and download their letter.'
+      }
+    ]
   }
 ];
 
