@@ -19,10 +19,17 @@ async def upload_to_cloudinary_async(file: UploadFile, folder: str = "nsg_erp", 
     """
     try:
         content = await file.read()
+        
+        actual_resource_type = resource_type
+        if actual_resource_type == "auto" and file.filename:
+            ext = file.filename.split('.')[-1].lower()
+            if ext in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'csv', 'txt']:
+                actual_resource_type = "raw"
+
         response = cloudinary.uploader.upload(
             content,
             folder=folder,
-            resource_type=resource_type,
+            resource_type=actual_resource_type,
             filename_override=file.filename,
             use_filename=True,
             unique_filename=True
@@ -40,10 +47,17 @@ def upload_to_cloudinary_sync(file: UploadFile, folder: str = "nsg_erp", resourc
     """
     try:
         content = file.file.read()
+        
+        actual_resource_type = resource_type
+        if actual_resource_type == "auto" and file.filename:
+            ext = file.filename.split('.')[-1].lower()
+            if ext in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'csv', 'txt']:
+                actual_resource_type = "raw"
+
         response = cloudinary.uploader.upload(
             content,
             folder=folder,
-            resource_type=resource_type,
+            resource_type=actual_resource_type,
             filename_override=file.filename,
             use_filename=True,
             unique_filename=True
@@ -59,10 +73,16 @@ def upload_bytes_to_cloudinary(content: bytes, filename: str, folder: str = "nsg
     Uploads raw bytes to Cloudinary. Useful for generated PDFs/DOCXs.
     """
     try:
+        actual_resource_type = resource_type
+        if actual_resource_type == "auto" and filename:
+            ext = filename.split('.')[-1].lower()
+            if ext in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'csv', 'txt']:
+                actual_resource_type = "raw"
+
         response = cloudinary.uploader.upload(
             content,
             folder=folder,
-            resource_type=resource_type,
+            resource_type=actual_resource_type,
             filename_override=filename,
             use_filename=True,
             unique_filename=True
