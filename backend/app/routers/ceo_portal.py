@@ -2246,6 +2246,7 @@ def process_manual_payroll(user_id: int, req: ProcessPayrollRequest, current_use
     payslip.arrear_days = req.arrear_days
     payslip.lop_days = req.lop_days
     payslip.lop_days_reversed = req.lop_days_reversed
+    payslip.custom_payslip_html = req.custom_payslip_html
     payslip.processed_by_id = current_user.id
     
     # Log Action
