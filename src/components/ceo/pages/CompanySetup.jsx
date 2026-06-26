@@ -479,7 +479,7 @@ export default function CompanySetup() {
         });
         if (configs.company_logo) {
           setLogoFile(configs.company_logo.split('/').pop());
-          setLogoPreview("http://localhost:8000" + configs.company_logo);
+          setLogoPreview(configs.company_logo.startsWith('http') ? configs.company_logo : "http://localhost:8000" + configs.company_logo);
         }
       }
     } catch (err) { }
@@ -641,7 +641,7 @@ export default function CompanySetup() {
         if (res.ok) {
           const data = await res.json();
           setLogoFile(fileName);
-          setLogoPreview("http://localhost:8000" + data.file_url);
+          setLogoPreview(data.file_url.startsWith('http') ? data.file_url : "http://localhost:8000" + data.file_url);
           window.showToast('Logo perfectly cropped and securely uploaded.');
           refreshCompanyConfig();
         } else {
