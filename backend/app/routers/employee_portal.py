@@ -483,6 +483,7 @@ class PayslipResponse(BaseModel):
     payment_method: Optional[str] = None
     transaction_ref: Optional[str] = None
     payment_date: Optional[datetime] = None
+    custom_payslip_html: Optional[str] = None
 
     class Config:
         from_attributes = True
