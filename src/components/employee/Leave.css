@@ -355,7 +355,8 @@
   border: 1px solid var(--lv-border);
 }
 .lv-history-table-wrap { 
-  overflow-x: auto; 
+  overflow: auto; 
+  max-height: 450px;
   padding-bottom: 8px;
 }
 
@@ -379,6 +380,8 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
+  table-layout: fixed;
+  min-width: 650px;
 }
 .lv-table th {
   padding: 8px 12px;
@@ -389,13 +392,15 @@
   letter-spacing: 0.6px;
   color: var(--lv-text-muted);
   border-bottom: 1px solid var(--lv-border);
-  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--lv-surface);
+  z-index: 10;
 }
 .lv-table-row td {
   padding: 12px 12px;
   border-bottom: 1px solid var(--lv-border);
   vertical-align: middle;
-  white-space: nowrap;
   color: var(--lv-text-secondary);
   transition: background 0.15s;
 }

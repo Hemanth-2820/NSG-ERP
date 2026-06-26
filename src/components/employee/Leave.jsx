@@ -307,14 +307,14 @@ function LeaveHistoryTable({ history, onCancelRequest }) {
         <table className="lv-table">
           <thead>
             <tr>
-              <th>Applied</th>
-              <th>Type</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Days</th>
-              <th>Status</th>
-              <th>Approver</th>
-              <th></th>
+              <th style={{ width: '14%' }}>Applied</th>
+              <th style={{ width: '16%' }}>Type</th>
+              <th style={{ width: '14%' }}>From</th>
+              <th style={{ width: '14%' }}>To</th>
+              <th style={{ width: '9%' }}>Days</th>
+              <th style={{ width: '14%' }}>Status</th>
+              <th style={{ width: '14%' }}>Approver</th>
+              <th style={{ width: '5%' }}></th>
             </tr>
           </thead>
           <tbody>

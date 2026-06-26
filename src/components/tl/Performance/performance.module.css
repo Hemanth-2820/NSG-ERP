@@ -31,6 +31,7 @@
   border: 1px solid var(--border-color);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  min-width: 0;
 }
 
 .formCard:hover, .activeCard:hover {
@@ -109,13 +110,32 @@
 }
 
 .tableWrapper {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 450px;
+}
+
+.tableWrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.tableWrapper::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+.tableWrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.tableWrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .trackerTable {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  table-layout: fixed;
+  min-width: 900px;
 }
 
 .trackerTable th {
@@ -126,6 +146,10 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid #f1f5f9;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
 }
 
 .trackerTable td {

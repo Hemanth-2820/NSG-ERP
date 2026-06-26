@@ -63,7 +63,8 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 1000px;
+  min-width: 1200px;
+  table-layout: fixed;
 }
 
 .ts-table th {

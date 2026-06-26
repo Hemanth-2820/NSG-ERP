@@ -415,10 +415,10 @@ export default function Performance({ currentUser }) {
                 <table className={styles.trackerTable}>
                   <thead>
                     <tr>
-                      <th>Employee</th>
-                      <th>Rating</th>
-                      <th>Feedback / Comments</th>
-                      <th>Status (Employee & HR)</th>
+                      <th style={{ width: '20%' }}>Employee</th>
+                      <th style={{ width: '25%' }}>Rating</th>
+                      <th style={{ width: '30%' }}>Feedback / Comments</th>
+                      <th style={{ width: '25%' }}>Status (Employee & HR)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -426,7 +426,7 @@ export default function Performance({ currentUser }) {
                       <tr key={sc.id}>
                         <td><strong>{sc.employee_name}</strong></td>
                         <td>
-                          <span className={`${styles.badge} ${sc.rating.startsWith('A') ? styles.badgeSuccess : sc.rating.startsWith('B') ? styles.badgeWarning : styles.badgeDanger}`}>
+                          <span className={`${styles.badge} ${sc.rating.startsWith('A') ? styles.badgeExcellent : sc.rating.startsWith('B') ? styles.badgeCompetent : sc.rating.startsWith('C') ? styles.badgeDeveloping : styles.badgeNeedsImprovement}`} style={{ whiteSpace: 'nowrap' }}>
                             {sc.rating}
                           </span>
                         </td>
