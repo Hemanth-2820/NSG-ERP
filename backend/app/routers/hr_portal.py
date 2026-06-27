@@ -537,8 +537,8 @@ def get_dashboard_metrics(current_user: models.User = Depends(security.get_curre
     verify_hr_role(current_user)
     
     total_employees = db.query(models.User).filter(models.User.role == "employee").count()
-    active_employees = db.query(models.User).filter(models.User.role == "employee", models.User.status == "active").count()
-    probation_employees = db.query(models.User).filter(models.User.role == "employee", models.User.status == "probation").count()
+    active_employees = db.query(models.User).filter(models.User.role == "employee", func.lower(models.User.status) == "active").count()
+    probation_employees = db.query(models.User).filter(models.User.role == "employee", func.lower(models.User.status) == "probation").count()
     active_candidates = db.query(models.Candidate).filter(models.Candidate.stage.notin_(["joined", "rejected"])).count()
     ongoing_pips = db.query(models.PIP).filter(models.PIP.status == "ongoing").count()
     pending_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.status == "pending").count()

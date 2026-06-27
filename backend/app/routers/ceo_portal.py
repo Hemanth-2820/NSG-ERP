@@ -360,7 +360,7 @@ def get_dashboard_heatmap(current_user: models.User = Depends(security.get_curre
         calculated_dates.append(d)
         
     # Get all users and group by department
-    users = db.query(models.User).filter(models.User.role == "employee", models.User.status == "active").offset(skip).limit(limit).all()
+    users = db.query(models.User).filter(models.User.role == "employee", func.lower(models.User.status) == "active").offset(skip).limit(limit).all()
     dept_users = {dept: [] for dept in heatmap_depts}
     for u in users:
         if u.department in dept_users:
@@ -1447,7 +1447,7 @@ def ceo_signoff_project(id: int, current_user: models.User = Depends(security.ge
 @router.get("/dashboard/summary")
 def get_dashboard_summary(current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)
-    headcount = db.query(models.User).filter(models.User.status == "active").count()
+    headcount = db.query(models.User).filter(func.lower(models.User.status) == "active").count()
     active_blockers = db.query(models.Escalation).filter(models.Escalation.resolved == False).count()
     
     pending_leaves = db.query(models.LeaveRequest).filter(models.LeaveRequest.status == "pending").count()
@@ -1699,8 +1699,8 @@ class ProcessPayrollRequest(BaseModel):
 def get_pending_payrolls(month: int, year: int, current_user: models.User = Depends(security.get_current_user), skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)
     
-    # Get all active users
-    users = db.query(models.User).filter(models.User.status == "active").offset(skip).limit(limit).all()
+    # Get all active users (case-insensitive)
+    users = db.query(models.User).filter(func.lower(models.User.status) == "active").offset(skip).limit(limit).all()
     pending = []
     
     for u in users:
