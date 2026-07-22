@@ -1652,8 +1652,7 @@ class AppraisalScorecardResponse(BaseModel):
 # 8. Org Chart
 @router.get("/org-chart", response_model=List[OrgChartResponse])
 def get_org_chart(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
-    # Return all active employees, TLs, managers, HR, CEO
-    active_users = db.query(models.User).filter(models.User.status.in_(["active", "probation"])).all()
+    active_users = db.query(models.User).filter(models.User.status.in_(["active", "probation", "Active", "Probation"])).all()
     ceos = db.query(models.User).filter(models.User.role == "ceo").all()
     user_dict = {u.id: u for u in active_users + ceos}
     return list(user_dict.values())
