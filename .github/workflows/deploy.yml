@@ -21,7 +21,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             # Navigate to the project directory on the server
-            cd /path/to/your/project/folder/NSG-ERP
+            cd ~/NSG-ERP
             
             # Pull the latest code
             git pull origin main
