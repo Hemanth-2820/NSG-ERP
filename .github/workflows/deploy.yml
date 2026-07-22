@@ -27,7 +27,7 @@ jobs:
             git pull origin main
             
             # Rebuild and restart the Docker containers
-            docker-compose up -d --build
+            docker compose up -d --build
             
             # Clean up old unused images
             docker image prune -f
