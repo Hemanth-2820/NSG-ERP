@@ -3754,6 +3754,11 @@ def hr_get_channels(skip: int = 0, limit: int = 100, db: Session = Depends(datab
     channels = db.query(models.ChatChannel).offset(skip).limit(limit).all()
     filtered_channels = []
     for c in channels:
+        if c.id.startswith("dm-"):
+            if current_user.name and current_user.name in c.id:
+                filtered_channels.append(c)
+            continue
+            
         try:
             members = json.loads(c.members) if c.members else []
             if str(current_user.id) in members or str(current_user.name) in members or current_user.role in ["ceo", "hr"]:

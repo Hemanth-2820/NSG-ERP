@@ -1212,9 +1212,14 @@ def get_channels(db: Session = Depends(database.get_db), current_user: models.Us
     channels = db.query(models.ChatChannel).all()
     filtered_channels = []
     for c in channels:
+        if c.id.startswith("dm-"):
+            # It's a DM channel: check if current user is part of it by name
+            if current_user.name and current_user.name in c.id:
+                filtered_channels.append(c)
+            continue
+            
         try:
             members = json.loads(c.members) if c.members else []
-            # Allow if current user's ID (as string) or name is in members, or if user is CEO/HR (fallback)
             if str(current_user.id) in members or str(current_user.name) in members or current_user.role in ["ceo", "hr"]:
                 filtered_channels.append(c)
         except:
