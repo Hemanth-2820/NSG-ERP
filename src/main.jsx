@@ -15,6 +15,20 @@ window.fetch = async function() {
   // Ensure cookies are sent with every cross-origin/same-origin request
   config.credentials = 'include';
   
+  // Prevent browser caching for GET requests (fixes UI not updating without refresh)
+  const isGet = !config.method || config.method.toUpperCase() === 'GET';
+  if (isGet) {
+    // Some browsers/proxies ignore 'no-store' or 'no-cache', so appending a timestamp is safest
+    config.cache = 'no-store';
+    
+    // Only append timestamp if resource is a string
+    if (typeof resource === 'string' && !resource.startsWith('data:')) {
+      const urlObj = new URL(resource, window.location.origin);
+      urlObj.searchParams.set('_t', Date.now());
+      resource = urlObj.toString();
+    }
+  }
+  
   // Strip manual Authorization Bearer tokens since we use cookies now
   if (config.headers) {
     const headersObj = new Headers(config.headers);
