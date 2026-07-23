@@ -1208,17 +1208,38 @@ class ChannelUpdate(BaseModel):
 
 @router.get("/chat/channels", response_model=List[ChannelResponse])
 def get_channels(db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
-    return db.query(models.ChatChannel).all()
+    import json
+    channels = db.query(models.ChatChannel).all()
+    filtered_channels = []
+    for c in channels:
+        try:
+            members = json.loads(c.members) if c.members else []
+            # Allow if current user's ID (as string) or name is in members, or if user is CEO/HR (fallback)
+            if str(current_user.id) in members or str(current_user.name) in members or current_user.role in ["ceo", "hr"]:
+                filtered_channels.append(c)
+        except:
+            pass
+    return filtered_channels
 
 @router.post("/chat/channels", response_model=ChannelResponse, status_code=status.HTTP_201_CREATED)
 def create_channel(req: ChannelCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
+    if current_user.role not in ["hr", "ceo"]:
+        raise HTTPException(status_code=403, detail="Only HR or CEO can create channels")
+        
     import json
+    
+    # Auto-add HR and CEO members
+    mandatory_users = db.query(models.User).filter(models.User.role.in_(["hr", "ceo"])).all()
+    mandatory_ids = [str(u.id) for u in mandatory_users]
+    
+    final_members = list(set(req.members + mandatory_ids))
+    
     channel = models.ChatChannel(
         id=req.id,
         name=req.name,
         label=req.label,
         type=req.type,
-        members=json.dumps(req.members)
+        members=json.dumps(final_members)
     )
     db.add(channel)
     db.commit()
@@ -1306,6 +1327,11 @@ def update_channel_members(channel_id: str, req: MembersUpdate, db: Session = De
     """Update the member list for a channel. Called by HR portal when adding/removing employees."""
     import json
     channel = db.query(models.ChatChannel).filter(models.ChatChannel.id == channel_id).first()
+    # Always enforce HR and CEO members
+    mandatory_users = db.query(models.User).filter(models.User.role.in_(["hr", "ceo"])).all()
+    mandatory_ids = [str(u.id) for u in mandatory_users]
+    final_members = list(set(req.members + mandatory_ids))
+
     if not channel:
         # Auto-create channel if it does not exist
         channel = models.ChatChannel(
@@ -1313,11 +1339,11 @@ def update_channel_members(channel_id: str, req: MembersUpdate, db: Session = De
             name=f"#{channel_id}",
             label=f"Channel {channel_id}",
             type="staff",
-            members=json.dumps(req.members)
+            members=json.dumps(final_members)
         )
         db.add(channel)
     else:
-        channel.members = json.dumps(req.members)
+        channel.members = json.dumps(final_members)
     db.commit()
     db.refresh(channel)
     return channel

@@ -3750,18 +3750,35 @@ def get_all_users_for_chat(skip: int = 0, limit: int = 100, db: Session = Depend
 @router.get("/chat/channels", response_model=List[HRChannelResponse])
 def hr_get_channels(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
     verify_hr_role(current_user)
-    return db.query(models.ChatChannel).offset(skip).limit(limit).all()
+    import json
+    channels = db.query(models.ChatChannel).offset(skip).limit(limit).all()
+    filtered_channels = []
+    for c in channels:
+        try:
+            members = json.loads(c.members) if c.members else []
+            if str(current_user.id) in members or str(current_user.name) in members or current_user.role in ["ceo", "hr"]:
+                filtered_channels.append(c)
+        except:
+            pass
+    return filtered_channels
 
 @router.post("/chat/channels", response_model=HRChannelResponse, status_code=status.HTTP_201_CREATED)
 def hr_create_channel(req: HRChannelCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(security.get_current_user)):
     verify_hr_role(current_user)
     import json
+    
+    # Auto-add HR and CEO members
+    mandatory_users = db.query(models.User).filter(models.User.role.in_(["hr", "ceo"])).all()
+    mandatory_ids = [str(u.id) for u in mandatory_users]
+    
+    final_members = list(set(req.members + mandatory_ids))
+    
     new_channel = models.ChatChannel(
         id=req.id,
         name=req.name,
         label=req.label,
         type=req.type,
-        members=json.dumps(req.members)
+        members=json.dumps(final_members)
     )
     db.add(new_channel)
     db.commit()
@@ -3834,7 +3851,13 @@ def hr_update_channel_members(channel_id: str, req: HRMembersUpdate, db: Session
         raise HTTPException(status_code=404, detail="Channel not found")
     
     import json
-    channel.members = json.dumps(req.members)
+    
+    # Always enforce HR and CEO members
+    mandatory_users = db.query(models.User).filter(models.User.role.in_(["hr", "ceo"])).all()
+    mandatory_ids = [str(u.id) for u in mandatory_users]
+    final_members = list(set(req.members + mandatory_ids))
+    
+    channel.members = json.dumps(final_members)
     db.commit()
     db.refresh(channel)
     return channel
