@@ -104,7 +104,10 @@ export default function Navbar({ activeRole, setActiveRole, navigateTo, hrDb = {
     const connectTimer = setTimeout(() => {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const userName = currentUser.name || 'User';
-      const wsUrl = `${wsProtocol}//127.0.0.1:8000/employee-portal/ws/${encodeURIComponent(userName)}`;
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const wsHost = isLocal ? '127.0.0.1:8000' : window.location.host;
+      const wsPath = isLocal ? `/employee-portal/ws/${encodeURIComponent(userName)}` : `/api/employee-portal/ws/${encodeURIComponent(userName)}`;
+      const wsUrl = `${wsProtocol}//${wsHost}${wsPath}`;
       socket = new WebSocket(wsUrl);
 
       socket.onmessage = (event) => {
