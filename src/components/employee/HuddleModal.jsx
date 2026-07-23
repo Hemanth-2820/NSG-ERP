@@ -25,7 +25,7 @@ export default function HuddleModal({ peer, onClose }) {
     if (!script) {
       script = document.createElement('script');
       script.id = scriptId;
-      script.src = 'https://meet.element.io/external_api.js';
+      script.src = 'https://meet.jit.si/external_api.js';
       script.async = true;
       script.onload = handleScriptLoad;
       document.body.appendChild(script);
@@ -48,7 +48,7 @@ export default function HuddleModal({ peer, onClose }) {
         .replace(/[^a-zA-Z0-9-_]/g, '')
         .substring(0, 80);
 
-      const domain = 'meet.element.io';
+      const domain = 'meet.jit.si';
       const options = {
         roomName: sanitizedRoomName,
         width: '100%',
