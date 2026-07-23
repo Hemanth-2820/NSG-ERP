@@ -18,15 +18,17 @@ window.fetch = async function() {
   // Prevent browser caching for GET requests (fixes UI not updating without refresh)
   const isGet = !config.method || config.method.toUpperCase() === 'GET';
   if (isGet) {
-    // Some browsers/proxies ignore 'no-store' or 'no-cache', so appending a timestamp is safest
     config.cache = 'no-store';
     
-    // Only append timestamp if resource is a string
-    if (typeof resource === 'string' && !resource.startsWith('data:')) {
-      const urlObj = new URL(resource, window.location.origin);
-      urlObj.searchParams.set('_t', Date.now());
-      resource = urlObj.toString();
+    // Set headers to prevent caching
+    if (!config.headers) {
+      config.headers = {};
     }
+    const headersObj = new Headers(config.headers);
+    headersObj.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    headersObj.set('Pragma', 'no-cache');
+    headersObj.set('Expires', '0');
+    config.headers = headersObj;
   }
   
   // Strip manual Authorization Bearer tokens since we use cookies now
