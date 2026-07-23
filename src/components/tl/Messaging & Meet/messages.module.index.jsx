@@ -1214,7 +1214,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
 
         {/* Pinned Messages Banner */}
         {(() => {
-          const pinnedMsgs = (messages[selectedChannel] || []).filter(m => m.is_pinned);
+          const pinnedMsgs = (messages[selectedChannel] || []).filter(m => m.is_pinned && !m.deleted_at);
           if (pinnedMsgs.length === 0) return null;
           return (
             <div style={{ background: '#FEF3C7', borderBottom: '1px solid #FDE68A', padding: '10px 24px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -1299,7 +1299,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
               }
               return true;
             }).map((msg, idx) => {
-              const isMsgMe = msg.sender === tlName || msg.sender === tlName + ' (TL)';
+              const isMsgMe = msg.isMe || (msg.sender && msg.sender === tlName);
               const isDeleted = !!msg.deleted_at;
               
               let parsedReactions = {};
@@ -2042,7 +2042,7 @@ export default function Messages({ initialSelectedChannel, currentUser }) {
             </button>
 
             {/* If it's my message, I can edit/delete */}
-            {(contextMenu.msg.isMe || (contextMenu.msg.sender && (contextMenu.msg.sender === tlName || contextMenu.msg.sender.includes('TL') || contextMenu.msg.sender.includes('CEO') || contextMenu.msg.sender.toLowerCase() === 'ceo' || contextMenu.msg.sender.includes('HR') || contextMenu.msg.sender.toLowerCase() === 'hr' || contextMenu.msg.sender.includes('TL') || contextMenu.msg.sender.toLowerCase() === 'tl'))) && (
+            {(contextMenu.msg.isMe || (contextMenu.msg.sender && contextMenu.msg.sender === tlName)) && (
               <>
                 <button 
                   onClick={() => { setEditingMessageId(contextMenu.msg.id); setEditingText(contextMenu.msg.text); closeContextMenu(); }} 

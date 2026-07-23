@@ -1265,7 +1265,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
 
         {/* Pinned Messages Banner */}
         {(() => {
-          const pinnedMsgs = (messages[selectedChannel] || []).filter(m => m.is_pinned);
+          const pinnedMsgs = (messages[selectedChannel] || []).filter(m => m.is_pinned && !m.deleted_at);
           if (pinnedMsgs.length === 0) return null;
           return (
             <div style={{ background: '#FEF3C7', borderBottom: '1px solid #FDE68A', padding: '10px 24px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -1350,7 +1350,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
               }
               return true;
             }).map((msg, idx) => {
-              const isMsgMe = msg.isMe || (msg.sender && (msg.sender === userName || msg.sender.includes('CEO') || msg.sender.includes('HR') || msg.sender.toLowerCase() === 'hr' || msg.sender.includes('TL') || msg.sender.toLowerCase() === 'tl'));
+              const isMsgMe = msg.isMe || (msg.sender && msg.sender === userName);
               const isDeleted = !!msg.deleted_at;
               
               let parsedReactions = {};
@@ -2093,7 +2093,7 @@ export function HrMessagingView({ initialSelectedChannel, currentUser }) {
             </button>
 
             {/* If it's my message, I can edit/delete */}
-            {(contextMenu.msg.isMe || (contextMenu.msg.sender && (contextMenu.msg.sender === userName || contextMenu.msg.sender.includes('CEO') || contextMenu.msg.sender.toLowerCase() === 'ceo' || contextMenu.msg.sender.includes('HR') || contextMenu.msg.sender.toLowerCase() === 'hr' || contextMenu.msg.sender.includes('TL') || contextMenu.msg.sender.toLowerCase() === 'tl'))) && (
+            {(contextMenu.msg.isMe || (contextMenu.msg.sender && contextMenu.msg.sender === userName)) && (
               <>
                 <button 
                   onClick={() => { setEditingMessageId(contextMenu.msg.id); setEditingText(contextMenu.msg.text); closeContextMenu(); }} 
