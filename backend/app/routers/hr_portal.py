@@ -898,9 +898,29 @@ def get_team_leads(current_user: models.User = Depends(security.get_current_user
     verify_hr_role(current_user)
     return db.query(models.User).filter(models.User.role == "tl").offset(skip).limit(limit).all()
 
+def validate_unique_financials(db: Session, req: BaseModel, exclude_id: Optional[int] = None):
+    fields = {
+        "pan_number": getattr(req, "pan_number", None),
+        "pf_number": getattr(req, "pf_number", None),
+        "uan": getattr(req, "uan", None),
+        "esi_number": getattr(req, "esi_number", None),
+        "account_number": getattr(req, "account_number", None)
+    }
+    for field_name, value in fields.items():
+        if value and str(value).strip():
+            query = db.query(models.User).filter(getattr(models.User, field_name) == str(value).strip())
+            if exclude_id:
+                query = query.filter(models.User.id != exclude_id)
+            if query.first():
+                label = field_name.replace('_', ' ').upper()
+                raise HTTPException(status_code=400, detail=f"The {label} '{value}' is already registered to another employee.")
+
 @router.post("/employees", response_model=EmployeeCreateResponse, status_code=status.HTTP_201_CREATED)
 def add_employee(req: EmployeeCreateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_hr_role(current_user)
+    
+    validate_unique_financials(db, req)
+    
     exists = db.query(models.User).filter(models.User.email == req.email).first()
     if exists:
         raise HTTPException(status_code=400, detail="Employee already exists.")
@@ -1146,6 +1166,8 @@ def update_employee(id: int, req: EmployeeUpdateRequest, current_user: models.Us
     emp = db.query(models.User).filter(models.User.id == id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
+
+    validate_unique_financials(db, req, exclude_id=id)
 
     if req.name is not None:
         emp.name = req.name

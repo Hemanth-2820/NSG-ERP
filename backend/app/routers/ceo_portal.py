@@ -402,9 +402,36 @@ def get_all_users_by_ceo(current_user: models.User = Depends(security.get_curren
     verify_ceo_role(current_user)
     return db.query(models.User).filter(models.User.role != "admin").offset(skip).limit(limit).all()
 
+@router.get("/users/{user_id}", response_model=UserDetailResponse)
+def get_user_by_ceo(user_id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return user
+
+def validate_unique_financials(db: Session, req: BaseModel, exclude_id: Optional[int] = None):
+    fields = {
+        "pan_number": getattr(req, "pan_number", None),
+        "pf_number": getattr(req, "pf_number", None),
+        "uan": getattr(req, "uan", None),
+        "esi_number": getattr(req, "esi_number", None),
+        "account_number": getattr(req, "account_number", None)
+    }
+    for field_name, value in fields.items():
+        if value and str(value).strip():
+            query = db.query(models.User).filter(getattr(models.User, field_name) == str(value).strip())
+            if exclude_id:
+                query = query.filter(models.User.id != exclude_id)
+            if query.first():
+                label = field_name.replace('_', ' ').upper()
+                raise HTTPException(status_code=400, detail=f"The {label} '{value}' is already registered to another employee.")
+
 @router.post("/users", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_user_by_ceo(req: UserCreateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
     verify_ceo_role(current_user)
+    
+    validate_unique_financials(db, req)
     
     exists = db.query(models.User).filter(models.User.email == req.email).first()
     if exists:
@@ -465,6 +492,8 @@ def update_user_by_ceo(user_id: int, req: UserUpdateRequest, current_user: model
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found.")
+        
+    validate_unique_financials(db, req, exclude_id=user_id)
         
     if req.name is not None:
         db_user.name = req.name
