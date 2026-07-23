@@ -9,6 +9,11 @@ export default function HuddleModal({ peer, onClose }) {
   
   const containerRef = useRef(null);
   const jitsiApiRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 1. Dynamically load Jitsi Meet iframe API
   useEffect(() => {
@@ -87,7 +92,7 @@ export default function HuddleModal({ peer, onClose }) {
 
         // Auto-terminate modal when employee hangs up inside the frame
         api.addEventListener('videoConferenceLeft', () => {
-          onClose();
+          if (onCloseRef.current) onCloseRef.current();
         });
       } catch (err) {
         console.error('Failed to initialize Jitsi Meet iframe API:', err);
@@ -100,7 +105,8 @@ export default function HuddleModal({ peer, onClose }) {
         }
       };
     }
-  }, [jitsiLoaded, connecting, peer, onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jitsiLoaded, connecting, peer]);
 
   // Premium loading ring screen during handshake
   if (connecting) {
