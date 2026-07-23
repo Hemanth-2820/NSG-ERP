@@ -638,7 +638,16 @@ def create_candidate(req: CandidateCreate, current_user: models.User = Depends(s
     
     exists = db.query(models.Candidate).filter(models.Candidate.email == req.email).first()
     if exists:
-        raise HTTPException(status_code=400, detail=f"A candidate with the email {req.email} already exists in the ATS.")
+        # Upsert: Update existing candidate with new data
+        exists.name = req.name
+        exists.phone = req.phone
+        exists.role = req.role
+        exists.source = req.source
+        exists.stage = "applied"  # Reset to applied
+        exists.resume_url = req.resume_url
+        db.commit()
+        db.refresh(exists)
+        return exists
         
     db_cand = models.Candidate(
         name=req.name,
@@ -653,6 +662,17 @@ def create_candidate(req: CandidateCreate, current_user: models.User = Depends(s
     db.commit()
     db.refresh(db_cand)
     return db_cand
+
+@router.delete("/candidates/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_candidate(candidate_id: int, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_hr_role(current_user)
+    cand = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    db.delete(cand)
+    db.commit()
+    return None
 
 @router.put("/candidates/{id}/stage", response_model=CandidateResponse)
 def update_candidate_stage(id: int, req: StageUpdateRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):

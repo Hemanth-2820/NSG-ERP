@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { Calendar, FileText, ArrowRight } from 'lucide-react';
+import { Calendar, FileText, ArrowRight, Trash2 } from 'lucide-react';
 import { notify } from '../../utils/notify';
 import { useCompany } from '../../../common/CompanyContext';
 
@@ -183,7 +183,25 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
       await fetchCandidates();
       notify(`Candidate moved to ${newStage}.`, 'success');
     } catch (err) {
-      notify(`Error updating stage: ${err.message}`, 'error');
+      notify(err.message, 'error');
+    }
+  };
+
+  const handleDeleteCandidate = async (id) => {
+    try {
+      const res = await fetch(`/api/hr-portal/candidates/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (!res.ok) {
+        let errData = {};
+        try { errData = await res.json(); } catch(e){}
+        throw new Error(errData.detail || 'Failed to delete candidate.');
+      }
+      await fetchCandidates();
+      notify('Candidate deleted successfully.', 'success');
+    } catch (err) {
+      notify(err.message, 'error');
     }
   };
 
@@ -492,6 +510,13 @@ export function RecruitmentView({ queryParams, setQueryParams }) {
                         ✕ Reject
                       </button>
                     )}
+                    <button style={{ background: 'none', border: '1px solid #9ca3af', color: '#6b7280', cursor: 'pointer', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }} onClick={() => {
+                      if (window.confirm(`Are you sure you want to completely delete ${cand.name} from the ATS? This cannot be undone.`)) {
+                        handleDeleteCandidate(cand.id);
+                      }
+                    }}>
+                      <Trash2 size={12} />
+                    </button>
 
                     {st.id === 'joined' && (
                       <button style={{ background: 'var(--accent-pink)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }} onClick={() => {
