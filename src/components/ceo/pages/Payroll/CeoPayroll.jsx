@@ -864,7 +864,7 @@ export default function CeoPayroll() {
   return (
     <div className="ceo-payroll-container">
       {showMappingModal && (
-        <div className="ceo-modal-overlay">
+        <div className="ceo-modal-overlay" style={{ zIndex: 2000 }}>
           <div className="ceo-modal" style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="ceo-modal-header">
               <h2>Map PDF Coordinates</h2>
