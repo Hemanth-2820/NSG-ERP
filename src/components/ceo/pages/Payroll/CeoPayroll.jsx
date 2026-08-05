@@ -98,11 +98,6 @@ export default function CeoPayroll() {
   const [isEditingPdf, setIsEditingPdf] = useState(false);
   const [isExtractingPdf, setIsExtractingPdf] = useState(false);
 
-  const [showDocxPreviewModal, setShowDocxPreviewModal] = useState(false);
-  const [docxExtractedBlocks, setDocxExtractedBlocks] = useState([]);
-  const [docxEdits, setDocxEdits] = useState({});
-  const [isExtractingDocx, setIsExtractingDocx] = useState(false);
-
 
   
   const fetchPdfTemplateInfo = async () => {
@@ -1475,38 +1470,18 @@ export default function CeoPayroll() {
                 )}
               </div>
               
-              {/* CSV Board Right Panel */}
+              {/* Mapping Prompt for Custom PDF */}
               {currentPdfFile && Object.keys(customFieldMappings).length === 0 && (
-              <div className="custom-scroll" style={{ flex: '0 0 35%', overflowY: 'auto', maxHeight: '70vh', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
-                 <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>CSV Board (Text Extracted from PDF)</h3>
-                 {isExtractingPdf ? (
-                     <div style={{ fontSize: '12px', color: '#6b7280', padding: '10px', textAlign: 'center' }}>
-                         Extracting text...
-                     </div>
-                 ) : pdfExtractedBlocks.length === 0 ? (
-                     <div style={{ fontSize: '13px', color: '#ef4444', padding: '10px', textAlign: 'center', backgroundColor: '#fef2f2', borderRadius: '4px' }}>
-                         <strong>No editable text found!</strong>
-                     </div>
-                 ) : (
-                     pdfExtractedBlocks.map((block, idx) => (
-                        <div key={idx} style={{ marginBottom: '12px' }}>
-                           <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original: {block}</label>
-                           <textarea 
-                              rows={2}
-                              value={pdfEdits[idx] !== undefined ? pdfEdits[idx] : block}
-                              onChange={(e) => setPdfEdits({...pdfEdits, [idx]: e.target.value})}
-                              style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
-                           />
-                        </div>
-                     ))
-                 )}
-                 <button 
-                    onClick={handleBatchPdfEdit} 
-                    disabled={isEditingPdf}
-                    style={{ marginTop: '20px', padding: '10px', backgroundColor: isEditingPdf ? '#9ca3af' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: isEditingPdf ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
-                 >
-                    {isEditingPdf ? 'Applying Updates...' : 'Apply All Updates to PDF'}
-                 </button>
+              <div style={{ flex: '0 0 35%', backgroundColor: '#fffbeb', border: '1px solid #fcd34d', padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                  <h3 style={{ color: '#92400e', marginBottom: '8px', fontSize: '16px' }}>Mapping Required</h3>
+                  <p style={{ color: '#b45309', fontSize: '14px', marginBottom: '16px' }}>You uploaded a custom PDF but haven't mapped the text fields yet. Please open the mapping tool to tell the system where to place the employee data.</p>
+                  <button onClick={() => {
+                     setFieldMappings(customFieldMappings);
+                     setIsMappingGlobal(false);
+                     setShowMappingModal(true);
+                  }} style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '10px 20px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                     Open Mapping Tool
+                  </button>
               </div>
               )}
               {currentPdfFile && Object.keys(customFieldMappings).length > 0 && (
