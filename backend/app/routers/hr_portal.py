@@ -4028,10 +4028,14 @@ async def extract_pdf_text(
             for b in blocks:
                 if b[6] == 0:  # Text block
                     text = b[4].strip()
-                    if text and len(text) > 1: # Filter out empty or single-character noise
-                        # check if already added to avoid exact duplicates
-                        if text not in extracted_blocks:
-                            extracted_blocks.append(text)
+                    if text:
+                        # Split by newline so each table cell / line gets its own granular box in the CSV board
+                        for line_text in text.split('\n'):
+                            line_text = line_text.strip()
+                            if line_text and len(line_text) > 1:
+                                # check if already added to avoid exact duplicates
+                                if line_text not in extracted_blocks:
+                                    extracted_blocks.append(line_text)
                             
         doc.close()
         return {"blocks": extracted_blocks}
