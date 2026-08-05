@@ -3985,9 +3985,9 @@ async def edit_pdf_text(
             text_instances = page.search_for(search_text)
             
             for inst in text_instances:
-                # Redact the old text
-                page.add_redact_annot(inst, fill=(1, 1, 1)) # White background
-                page.apply_redactions()
+                # Redact the old text by removing it (without drawing a white box that hides borders)
+                page.add_redact_annot(inst)
+                page.apply_redactions(images=0, graphics=0)
                 
                 # Insert the new text. Try to match standard font sizes based on rect height.
                 # height of rect is approximately the font size
@@ -4090,7 +4090,8 @@ async def batch_edit_pdf_text(
                     for r in match_rects[1:]:
                         u_rect = u_rect | fitz.Rect(r)
                         
-                    page.add_redact_annot(u_rect, fill=(1, 1, 1))
+                    # Add redaction without a fill color, so it deletes text but doesn't draw an opaque white box that hides borders
+                    page.add_redact_annot(u_rect)
                     redactions_added = True
                     
                     
@@ -4100,8 +4101,8 @@ async def batch_edit_pdf_text(
                     calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
                     
                     # Create a text rect that fits the width, and is at least as tall as the original text block
-                    # plus a little extra padding, so large blocks (like tables) don't get truncated and disappear!
-                    bottom_y = max(u_rect.y1 + (calculated_fontsize * 2), u_rect.y0 + (calculated_fontsize * 6))
+                    # Give it plenty of height so PyMuPDF doesn't silently abort inserting the text if it wraps
+                    bottom_y = max(u_rect.y1 + 100, u_rect.y0 + (calculated_fontsize * 10))
                     text_rect = fitz.Rect(u_rect.x0, u_rect.y0, max(u_rect.x1, page.rect.x1 - 40), bottom_y)
                     
                     insertions.append({
