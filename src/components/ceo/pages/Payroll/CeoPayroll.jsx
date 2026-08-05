@@ -106,6 +106,11 @@ export default function CeoPayroll() {
           const [docxMapping, setDocxMapping] = useState(null);
     const [docxPreviewUrl, setDocxPreviewUrl] = useState(null);
   const [csvBoardEdits, setCsvBoardEdits] = useState({});
+  const [logoData, setLogoData] = useState(null);
+  const [logoPos, setLogoPos] = useState({ x: 0.85, y: 0.05, width: 120 });
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const [signaturePos, setSignaturePos] = useState({ x: 0.85, y: 0.85, width: 120 });
+  const [isDraggingSignature, setIsDraggingSignature] = useState(false);
   
   const fetchPdfTemplateInfo = async () => {
     try {
@@ -451,6 +456,14 @@ export default function CeoPayroll() {
     // Construct values dict for the preview
     const values = { ...getDocxBaseValues(), ...csvBoardEdits };
 
+    const payload = { values };
+    if (logoData) {
+        payload.logo = { data: logoData, ...logoPos };
+    }
+    if (signatureBase64) {
+        payload.signature = { data: signatureBase64, ...signaturePos };
+    }
+
     try {
         const token = localStorage.getItem('nsg_jwt_token');
         const res = await fetch('/api/ceo-portal/payroll/template/docx/preview', {
@@ -459,7 +472,7 @@ export default function CeoPayroll() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ values })
+            body: JSON.stringify(payload)
         });
         
         if (res.ok) {
@@ -750,6 +763,13 @@ export default function CeoPayroll() {
             payment_mode: paymentMethod || ''
           };
           const values = { ...baseRecordValues, ...csvBoardEdits };
+          const payload = { values };
+          if (logoData) {
+              payload.logo = { data: logoData, ...logoPos };
+          }
+          if (signatureBase64) {
+              payload.signature = { data: signatureBase64, ...signaturePos };
+          }
 
           const res = await fetch('/api/ceo-portal/payroll/template/docx/generate', {
               method: 'POST',
@@ -757,7 +777,7 @@ export default function CeoPayroll() {
                   'Authorization': `Bearer ${token}`,
                   'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ values })
+              body: JSON.stringify(payload)
           });
           
           if (!res.ok) throw new Error('Failed to generate DOCX');
@@ -1253,9 +1273,12 @@ export default function CeoPayroll() {
                             ref={sigPad}
                             penColor="black"
                             canvasProps={{width: 320, height: 100, className: 'sigCanvas'}}
-                            onEnd={() => setSignatureBase64(sigPad.current.getTrimmedCanvas().toDataURL('image/png'))}
+                            onEnd={() => {
+                                setSignatureBase64(sigPad.current.getTrimmedCanvas().toDataURL('image/png'));
+                                setTimeout(getDocxPreview, 100);
+                            }}
                         />
-                        <button onClick={() => { sigPad.current.clear(); setSignatureBase64(''); }} style={{ position: 'absolute', bottom: '4px', right: '4px', fontSize: '10px', padding: '2px 4px', cursor: 'pointer' }}>Clear</button>
+                        <button onClick={() => { sigPad.current.clear(); setSignatureBase64(''); setTimeout(getDocxPreview, 100); }} style={{ position: 'absolute', bottom: '4px', right: '4px', fontSize: '10px', padding: '2px 4px', cursor: 'pointer' }}>Clear</button>
                     </div>
                 )}
                 {signatureType === 'upload' && (
@@ -1264,8 +1287,14 @@ export default function CeoPayroll() {
                             const file = e.target.files[0];
                             if (file) {
                                 const reader = new FileReader();
-                                reader.onloadend = () => setSignatureBase64(reader.result);
+                                reader.onloadend = () => {
+                                    setSignatureBase64(reader.result);
+                                    setTimeout(getDocxPreview, 100);
+                                };
                                 reader.readAsDataURL(file);
+                            } else {
+                                setSignatureBase64('');
+                                setTimeout(getDocxPreview, 100);
                             }
                         }} style={{ width: '100%', fontSize: '13px' }} />
                     </div>
@@ -1312,6 +1341,125 @@ export default function CeoPayroll() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {docxMapping && (
+                    <div style={{ marginTop: '16px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                        <h4 style={{ margin: '0 0 12px', fontSize: '13px', color: '#1e293b' }}>Add Custom Logo</h4>
+                        <input type="file" accept="image/*" onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                    setLogoData(e.target.result);
+                                    setTimeout(getDocxPreview, 100);
+                                };
+                                reader.readAsDataURL(file);
+                            } else {
+                                setLogoData(null);
+                                setTimeout(getDocxPreview, 100);
+                            }
+                        }} style={{ width: '100%', fontSize: '12px', marginBottom: '12px' }} />
+                        
+                        {(logoData || signatureBase64) && (
+                            <div style={{ marginTop: '8px' }}>
+                                <label style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '8px' }}>
+                                    Drag the logo/signature on the mini-map to position it:
+                                </label>
+                                <div style={{ 
+                                    width: '100%', 
+                                    aspectRatio: '1 / 1.414', // A4 ratio
+                                    backgroundColor: '#fff',
+                                    border: '1px dashed #cbd5e1',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    borderRadius: '4px'
+                                }}
+                                onPointerMove={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                                    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+                                    if (isDraggingLogo) {
+                                        setLogoPos(prev => ({ ...prev, x, y }));
+                                    }
+                                    if (isDraggingSignature) {
+                                        setSignaturePos(prev => ({ ...prev, x, y }));
+                                    }
+                                }}
+                                onPointerUp={() => {
+                                    if (isDraggingLogo || isDraggingSignature) {
+                                        setIsDraggingLogo(false);
+                                        setIsDraggingSignature(false);
+                                        getDocxPreview();
+                                    }
+                                }}
+                                onPointerLeave={() => {
+                                    if (isDraggingLogo || isDraggingSignature) {
+                                        setIsDraggingLogo(false);
+                                        setIsDraggingSignature(false);
+                                        getDocxPreview();
+                                    }
+                                }}
+                                >
+                                    {logoData && (
+                                        <div 
+                                            style={{ 
+                                                position: 'absolute', 
+                                                left: `${logoPos.x * 100}%`, 
+                                                top: `${logoPos.y * 100}%`,
+                                                transform: 'translate(-50%, -50%)',
+                                                cursor: 'grab',
+                                                border: '2px solid #3b82f6',
+                                                padding: '2px',
+                                                backgroundColor: 'rgba(255,255,255,0.8)'
+                                            }}
+                                            onPointerDown={(e) => {
+                                                e.preventDefault();
+                                                setIsDraggingLogo(true);
+                                            }}
+                                        >
+                                            <img src={logoData} style={{ width: '40px', height: 'auto', display: 'block' }} alt="logo-thumb" />
+                                        </div>
+                                    )}
+                                    
+                                    {signatureBase64 && (
+                                        <div 
+                                            style={{ 
+                                                position: 'absolute', 
+                                                left: `${signaturePos.x * 100}%`, 
+                                                top: `${signaturePos.y * 100}%`,
+                                                transform: 'translate(-50%, -50%)',
+                                                cursor: 'grab',
+                                                border: '2px solid #10b981',
+                                                padding: '2px',
+                                                backgroundColor: 'rgba(255,255,255,0.8)'
+                                            }}
+                                            onPointerDown={(e) => {
+                                                e.preventDefault();
+                                                setIsDraggingSignature(true);
+                                            }}
+                                        >
+                                            <img src={signatureBase64} style={{ width: '40px', height: 'auto', display: 'block' }} alt="signature-thumb" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Logo Size (px)</label>
+                                        <input type="number" value={logoPos.width} onChange={(e) => {
+                                            setLogoPos(prev => ({ ...prev, width: Number(e.target.value) }));
+                                        }} onBlur={getDocxPreview} style={{ width: '100%', padding: '4px', fontSize: '12px' }} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Sign Size (px)</label>
+                                        <input type="number" value={signaturePos.width} onChange={(e) => {
+                                            setSignaturePos(prev => ({ ...prev, width: Number(e.target.value) }));
+                                        }} onBlur={getDocxPreview} style={{ width: '100%', padding: '4px', fontSize: '12px' }} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

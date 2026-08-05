@@ -74,21 +74,15 @@ def extract_docx_fields(file_path):
         if not text:
             continue
             
-        # Try to find a label at the start of the paragraph
         # e.g., "Employee Name : __________"
-        match = process.extractOne(text, label_keys, scorer=fuzz.partial_ratio, score_cutoff=85)
-        if match:
-            matched_label, score, _ = match
-            field_id = KNOWN_LABELS[matched_label]
-            
-            # Since paragraph contains label + value, we want to replace the value part.
-            # We store the run that represents the blank line or the value.
-            # Simplified approach: We store paragraph index. We will append to it or replace runs.
-            mapping[field_id].append({
-                "type": "paragraph",
-                "paragraph": p_idx,
-                "label_found": matched_label
-            })
+        for label_text, field_id in KNOWN_LABELS.items():
+            norm_label = normalize_text(label_text)
+            if text.lower().startswith(norm_label.lower()):
+                mapping[field_id].append({
+                    "type": "paragraph",
+                    "paragraph": p_idx,
+                    "label_found": label_text
+                })
 
     return dict(mapping)
 

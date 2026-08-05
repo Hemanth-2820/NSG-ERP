@@ -3724,6 +3724,8 @@ def get_docx_template_info(current_user: models.User = Depends(security.get_curr
 from pydantic import BaseModel
 class DocxPreviewRequest(BaseModel):
     values: dict
+    logo: dict = None
+    signature: dict = None
 
 @router.post("/payroll/template/docx/preview")
 def preview_docx_template(req: DocxPreviewRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
@@ -3765,6 +3767,73 @@ def preview_docx_template(req: DocxPreviewRequest, current_user: models.User = D
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
+            
+        if req.logo and req.logo.get("data"):
+            import fitz
+            import base64
+            
+            # Extract base64 image data (strip data:image/png;base64, prefix)
+            logo_data_str = req.logo["data"]
+            if "," in logo_data_str:
+                logo_data_str = logo_data_str.split(",")[1]
+                
+            img_bytes = base64.b64decode(logo_data_str)
+            
+            # Open PDF and stamp image on the first page
+            pdf_doc = fitz.open(pdf_out)
+            page = pdf_doc[0]
+            
+            page_width = page.rect.width
+            page_height = page.rect.height
+            
+            x_pct = float(req.logo.get("x_pct", 0))
+            y_pct = float(req.logo.get("y_pct", 0))
+            width_px = float(req.logo.get("width", 150))
+            
+            # We scale width to PDF points, let's keep aspect ratio by using fitz insert_image auto scaling
+            # Create a Rect for the image. If we don't know the height, we make the rect square 
+            # and fitz will keep aspect ratio inside it.
+            x = page_width * x_pct
+            y = page_height * y_pct
+            rect = fitz.Rect(x, y, x + width_px, y + width_px)
+            
+            page.insert_image(rect, stream=img_bytes, keep_proportion=True)
+            
+            stamped_pdf_out = f"stamped_logo_{uid}.pdf"
+            pdf_doc.save(stamped_pdf_out)
+            pdf_doc.close()
+            pdf_out = stamped_pdf_out
+
+        if req.signature and req.signature.get("data"):
+            import fitz
+            import base64
+            
+            sig_data_str = req.signature["data"]
+            if "," in sig_data_str:
+                sig_data_str = sig_data_str.split(",")[1]
+                
+            img_bytes = base64.b64decode(sig_data_str)
+            
+            pdf_doc = fitz.open(pdf_out)
+            page = pdf_doc[0]
+            
+            page_width = page.rect.width
+            page_height = page.rect.height
+            
+            x_pct = float(req.signature.get("x_pct", 0))
+            y_pct = float(req.signature.get("y_pct", 0))
+            width_px = float(req.signature.get("width", 150))
+            
+            x = page_width * x_pct
+            y = page_height * y_pct
+            rect = fitz.Rect(x, y, x + width_px, y + width_px)
+            
+            page.insert_image(rect, stream=img_bytes, keep_proportion=True)
+            
+            stamped_pdf_out = f"stamped_sig_{uid}.pdf"
+            pdf_doc.save(stamped_pdf_out)
+            pdf_doc.close()
+            pdf_out = stamped_pdf_out
         
         from fastapi.responses import FileResponse
         return FileResponse(pdf_out, media_type="application/pdf", filename="preview.pdf", background=None)
