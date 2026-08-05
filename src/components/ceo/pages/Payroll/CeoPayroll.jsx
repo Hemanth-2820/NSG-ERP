@@ -97,8 +97,10 @@ export default function CeoPayroll() {
   const [pdfEdits, setPdfEdits] = useState({});
   const [isEditingPdf, setIsEditingPdf] = useState(false);
   const [isExtractingPdf, setIsExtractingPdf] = useState(false);
-
-
+  const [showDocxPreviewModal, setShowDocxPreviewModal] = useState(false);
+  const [docxExtractedBlocks, setDocxExtractedBlocks] = useState([]);
+  const [docxEdits, setDocxEdits] = useState({});
+  const [isExtractingDocx, setIsExtractingDocx] = useState(false);
   
   const fetchPdfTemplateInfo = async () => {
     try {
