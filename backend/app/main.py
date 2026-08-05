@@ -12,6 +12,17 @@ from sqlalchemy.exc import SQLAlchemyError
 # For production environments, database migrations (like Alembic) are recommended.
 try:
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-migrate global_templates to add field_mappings column if it doesn't exist
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE global_templates ADD COLUMN field_mappings JSON;"))
+            conn.commit()
+            print("Successfully added field_mappings column to global_templates")
+        except Exception as e:
+            # Column likely already exists
+            pass
 except Exception as e:
     print(f"Error creating database tables: {e}")
 

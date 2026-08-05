@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Float, ForeignKey, Text, LargeBinary
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Float, ForeignKey, Text, LargeBinary, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -937,3 +937,4 @@ class GlobalTemplate(Base):
     template_type = Column(String, unique=True, index=True, nullable=False)
     html_content = Column(Text, nullable=True)
     file_data = Column(LargeBinary, nullable=True)
+    field_mappings = Column(JSON, nullable=True)
