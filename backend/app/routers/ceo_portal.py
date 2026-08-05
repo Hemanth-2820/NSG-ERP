@@ -2090,6 +2090,14 @@ def generate_mapped_pdf(
     except:
         values["net_words"] = ""
         
+    # DEBUG LOGGING
+    with open('pdf_debug.log', 'w') as logf:
+        logf.write('Global PDF mapping keys: ' + str(mapping.keys()) + '\n')
+        logf.write('Global PDF data keys: ' + str(data.keys()) + '\n')
+        logf.write('Values: ' + str(values) + '\n')
+        
+    page.insert_text(fitz.Point(50, 50), 'DEBUG: GLOBAL API CALLED', fontsize=20, color=(1,0,0))
+
     for field_key, coords in mapping.items():
         if field_key == "signature":
             import base64
@@ -2216,6 +2224,14 @@ async def generate_custom_mapped_pdf(
     try: values["net_words"] = in_words(int(round(float(data_dict.get("net") or 0))))
     except: values["net_words"] = ""
         
+    # DEBUG LOGGING
+    with open('pdf_debug.log', 'w') as logf:
+        logf.write('Custom PDF mapping keys: ' + str(mapping_dict.keys()) + '\n')
+        logf.write('Custom PDF data keys: ' + str(data_dict.keys()) + '\n')
+        logf.write('Values: ' + str(values) + '\n')
+        
+    page.insert_text(fitz.Point(50, 50), 'DEBUG: CUSTOM API CALLED', fontsize=20, color=(1,0,0))
+
     for field_key, coords in mapping_dict.items():
         if field_key == "signature":
             import base64

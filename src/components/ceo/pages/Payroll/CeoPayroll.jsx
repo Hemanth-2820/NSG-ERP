@@ -721,8 +721,15 @@ export default function CeoPayroll() {
     try {
       const payload = {
           ...record,
+          ...manualOverrides,
           month: month,
           year: year,
+          worked_days: workedDays,
+          arrear_days: arrearDays,
+          lop_days: lopDays,
+          payment_method: paymentMethod,
+          transaction_ref: transactionRef,
+          payment_date: paymentDate,
           signature_base64: signatureBase64
       };
       
