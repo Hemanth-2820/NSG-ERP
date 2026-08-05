@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Loader, CheckCircle, Search, AlertCircle, FileText, IndianRupee, History, DollarSign, X, Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { jsPDF } from 'jspdf';
+import SignatureCanvas from 'react-signature-canvas';
 import { generatePayslipPDF } from '../../../../utils/pdfGenerator';
 import PayrollEntryRow from './PayrollEntryRow';
 import './CeoPayroll.css';
@@ -51,6 +52,9 @@ export default function CeoPayroll() {
   const [arrearDays, setArrearDays] = useState('');
   const [lopDays, setLopDays] = useState('');
   const [lopDaysReversed, setLopDaysReversed] = useState('');
+  const [signatureBase64, setSignatureBase64] = useState('');
+  const [signatureType, setSignatureType] = useState('draw'); // 'draw' or 'upload'
+  const sigPad = useRef({});
   const [letterheadUrl, setLetterheadUrl] = useState('/hmns-logo.png');
   const [hasCustomTemplate, setHasCustomTemplate] = useState(false);
   const [customHtmlContent, setCustomHtmlContent] = useState('');
@@ -65,6 +69,8 @@ export default function CeoPayroll() {
   const [fieldMappings, setFieldMappings] = useState({});
   const [selectedField, setSelectedField] = useState('employee_name');
   const [hasMappedTemplate, setHasMappedTemplate] = useState(false);
+  const [isMappingGlobal, setIsMappingGlobal] = useState(true);
+  const [customFieldMappings, setCustomFieldMappings] = useState({});
   const [pdfScale, setPdfScale] = useState(1);
 
   const MAPPABLE_FIELDS = [
@@ -80,7 +86,8 @@ export default function CeoPayroll() {
     { id: 'tds', label: 'TDS' },
     { id: 'lop', label: 'LOP' },
     { id: 'net', label: 'Net Pay' },
-    { id: 'net_words', label: 'Net Pay (Words)' }
+    { id: 'net_words', label: 'Net Pay (Words)' },
+    { id: 'signature', label: 'Authorized Signatory (Signature)' }
   ];
 
 
@@ -242,23 +249,37 @@ export default function CeoPayroll() {
       try {
         
         if (file.type === 'application/pdf') {
-          if (isGlobal) {
-             const token = localStorage.getItem('nsg_jwt_token');
-             const formData = new FormData();
-             formData.append('file', file);
-             const upRes = await fetch('/api/ceo-portal/payroll/upload-pdf-template', {
-                 method: 'POST',
-                 headers: { 'Authorization': `Bearer ${token}` },
-                 body: formData
-             });
-             if (upRes.ok) {
+             setIsMappingGlobal(isGlobal);
+             setLoading(true);
+             
+             if (isGlobal) {
+                 const token = localStorage.getItem('nsg_jwt_token');
+                 const formData = new FormData();
+                 formData.append('file', file);
+                 const upRes = await fetch('/api/ceo-portal/payroll/upload-pdf-template', {
+                     method: 'POST',
+                     headers: { 'Authorization': `Bearer ${token}` },
+                     body: formData
+                 });
+                 if (!upRes.ok) {
+                     setLoading(false);
+                     setNotification({ msg: 'Failed to upload global PDF template', type: 'error' });
+                     return;
+                 }
+             } else {
+                 setOriginalPdfFile(file);
+                 setCurrentPdfFile(file);
+                 setHasCustomTemplate(true);
+                 setCustomHtmlContent('');
+             }
+             
+             try {
                  const pdfjsLib = await import('pdfjs-dist');
                  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
                  const arrayBuffer = await file.arrayBuffer();
                  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                 const page = await pdf.getPage(1); // Usually template is 1 page
+                 const page = await pdf.getPage(1);
                  
-                 // Render at a fixed scale for mapping consistency
                  const scale = 1.5; 
                  const viewport = page.getViewport({ scale: scale });
                  const canvas = document.createElement('canvas');
@@ -270,63 +291,20 @@ export default function CeoPayroll() {
                  setMappingImage(canvas.toDataURL('image/jpeg', 0.8));
                  
                  setPdfScale(scale);
-                 setFieldMappings({});
+                 setFieldMappings({}); // Start fresh
                  setShowMappingModal(true);
                  setLoading(false);
                  e.target.value = null;
                  return;
+             } catch (err) {
+                 console.error(err);
+                 setLoading(false);
+                 setNotification({ msg: 'Error parsing PDF for mapping', type: 'error' });
+                 return;
              }
-          }
 
-          if (!isGlobal) {
-            setOriginalPdfFile(file);
-            setCurrentPdfFile(file);
-            setIsExtractingPdf(true);
-            try {
-                const token = localStorage.getItem('nsg_jwt_token');
-                const formData = new FormData();
-                formData.append('file', file);
-                const res = await fetch('/api/hr-portal/onboarding/extract-pdf-text', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setPdfExtractedBlocks(data.blocks || []);
-                    setPdfEdits({});
-                }
-            } catch (err) { console.error('Extraction failed', err); }
-            finally { setIsExtractingPdf(false); }
-          }
 
-          const pdfjsLib = await import('pdfjs-dist');
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
-          
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const viewport = page.getViewport({ scale: 2.0 });
-              
-              const canvas = document.createElement('canvas');
-              const context = canvas.getContext('2d');
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-              
-              await page.render({ canvasContext: context, viewport }).promise;
-              const imgData = canvas.toDataURL('image/jpeg', 0.8);
-              const cssHeight = (viewport.height / viewport.width) * 100;
-              
-              pagesHtml += `
-                <div style="position: relative; width: 100%; padding-bottom: ${cssHeight}%; background-image: url('${imgData}'); background-size: cover; background-repeat: no-repeat; background-position: top center; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                  <div contentEditable="true" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 40px; outline: none; z-index: 10; font-family: sans-serif; min-height: 100%;">
-                    <div><br/></div>
-                  </div>
-                </div>
-              `;
-          }
+
         } else if (file.name.endsWith('.docx')) {
           const token = localStorage.getItem('nsg_jwt_token');
           const formData = new FormData();
@@ -401,32 +379,39 @@ export default function CeoPayroll() {
 
   
   const handleSaveMapping = async () => {
-      try {
-          setLoading(true);
-          const token = localStorage.getItem('nsg_jwt_token');
-          const res = await fetch('/api/ceo-portal/payroll/save-pdf-mapping', {
-              method: 'POST',
-              headers: { 
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ mapping: fieldMappings })
-          });
-          if (res.ok) {
-              // Now we can use normal notification instead of showNotification if we want, but showNotification is here
-              setNotification({ msg: 'PDF Mapping Saved Successfully!', type: 'success' });
+      if (isMappingGlobal) {
+          try {
+              setLoading(true);
+              const token = localStorage.getItem('nsg_jwt_token');
+              const res = await fetch('/api/ceo-portal/payroll/save-pdf-mapping', {
+                  method: 'POST',
+                  headers: { 
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ mapping: fieldMappings })
+              });
+              if (res.ok) {
+                  setNotification({ msg: 'PDF Mapping Saved Successfully!', type: 'success' });
+                  setTimeout(() => setNotification(null), 3000);
+                  setShowMappingModal(false);
+                  setHasMappedTemplate(true);
+              } else {
+                  setNotification({ msg: 'Failed to save mapping', type: 'error' });
+                  setTimeout(() => setNotification(null), 3000);
+              }
+          } catch (e) {
+              setNotification({ msg: 'Error saving mapping', type: 'error' });
               setTimeout(() => setNotification(null), 3000);
-              setShowMappingModal(false);
-              setHasMappedTemplate(true);
-          } else {
-              setNotification({ msg: 'Failed to save mapping', type: 'error' });
-              setTimeout(() => setNotification(null), 3000);
+          } finally {
+              setLoading(false);
           }
-      } catch (e) {
-          setNotification({ msg: 'Error saving mapping', type: 'error' });
+      } else {
+          // Custom mapping, just save to state
+          setCustomFieldMappings(fieldMappings);
+          setShowMappingModal(false);
+          setNotification({ msg: 'Custom Template Mapping Saved locally!', type: 'success' });
           setTimeout(() => setNotification(null), 3000);
-      } finally {
-          setLoading(false);
       }
   };
 
@@ -718,6 +703,41 @@ export default function CeoPayroll() {
 
   const downloadPDF = async (record) => {
     try {
+      const payload = {
+          ...record,
+          month: month,
+          year: year,
+          signature_base64: signatureBase64
+      };
+      
+      // If Custom PDF is mapped
+      if (currentPdfFile && Object.keys(customFieldMappings).length > 0) {
+          showNotification(`Generating custom mapped PDF for ${record.employee_name}...`, 'info');
+          const token = localStorage.getItem('nsg_jwt_token');
+          const formData = new FormData();
+          formData.append('file', currentPdfFile);
+          formData.append('mapping', JSON.stringify(customFieldMappings));
+          formData.append('data', JSON.stringify(payload));
+          
+          const res = await fetch('/api/ceo-portal/payroll/generate-custom-mapped-pdf', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` },
+              body: formData
+          });
+          if (!res.ok) throw new Error('Failed to generate custom mapped PDF');
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Payslip_${record.employee_name}_${month}_${year}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          showNotification(`Downloaded PDF for ${record.employee_name}`, 'success');
+          return;
+      }
+      
       if (hasMappedTemplate) {
         showNotification(`Generating mapped PDF for ${record.employee_name}...`, 'info');
         const token = localStorage.getItem('nsg_jwt_token');
@@ -1189,6 +1209,36 @@ export default function CeoPayroll() {
                   </div>
                 </div>
 
+                
+                <hr style={{ margin: '8px 0', border: '1px solid #e2e8f0' }} />
+                <h4 style={{ margin: '0 0 4px', fontSize: '14px', color: '#334155' }}>Authorized Signature</h4>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <button className={`ceo-btn ${signatureType === 'draw' ? 'ceo-btn-primary' : 'ceo-btn-outline'}`} onClick={() => setSignatureType('draw')} style={{ flex: 1, padding: '4px', fontSize: '12px' }}>Draw</button>
+                    <button className={`ceo-btn ${signatureType === 'upload' ? 'ceo-btn-primary' : 'ceo-btn-outline'}`} onClick={() => setSignatureType('upload')} style={{ flex: 1, padding: '4px', fontSize: '12px' }}>Upload</button>
+                </div>
+                {signatureType === 'draw' && (
+                    <div style={{ border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff', position: 'relative' }}>
+                        <SignatureCanvas 
+                            ref={sigPad}
+                            penColor="black"
+                            canvasProps={{width: 320, height: 100, className: 'sigCanvas'}}
+                            onEnd={() => setSignatureBase64(sigPad.current.getTrimmedCanvas().toDataURL('image/png'))}
+                        />
+                        <button onClick={() => { sigPad.current.clear(); setSignatureBase64(''); }} style={{ position: 'absolute', bottom: '4px', right: '4px', fontSize: '10px', padding: '2px 4px', cursor: 'pointer' }}>Clear</button>
+                    </div>
+                )}
+                {signatureType === 'upload' && (
+                    <div className="form-group">
+                        <input type="file" accept="image/*" onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => setSignatureBase64(reader.result);
+                                reader.readAsDataURL(file);
+                            }
+                        }} style={{ width: '100%', fontSize: '13px' }} />
+                    </div>
+                )}
                 <div className="form-group" style={{ marginTop: '12px' }}>
                   <label>Upload Letterhead (Logo)</label>
                   <input type="file" accept="image/*" onChange={handleLetterheadUpload} style={{ width: '100%', fontSize: '13px' }} />
@@ -1413,7 +1463,7 @@ export default function CeoPayroll() {
               </div>
               
               {/* CSV Board Right Panel */}
-              {currentPdfFile && (
+              {currentPdfFile && Object.keys(customFieldMappings).length === 0 && (
               <div className="custom-scroll" style={{ flex: '0 0 35%', overflowY: 'auto', maxHeight: '70vh', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
                  <h3 style={{ fontSize: '15px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', color: '#111827' }}>CSV Board (Text Extracted from PDF)</h3>
                  {isExtractingPdf ? (
@@ -1444,6 +1494,19 @@ export default function CeoPayroll() {
                  >
                     {isEditingPdf ? 'Applying Updates...' : 'Apply All Updates to PDF'}
                  </button>
+              </div>
+              )}
+              {currentPdfFile && Object.keys(customFieldMappings).length > 0 && (
+              <div style={{ flex: '0 0 35%', backgroundColor: '#f0fdf4', border: '1px solid #4ade80', padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <h3 style={{ color: '#166534', marginBottom: '8px' }}>Custom Template Mapped Successfully!</h3>
+                  <p style={{ color: '#15803d', textAlign: 'center', fontSize: '14px' }}>Click "Download Preview" or "Process to Pay" to generate the final PDF.</p>
+                  <button className="ceo-btn" onClick={() => {
+                     setFieldMappings(customFieldMappings);
+                     setIsMappingGlobal(false);
+                     setShowMappingModal(true);
+                  }} style={{ marginTop: '16px', backgroundColor: '#3b82f6', color: '#fff', padding: '8px 16px', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                     Edit Mapping
+                  </button>
               </div>
               )}
               </div>
