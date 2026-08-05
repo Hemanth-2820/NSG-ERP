@@ -4068,70 +4068,92 @@ async def batch_edit_pdf_text(
                 if not search_text or not replace_text:
                     continue
                     
-                text_instances = page.search_for(search_text)
-                if not text_instances:
-                    continue
-                    
-                text_instances.sort(key=lambda r: (r.y0, r.x0))
-                matches = []
-                current_match = [text_instances[0]]
+                # PyMuPDF standard fonts do not support ₹, which turns into a ?
+                replace_text = replace_text.replace("₹", "Rs.")
+                search_text_normalized = search_text.replace("₹", "Rs.")
                 
-                for inst in text_instances[1:]:
-                    prev = current_match[-1]
-                    if inst.y0 - prev.y1 < 25:
-                        current_match.append(inst)
-                    else:
-                        matches.append(current_match)
-                        current_match = [inst]
-                matches.append(current_match)
+                # We use word-level diffing to precisely identify what changed and where it belongs.
+                # This completely prevents text from jumping around or destroying table structures.
+                import difflib
                 
-                for match_rects in matches:
-                    u_rect = fitz.Rect(match_rects[0])
-                    for r in match_rects[1:]:
-                        u_rect = u_rect | fitz.Rect(r)
+                orig_words = search_text.split()
+                new_words = replace_text.split()
+                
+                # Calculate a boundary box for the entire search text so we don't accidentally replace identical words elsewhere
+                u_rect = None
+                
+                # First, find boundary by searching for individual words to be safe
+                for word in orig_words:
+                    if len(word) > 2:
+                        w_insts = page.search_for(word)
+                        if w_insts:
+                            for r in w_insts:
+                                if u_rect is None:
+                                    u_rect = fitz.Rect(r)
+                                else:
+                                    u_rect = u_rect | fitz.Rect(r)
+                
+                if u_rect is None:
+                    # Fallback boundary
+                    u_rect = page.rect
+                else:
+                    # Give it a margin to accommodate minor shifts
+                    u_rect = u_rect + fitz.Rect(-20, -20, 20, 20)
+                
+                matcher = difflib.SequenceMatcher(None, orig_words, new_words)
+                
+                for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+                    if tag in ('replace', 'delete'):
+                        old_phrase = " ".join(orig_words[i1:i2])
+                        new_phrase = " ".join(new_words[j1:j2]) if tag == 'replace' else ""
                         
-                    # Precision diffing to preserve layout
-                    orig_lines = [l.strip() for l in search_text.split('\n')]
-                    new_lines = [l.strip() for l in replace_text.split('\n')]
-                    
-                    if len(orig_lines) == len(new_lines) and len(orig_lines) > 1:
-                        # Line-by-line precise replacement
-                        for old_l, new_l in zip(orig_lines, new_lines):
-                            if old_l != new_l and old_l:
-                                # Find instances of old_l that are INSIDE u_rect
-                                sub_instances = page.search_for(old_l)
-                                for sub_inst in sub_instances:
-                                    if u_rect.intersects(sub_inst):
-                                        page.add_redact_annot(sub_inst)
-                                        redactions_added = True
-                                        
-                                        line_height = sub_inst.y1 - sub_inst.y0
-                                        calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
-                                        
-                                        # Box only needs to be slightly taller, but extends right to fit longer numbers
-                                        text_rect = fitz.Rect(sub_inst.x0, sub_inst.y0, max(sub_inst.x1 + 100, page.rect.x1 - 40), sub_inst.y1 + 20)
-                                        
-                                        insertions.append({
-                                            "rect": text_rect,
-                                            "text": new_l,
-                                            "fontsize": calculated_fontsize
-                                        })
-                    else:
-                        # Fallback to massive block replacement if number of lines changed
-                        page.add_redact_annot(u_rect)
-                        redactions_added = True
+                        if not old_phrase.strip():
+                            continue
+                            
+                        # Revert Rs. back to original symbol just for searching if it was present
+                        search_phrase = old_phrase.replace("Rs.", "₹")
                         
-                        line_height = match_rects[0].y1 - match_rects[0].y0
-                        calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
-                        
-                        bottom_y = max(u_rect.y1 + 100, u_rect.y0 + (calculated_fontsize * 10))
-                        text_rect = fitz.Rect(u_rect.x0, u_rect.y0, max(u_rect.x1, page.rect.x1 - 40), bottom_y)
-                        
-                        insertions.append({
-                            "rect": text_rect,
-                            "text": replace_text,
-                            "fontsize": calculated_fontsize
-                        })
+                        sub_instances = page.search_for(search_phrase)
+                        if not sub_instances and "₹" in search_phrase:
+                            # Try searching without it just in case PyMuPDF extracted it weirdly
+                            search_phrase = search_phrase.replace("₹", "?")
+                            sub_instances = page.search_for(search_phrase)
+                            
+                        for sub_inst in sub_instances:
+                            if u_rect.intersects(sub_inst):
+                                page.add_redact_annot(sub_inst)
+                                redactions_added = True
+                                
+                                if new_phrase:
+                                    line_height = sub_inst.y1 - sub_inst.y0
+                                    calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
+                                    # Extend width to accommodate longer numbers/words
+                                    text_rect = fitz.Rect(sub_inst.x0, sub_inst.y0, page.rect.x1 - 40, sub_inst.y1 + 10)
+                                    insertions.append({
+                                        "rect": text_rect,
+                                        "text": new_phrase,
+                                        "fontsize": calculated_fontsize
+                                    })
+                                    
+                    elif tag == 'insert':
+                        # Insertions without deletion are extremely tricky because we don't know the exact x,y coordinates
+                        # We will append the text to the end of the previous word's coordinates if possible
+                        if i1 > 0:
+                            prev_word = orig_words[i1 - 1].replace("Rs.", "₹")
+                            prev_insts = page.search_for(prev_word)
+                            for p_inst in prev_insts:
+                                if u_rect.intersects(p_inst):
+                                    line_height = p_inst.y1 - p_inst.y0
+                                    calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
+                                    # Start inserting slightly to the right of the previous word
+                                    new_phrase = " ".join(new_words[j1:j2])
+                                    text_rect = fitz.Rect(p_inst.x1 + 4, p_inst.y0, page.rect.x1 - 40, p_inst.y1 + 10)
+                                    insertions.append({
+                                        "rect": text_rect,
+                                        "text": new_phrase,
+                                        "fontsize": calculated_fontsize
+                                    })
+                                    break
                     
             if redactions_added:
                 try:
