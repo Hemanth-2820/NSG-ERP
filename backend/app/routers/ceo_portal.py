@@ -3786,16 +3786,16 @@ def preview_docx_template(req: DocxPreviewRequest, current_user: models.User = D
             page_width = page.rect.width
             page_height = page.rect.height
             
-            x_pct = float(req.logo.get("x_pct", 0))
-            y_pct = float(req.logo.get("y_pct", 0))
-            width_px = float(req.logo.get("width", 150))
+            x_pct = float(req.logo.get("x", 0))
+            y_pct = float(req.logo.get("y", 0))
+            w_pct = float(req.logo.get("width", 0.15))
+            h_pct = float(req.logo.get("height", 0.15))
             
-            # We scale width to PDF points, let's keep aspect ratio by using fitz insert_image auto scaling
-            # Create a Rect for the image. If we don't know the height, we make the rect square 
-            # and fitz will keep aspect ratio inside it.
             x = page_width * x_pct
             y = page_height * y_pct
-            rect = fitz.Rect(x, y, x + width_px, y + width_px)
+            w = page_width * w_pct
+            h = page_height * h_pct
+            rect = fitz.Rect(x, y, x + w, y + h)
             
             page.insert_image(rect, stream=img_bytes, keep_proportion=True)
             
@@ -3820,13 +3820,16 @@ def preview_docx_template(req: DocxPreviewRequest, current_user: models.User = D
             page_width = page.rect.width
             page_height = page.rect.height
             
-            x_pct = float(req.signature.get("x_pct", 0))
-            y_pct = float(req.signature.get("y_pct", 0))
-            width_px = float(req.signature.get("width", 150))
+            x_pct = float(req.signature.get("x", 0))
+            y_pct = float(req.signature.get("y", 0))
+            w_pct = float(req.signature.get("width", 0.20))
+            h_pct = float(req.signature.get("height", 0.10))
             
             x = page_width * x_pct
             y = page_height * y_pct
-            rect = fitz.Rect(x, y, x + width_px, y + width_px)
+            w = page_width * w_pct
+            h = page_height * h_pct
+            rect = fitz.Rect(x, y, x + w, y + h)
             
             page.insert_image(rect, stream=img_bytes, keep_proportion=True)
             

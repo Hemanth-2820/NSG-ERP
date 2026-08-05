@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader, CheckCircle, Search, AlertCircle, FileText, IndianRupee, History, DollarSign, X, Download } from 'lucide-react';
+import { Eye, Printer, User, Filter, Save, Clock, ChevronDown, PenTool, Eraser } from 'lucide-react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { Rnd } from 'react-rnd';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 import html2pdf from 'html2pdf.js';
 import { jsPDF } from 'jspdf';
 import SignatureCanvas from 'react-signature-canvas';
@@ -52,7 +58,7 @@ export default function CeoPayroll() {
   const [arrearDays, setArrearDays] = useState('');
   const [lopDays, setLopDays] = useState('');
   const [lopDaysReversed, setLopDaysReversed] = useState('');
-  const [signatureBase64, setSignatureBase64] = useState('');
+  const [signatureBase64, setSignatureBase64] = useState(null);
   const [signatureType, setSignatureType] = useState('draw'); // 'draw' or 'upload'
   const sigPad = useRef({});
   const [letterheadUrl, setLetterheadUrl] = useState('/hmns-logo.png');
@@ -103,14 +109,16 @@ export default function CeoPayroll() {
   const [pdfEdits, setPdfEdits] = useState({});
   const [isEditingPdf, setIsEditingPdf] = useState(false);
   const [isExtractingPdf, setIsExtractingPdf] = useState(false);
-          const [docxMapping, setDocxMapping] = useState(null);
-    const [docxPreviewUrl, setDocxPreviewUrl] = useState(null);
+  const [docxMapping, setDocxMapping] = useState(null);
+  const [docxPreviewUrl, setDocxPreviewUrl] = useState(null);
   const [csvBoardEdits, setCsvBoardEdits] = useState({});
   const [logoData, setLogoData] = useState(null);
-  const [logoPos, setLogoPos] = useState({ x: 0.85, y: 0.05, width: 120 });
+  const [logoPos, setLogoPos] = useState({ x_pct: 0.85, y_pct: 0.05, width_pct: 0.15, height_pct: 0.15 });
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
-  const [signaturePos, setSignaturePos] = useState({ x: 0.85, y: 0.85, width: 120 });
+  const [signaturePos, setSignaturePos] = useState({ x_pct: 0.65, y_pct: 0.85, width_pct: 0.20, height_pct: 0.10 });
   const [isDraggingSignature, setIsDraggingSignature] = useState(false);
+  const [pdfPageWidth, setPdfPageWidth] = useState(1);
+  const [pdfPageHeight, setPdfPageHeight] = useState(1);
   
   const fetchPdfTemplateInfo = async () => {
     try {
@@ -458,10 +466,10 @@ export default function CeoPayroll() {
 
     const payload = { values };
     if (logoData) {
-        payload.logo = { data: logoData, ...logoPos };
+        payload.logo = { data: logoData, x: logoPos.x_pct, y: logoPos.y_pct, width: logoPos.width_pct, height: logoPos.height_pct };
     }
     if (signatureBase64) {
-        payload.signature = { data: signatureBase64, ...signaturePos };
+        payload.signature = { data: signatureBase64, x: signaturePos.x_pct, y: signaturePos.y_pct, width: signaturePos.width_pct, height: signaturePos.height_pct };
     }
 
     try {
@@ -495,7 +503,7 @@ export default function CeoPayroll() {
          }, 800);
          return () => clearTimeout(timer);
      }
-  }, [workedDays, lopDays, paymentMethod, selectedUser, showModal, csvBoardEdits, docxMapping]);
+  }, [workedDays, lopDays, paymentMethod, selectedUser, showModal, csvBoardEdits, docxMapping, logoPos, signaturePos]);
 
   
   const handleSaveMapping = async () => {
@@ -765,10 +773,10 @@ export default function CeoPayroll() {
           const values = { ...baseRecordValues, ...csvBoardEdits };
           const payload = { values };
           if (logoData) {
-              payload.logo = { data: logoData, ...logoPos };
+              payload.logo = { data: logoData, x: logoPos.x_pct, y: logoPos.y_pct, width: logoPos.width_pct, height: logoPos.height_pct };
           }
           if (signatureBase64) {
-              payload.signature = { data: signatureBase64, ...signaturePos };
+              payload.signature = { data: signatureBase64, x: signaturePos.x_pct, y: signaturePos.y_pct, width: signaturePos.width_pct, height: signaturePos.height_pct };
           }
 
           const res = await fetch('/api/ceo-portal/payroll/template/docx/generate', {
@@ -1363,101 +1371,10 @@ export default function CeoPayroll() {
                         }} style={{ width: '100%', fontSize: '12px', marginBottom: '12px' }} />
                         
                         {(logoData || signatureBase64) && (
-                            <div style={{ marginTop: '8px' }}>
-                                <label style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '8px' }}>
-                                    Drag the logo/signature on the mini-map to position it:
-                                </label>
-                                <div style={{ 
-                                    width: '100%', 
-                                    aspectRatio: '1 / 1.414', // A4 ratio
-                                    backgroundColor: '#fff',
-                                    border: '1px dashed #cbd5e1',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    borderRadius: '4px'
-                                }}
-                                onPointerMove={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                                    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-                                    if (isDraggingLogo) {
-                                        setLogoPos(prev => ({ ...prev, x, y }));
-                                    }
-                                    if (isDraggingSignature) {
-                                        setSignaturePos(prev => ({ ...prev, x, y }));
-                                    }
-                                }}
-                                onPointerUp={() => {
-                                    if (isDraggingLogo || isDraggingSignature) {
-                                        setIsDraggingLogo(false);
-                                        setIsDraggingSignature(false);
-                                        getDocxPreview();
-                                    }
-                                }}
-                                onPointerLeave={() => {
-                                    if (isDraggingLogo || isDraggingSignature) {
-                                        setIsDraggingLogo(false);
-                                        setIsDraggingSignature(false);
-                                        getDocxPreview();
-                                    }
-                                }}
-                                >
-                                    {logoData && (
-                                        <div 
-                                            style={{ 
-                                                position: 'absolute', 
-                                                left: `${logoPos.x * 100}%`, 
-                                                top: `${logoPos.y * 100}%`,
-                                                transform: 'translate(-50%, -50%)',
-                                                cursor: 'grab',
-                                                border: '2px solid #3b82f6',
-                                                padding: '2px',
-                                                backgroundColor: 'rgba(255,255,255,0.8)'
-                                            }}
-                                            onPointerDown={(e) => {
-                                                e.preventDefault();
-                                                setIsDraggingLogo(true);
-                                            }}
-                                        >
-                                            <img src={logoData} style={{ width: '40px', height: 'auto', display: 'block' }} alt="logo-thumb" />
-                                        </div>
-                                    )}
-                                    
-                                    {signatureBase64 && (
-                                        <div 
-                                            style={{ 
-                                                position: 'absolute', 
-                                                left: `${signaturePos.x * 100}%`, 
-                                                top: `${signaturePos.y * 100}%`,
-                                                transform: 'translate(-50%, -50%)',
-                                                cursor: 'grab',
-                                                border: '2px solid #10b981',
-                                                padding: '2px',
-                                                backgroundColor: 'rgba(255,255,255,0.8)'
-                                            }}
-                                            onPointerDown={(e) => {
-                                                e.preventDefault();
-                                                setIsDraggingSignature(true);
-                                            }}
-                                        >
-                                            <img src={signatureBase64} style={{ width: '40px', height: 'auto', display: 'block' }} alt="signature-thumb" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Logo Size (px)</label>
-                                        <input type="number" value={logoPos.width} onChange={(e) => {
-                                            setLogoPos(prev => ({ ...prev, width: Number(e.target.value) }));
-                                        }} onBlur={getDocxPreview} style={{ width: '100%', padding: '4px', fontSize: '12px' }} />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Sign Size (px)</label>
-                                        <input type="number" value={signaturePos.width} onChange={(e) => {
-                                            setSignaturePos(prev => ({ ...prev, width: Number(e.target.value) }));
-                                        }} onBlur={getDocxPreview} style={{ width: '100%', padding: '4px', fontSize: '12px' }} />
-                                    </div>
-                                </div>
+                            <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px' }}>
+                                <p style={{ fontSize: '11px', color: '#475569', margin: 0 }}>
+                                    Logo/Signature added. Drag/resize it directly on the PDF preview on the right.
+                                </p>
                             </div>
                         )}
                     </div>
@@ -1485,9 +1402,69 @@ export default function CeoPayroll() {
                 </div>
                 
               {docxPreviewUrl ? (
-                <div style={{ width: '100%', height: '70vh', borderRadius: '8px', overflow: 'hidden' }}>
-                    <iframe src={`${docxPreviewUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} title="Live Preview" />
-                </div>
+                            <div style={{ width: '100%', borderRadius: '8px', display: 'flex', justifyContent: 'center', backgroundColor: '#334155', padding: '24px 0', minHeight: '70vh', position: 'relative' }}>
+                                <Document
+                                    file={docxPreviewUrl}
+                                    loading={<div style={{ color: 'white', padding: '20px' }}>Loading PDF Preview...</div>}
+                                >
+                                    <Page 
+                                        pageNumber={1} 
+                                        renderTextLayer={false} 
+                                        renderAnnotationLayer={false}
+                                        onLoadSuccess={(page) => {
+                                            setPdfPageWidth(page.width);
+                                            setPdfPageHeight(page.height);
+                                        }}
+                                    >
+                                        {logoData && (
+                                            <Rnd
+                                                position={{ x: logoPos.x_pct * pdfPageWidth, y: logoPos.y_pct * pdfPageHeight }}
+                                                size={{ width: logoPos.width_pct * pdfPageWidth, height: logoPos.height_pct * pdfPageHeight }}
+                                                onDragStop={(e, d) => {
+                                                    setLogoPos(prev => ({ ...prev, x_pct: d.x / pdfPageWidth, y_pct: d.y / pdfPageHeight }));
+                                                }}
+                                                onResizeStop={(e, direction, ref, delta, position) => {
+                                                    setLogoPos(prev => ({
+                                                        ...prev,
+                                                        width_pct: parseInt(ref.style.width) / pdfPageWidth,
+                                                        height_pct: parseInt(ref.style.height) / pdfPageHeight,
+                                                        x_pct: position.x / pdfPageWidth,
+                                                        y_pct: position.y / pdfPageHeight
+                                                    }));
+                                                }}
+                                                bounds="parent"
+                                                style={{ border: '2px dashed #3b82f6' }}
+                                                lockAspectRatio={true}
+                                            >
+                                                <img src={logoData} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Logo Overlay" />
+                                            </Rnd>
+                                        )}
+                                        {signatureBase64 && (
+                                            <Rnd
+                                                position={{ x: signaturePos.x_pct * pdfPageWidth, y: signaturePos.y_pct * pdfPageHeight }}
+                                                size={{ width: signaturePos.width_pct * pdfPageWidth, height: signaturePos.height_pct * pdfPageHeight }}
+                                                onDragStop={(e, d) => {
+                                                    setSignaturePos(prev => ({ ...prev, x_pct: d.x / pdfPageWidth, y_pct: d.y / pdfPageHeight }));
+                                                }}
+                                                onResizeStop={(e, direction, ref, delta, position) => {
+                                                    setSignaturePos(prev => ({
+                                                        ...prev,
+                                                        width_pct: parseInt(ref.style.width) / pdfPageWidth,
+                                                        height_pct: parseInt(ref.style.height) / pdfPageHeight,
+                                                        x_pct: position.x / pdfPageWidth,
+                                                        y_pct: position.y / pdfPageHeight
+                                                    }));
+                                                }}
+                                                bounds="parent"
+                                                style={{ border: '2px dashed #10b981' }}
+                                                lockAspectRatio={true}
+                                            >
+                                                <img src={signatureBase64} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Signature Overlay" />
+                                            </Rnd>
+                                        )}
+                                    </Page>
+                                </Document>
+                            </div>
               ) : hasCustomTemplate ? (
 
                   <div
