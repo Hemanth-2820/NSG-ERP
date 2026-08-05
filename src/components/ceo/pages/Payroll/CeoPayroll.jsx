@@ -458,10 +458,10 @@ export default function CeoPayroll() {
 
     const payload = { values };
     if (logoData) {
-        payload.logo = { data: logoData, ...logoPos };
+        payload.logo = { data: logoData, x_pct: logoPos.x, y_pct: logoPos.y, width: logoPos.width };
     }
     if (signatureBase64) {
-        payload.signature = { data: signatureBase64, ...signaturePos };
+        payload.signature = { data: signatureBase64, x_pct: signaturePos.x, y_pct: signaturePos.y, width: signaturePos.width };
     }
 
     try {
@@ -765,10 +765,10 @@ export default function CeoPayroll() {
           const values = { ...baseRecordValues, ...csvBoardEdits };
           const payload = { values };
           if (logoData) {
-              payload.logo = { data: logoData, ...logoPos };
+              payload.logo = { data: logoData, x_pct: logoPos.x, y_pct: logoPos.y, width: logoPos.width };
           }
           if (signatureBase64) {
-              payload.signature = { data: signatureBase64, ...signaturePos };
+              payload.signature = { data: signatureBase64, x_pct: signaturePos.x, y_pct: signaturePos.y, width: signaturePos.width };
           }
 
           const res = await fetch('/api/ceo-portal/payroll/template/docx/generate', {
@@ -1374,7 +1374,8 @@ export default function CeoPayroll() {
                                     border: '1px dashed #cbd5e1',
                                     position: 'relative',
                                     overflow: 'hidden',
-                                    borderRadius: '4px'
+                                    borderRadius: '4px',
+                                    touchAction: 'none'
                                 }}
                                 onPointerMove={(e) => {
                                     const rect = e.currentTarget.getBoundingClientRect();
@@ -1419,7 +1420,7 @@ export default function CeoPayroll() {
                                                 setIsDraggingLogo(true);
                                             }}
                                         >
-                                            <img src={logoData} style={{ width: '40px', height: 'auto', display: 'block' }} alt="logo-thumb" />
+                                            <img src={logoData} draggable="false" style={{ width: '40px', height: 'auto', display: 'block', pointerEvents: 'none' }} alt="logo-thumb" />
                                         </div>
                                     )}
                                     
@@ -1440,7 +1441,7 @@ export default function CeoPayroll() {
                                                 setIsDraggingSignature(true);
                                             }}
                                         >
-                                            <img src={signatureBase64} style={{ width: '40px', height: 'auto', display: 'block' }} alt="signature-thumb" />
+                                            <img src={signatureBase64} draggable="false" style={{ width: '40px', height: 'auto', display: 'block', pointerEvents: 'none' }} alt="signature-thumb" />
                                         </div>
                                     )}
                                 </div>
