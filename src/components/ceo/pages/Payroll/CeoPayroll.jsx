@@ -65,19 +65,25 @@ export default function CeoPayroll() {
   const [notification, setNotification] = useState(null);
 
   const [showMappingModal, setShowMappingModal] = useState(false);
+  const [naturalDimensions, setNaturalDimensions] = useState({ width: 1, height: 1 });
   const [mappingImage, setMappingImage] = useState(null);
   const [fieldMappings, setFieldMappings] = useState({});
   const [selectedField, setSelectedField] = useState('employee_name');
   const [hasMappedTemplate, setHasMappedTemplate] = useState(false);
   const [isMappingGlobal, setIsMappingGlobal] = useState(true);
   const [customFieldMappings, setCustomFieldMappings] = useState({});
+  const [manualOverrides, setManualOverrides] = useState({});
   const [pdfScale, setPdfScale] = useState(1);
 
   const MAPPABLE_FIELDS = [
     { id: 'employee_name', label: 'Employee Name' },
     { id: 'employee_id', label: 'Employee ID' },
     { id: 'designation', label: 'Designation' },
+    { id: 'department', label: 'Department' },
+    { id: 'date_of_joining', label: 'Date of Joining' },
     { id: 'month_year', label: 'Month & Year' },
+    { id: 'worked_days', label: 'Working Days' },
+    { id: 'paid_days', label: 'Paid Days' },
     { id: 'basic', label: 'Basic' },
     { id: 'hra', label: 'HRA' },
     { id: 'allowances', label: 'Allowances' },
@@ -895,6 +901,7 @@ export default function CeoPayroll() {
                     <img 
                         src={mappingImage} 
                         alt="PDF Template Preview" 
+                        onLoad={(e) => setNaturalDimensions({ width: e.target.naturalWidth, height: e.target.naturalHeight })}
                         style={{ display: 'block', maxWidth: '100%' }} 
                         onClick={(e) => {
                             const rect = e.target.getBoundingClientRect();
@@ -924,8 +931,8 @@ export default function CeoPayroll() {
                                 title={fieldDef.label}
                                 style={{
                                     position: 'absolute',
-                                    top: `${coords.y * pdfScale}px`,
-                                    left: `${coords.x * pdfScale}px`,
+                                    top: `${(coords.y * pdfScale) / naturalDimensions.height * 100}%`,
+                                    left: `${(coords.x * pdfScale) / naturalDimensions.width * 100}%`,
                                     width: '8px',
                                     height: '8px',
                                     backgroundColor: 'red',
@@ -1472,31 +1479,32 @@ export default function CeoPayroll() {
                 )}
               </div>
               
-              {/* Mapping Prompt for Custom PDF */}
-              {currentPdfFile && Object.keys(customFieldMappings).length === 0 && (
-              <div style={{ flex: '0 0 35%', backgroundColor: '#fffbeb', border: '1px solid #fcd34d', padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                  <h3 style={{ color: '#92400e', marginBottom: '8px', fontSize: '16px' }}>Mapping Required</h3>
-                  <p style={{ color: '#b45309', fontSize: '14px', marginBottom: '16px' }}>You uploaded a custom PDF but haven't mapped the text fields yet. Please open the mapping tool to tell the system where to place the employee data.</p>
-                  <button onClick={() => {
-                     setFieldMappings(customFieldMappings);
-                     setIsMappingGlobal(false);
-                     setShowMappingModal(true);
-                  }} style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '10px 20px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                     Open Mapping Tool
-                  </button>
-              </div>
-              )}
-              {currentPdfFile && Object.keys(customFieldMappings).length > 0 && (
-              <div style={{ flex: '0 0 35%', backgroundColor: '#f0fdf4', border: '1px solid #4ade80', padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <h3 style={{ color: '#166534', marginBottom: '8px' }}>Custom Template Mapped Successfully!</h3>
-                  <p style={{ color: '#15803d', textAlign: 'center', fontSize: '14px' }}>Click "Download Preview" or "Process to Pay" to generate the final PDF.</p>
-                  <button className="ceo-btn" onClick={() => {
-                     setFieldMappings(customFieldMappings);
-                     setIsMappingGlobal(false);
-                     setShowMappingModal(true);
-                  }} style={{ marginTop: '16px', backgroundColor: '#3b82f6', color: '#fff', padding: '8px 16px', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
-                     Edit Mapping
-                  </button>
+              {/* Manual Override CSV Board */}
+              {currentPdfFile && (
+              <div className="custom-scroll" style={{ flex: '0 0 35%', overflowY: 'auto', maxHeight: '70vh', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #d1d5db', display: 'flex', flexDirection: 'column' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', marginBottom: '16px' }}>
+                     <h3 style={{ fontSize: '15px', color: '#111827', margin: 0 }}>CSV Board (Manual Entry)</h3>
+                     <button onClick={() => {
+                         setFieldMappings(customFieldMappings);
+                         setIsMappingGlobal(false);
+                         setShowMappingModal(true);
+                     }} style={{ backgroundColor: Object.keys(customFieldMappings).length > 0 ? '#3b82f6' : '#f59e0b', color: '#fff', padding: '6px 12px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                         {Object.keys(customFieldMappings).length > 0 ? 'Edit Mapping' : 'Map Coordinates'}
+                     </button>
+                 </div>
+                 <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '16px' }}>Enter values here to override the database values before generating the PDF.</p>
+                 {MAPPABLE_FIELDS.map((field) => (
+                    <div key={field.id} style={{ marginBottom: '12px' }}>
+                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{field.label}</label>
+                       <input 
+                          type="text"
+                          value={manualOverrides[field.id] !== undefined ? manualOverrides[field.id] : (selectedUser ? selectedUser[field.id] || '' : '')}
+                          onChange={(e) => setManualOverrides({...manualOverrides, [field.id]: e.target.value})}
+                          placeholder={`Enter ${field.label}...`}
+                          style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                       />
+                    </div>
+                 ))}
               </div>
               )}
               </div>

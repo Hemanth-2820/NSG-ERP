@@ -1759,11 +1759,17 @@ def get_pending_payrolls(month: int, year: int, current_user: models.User = Depe
         deductions = epf + tds
         net = gross - deductions
         
+        join_date = getattr(u, 'join_date', None)
+        join_date_str = join_date.isoformat() if hasattr(join_date, 'isoformat') else str(join_date) if join_date else ""
+
         pending.append({
             "employee_id": u.id,
+            "emp_id_str": str(getattr(u, 'emp_id', '') or ''),
             "employee_name": u.name,
             "role": u.role,
-            "department": u.department,
+            "designation": str(getattr(u, 'designation', u.role) or u.role),
+            "department": str(u.department or ''),
+            "date_of_joining": join_date_str,
             "basic": base,
             "hra": hra,
             "allowances": allowances,
@@ -2141,10 +2147,23 @@ async def generate_custom_mapped_pdf(
     m_name = month_names[m_idx] if 0 <= m_idx < 12 else ""
     month_year = f"{m_name} {data_dict.get('year', '')}"
     
+    paid_days = 0.0
+    try:
+        paid_days = float(data_dict.get("worked_days", 0)) - float(data_dict.get("lop_days", 0))
+    except:
+        pass
+
+    emp_id_str = data_dict.get("emp_id_str", "")
+    if not emp_id_str:
+        emp_id_str = str(data_dict.get("employee_id", ""))
+
     values = {
         "employee_name": str(data_dict.get("employee_name", "")),
-        "employee_id": str(data_dict.get("employee_id", "")),
+        "employee_id": emp_id_str,
         "designation": str(data_dict.get("designation", "")),
+        "department": str(data_dict.get("department", "")),
+        "date_of_joining": str(data_dict.get("date_of_joining", "") or data_dict.get("doj", "")),
+        "paid_days": fmt(paid_days),
         "month_year": month_year,
         "basic": fmt(data_dict.get("basic")),
         "hra": fmt(data_dict.get("hra")),
