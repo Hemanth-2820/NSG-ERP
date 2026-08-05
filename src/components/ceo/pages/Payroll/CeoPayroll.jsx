@@ -860,6 +860,9 @@ export default function CeoPayroll() {
     : historyRecords;
 
 
+
+  return (
+    <div className="ceo-payroll-container">
       {showMappingModal && (
         <div className="ceo-modal-overlay">
           <div className="ceo-modal" style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -947,9 +950,6 @@ export default function CeoPayroll() {
           </div>
         </div>
       )}
-
-  return (
-    <div className="ceo-payroll-container">
       <div className="ceo-payroll-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <h1 style={{ fontSize: '28px', color: '#1f2937', fontWeight: 'bold', margin: '0' }}>Payroll Processing</h1>
         
