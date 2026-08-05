@@ -61,6 +61,7 @@ export default function CeoPayroll() {
   const [notification, setNotification] = useState(null);
 
   const [currentPdfFile, setCurrentPdfFile] = useState(null);
+  const [originalPdfFile, setOriginalPdfFile] = useState(null);
   const [pdfExtractedBlocks, setPdfExtractedBlocks] = useState([]);
   const [pdfEdits, setPdfEdits] = useState({});
   const [isEditingPdf, setIsEditingPdf] = useState(false);
@@ -198,6 +199,7 @@ export default function CeoPayroll() {
         
         if (file.type === 'application/pdf') {
           if (!isGlobal) {
+            setOriginalPdfFile(file);
             setCurrentPdfFile(file);
             setIsExtractingPdf(true);
             try {
@@ -320,6 +322,7 @@ export default function CeoPayroll() {
   const clearCustomTemplate = () => {
     setHasCustomTemplate(false);
     setCurrentPdfFile(null);
+    setOriginalPdfFile(null);
     setTemplateKey(prev => prev + 1);
   };
 
@@ -369,7 +372,7 @@ export default function CeoPayroll() {
     try {
       const token = localStorage.getItem('nsg_jwt_token');
       const formData = new FormData();
-      formData.append('file', currentPdfFile);
+      formData.append('file', originalPdfFile || currentPdfFile);
       formData.append('replacements', JSON.stringify(replacements));
       
       const res = await fetch('/api/hr-portal/onboarding/batch-edit-pdf-text', {
