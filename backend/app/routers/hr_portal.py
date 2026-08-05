@@ -4111,7 +4111,11 @@ async def batch_edit_pdf_text(
                     })
                     
             if redactions_added:
-                page.apply_redactions()
+                try:
+                    page.apply_redactions(images=0, graphics=0)
+                except TypeError:
+                    # Fallback for older PyMuPDF versions
+                    page.apply_redactions(images=0)
                 
             for ins in insertions:
                 page.insert_textbox(
