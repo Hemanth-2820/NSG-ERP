@@ -108,7 +108,8 @@ export default function CeoPayroll() {
   const [docxEdits, setDocxEdits] = useState({});
   const [isExtractingDocx, setIsExtractingDocx] = useState(false);
   const [docxMapping, setDocxMapping] = useState(null);
-  const [docxPreviewUrl, setDocxPreviewUrl] = useState(null);
+    const [docxPreviewUrl, setDocxPreviewUrl] = useState(null);
+  const [csvBoardEdits, setCsvBoardEdits] = useState({});
   
   const fetchPdfTemplateInfo = async () => {
     try {
@@ -418,11 +419,10 @@ export default function CeoPayroll() {
     }
   };
 
-  const getDocxPreview = async () => {
-    if (!selectedUser) return;
-    
-    // Construct values dict for the preview
-    const values = {
+  
+  const getDocxBaseValues = () => {
+    if (!selectedUser) return {};
+    return {
         employee_name: selectedUser.employee_name,
         employee_id: selectedUser.employee_id,
         department: selectedUser.department || '',
@@ -446,6 +446,13 @@ export default function CeoPayroll() {
         ifsc: selectedUser.ifsc_code || '',
         payment_mode: paymentMethod || ''
     };
+  };
+
+  const getDocxPreview = async () => {
+    if (!selectedUser) return;
+    
+    // Construct values dict for the preview
+    const values = { ...getDocxBaseValues(), ...csvBoardEdits };
 
     try {
         const token = localStorage.getItem('nsg_jwt_token');
@@ -478,7 +485,7 @@ export default function CeoPayroll() {
          }, 800);
          return () => clearTimeout(timer);
      }
-  }, [workedDays, lopDays, paymentMethod, selectedUser, showModal]);
+  }, [workedDays, lopDays, paymentMethod, selectedUser, showModal, csvBoardEdits, docxMapping]);
 
   
   const handleSaveMapping = async () => {
@@ -826,7 +833,7 @@ export default function CeoPayroll() {
           showNotification(`Generating DOCX Payslip for ${record.employee_name}...`, 'info');
           const token = localStorage.getItem('nsg_jwt_token');
           
-          const values = {
+          const baseRecordValues = {
             employee_name: record.employee_name,
             employee_id: record.employee_id,
             department: record.department || '',
@@ -850,6 +857,7 @@ export default function CeoPayroll() {
             ifsc: record.ifsc_code || '',
             payment_mode: paymentMethod || ''
           };
+          const values = { ...baseRecordValues, ...csvBoardEdits };
 
           const res = await fetch('/api/ceo-portal/payroll/template/docx/generate', {
               method: 'POST',
@@ -1435,6 +1443,25 @@ export default function CeoPayroll() {
                     </div>
                   )}
                 </div>
+
+                {docxMapping && (
+                    <div style={{ marginTop: '16px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                        <h4 style={{ margin: '0 0 12px', fontSize: '13px', color: '#1e293b' }}>DOCX CSV Board (Mapped Fields)</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                            {Object.keys(docxMapping).map(key => (
+                                <div key={key} style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ fontSize: '11px', color: '#64748b', textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</label>
+                                    <input 
+                                        type="text" 
+                                        style={{ padding: '6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                                        value={csvBoardEdits[key] !== undefined ? csvBoardEdits[key] : (getDocxBaseValues()[key] || '')}
+                                        onChange={e => setCsvBoardEdits(prev => ({ ...prev, [key]: e.target.value }))}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button className="btn-confirm" onClick={processPayment} disabled={loading} style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
