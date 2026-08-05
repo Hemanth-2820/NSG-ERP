@@ -4024,18 +4024,30 @@ async def extract_pdf_text(
         extracted_blocks = []
         
         for page in doc:
-            blocks = page.get_text("blocks")
-            for b in blocks:
-                if b[6] == 0:  # Text block
-                    text = b[4].strip()
-                    if text:
-                        # Split by newline so each table cell / line gets its own granular box in the CSV board
-                        for line_text in text.split('\n'):
-                            line_text = line_text.strip()
-                            if line_text and len(line_text) > 1:
-                                # check if already added to avoid exact duplicates
-                                if line_text not in extracted_blocks:
-                                    extracted_blocks.append(line_text)
+            page_dict = page.get_text("dict")
+            for block in page_dict.get("blocks", []):
+                if block.get("type") == 0:  # Text block
+                    for line in block.get("lines", []):
+                        line_text = ""
+                        last_x = None
+                        for span in line.get("spans", []):
+                            text = span.get("text", "").strip()
+                            if not text: continue
+                            
+                            # If there is a large horizontal gap, treat it as a separate table column/cell
+                            if last_x is not None and (span["bbox"][0] - last_x > 20):
+                                if line_text and len(line_text) > 1:
+                                    if line_text not in extracted_blocks:
+                                        extracted_blocks.append(line_text)
+                                line_text = text
+                            else:
+                                line_text += " " + text if line_text else text
+                                
+                            last_x = span["bbox"][2]
+                            
+                        if line_text and len(line_text) > 1:
+                            if line_text not in extracted_blocks:
+                                extracted_blocks.append(line_text)
                             
         doc.close()
         return {"blocks": extracted_blocks}
