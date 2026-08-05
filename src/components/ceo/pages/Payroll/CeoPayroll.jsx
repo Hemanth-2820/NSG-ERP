@@ -107,6 +107,8 @@ export default function CeoPayroll() {
   const [docxExtractedBlocks, setDocxExtractedBlocks] = useState([]);
   const [docxEdits, setDocxEdits] = useState({});
   const [isExtractingDocx, setIsExtractingDocx] = useState(false);
+  const [docxMapping, setDocxMapping] = useState(null);
+  const [docxPreviewUrl, setDocxPreviewUrl] = useState(null);
   
   const fetchPdfTemplateInfo = async () => {
     try {
@@ -123,6 +125,25 @@ export default function CeoPayroll() {
       }
     } catch (e) {
       console.error("Failed to fetch PDF template info", e);
+    }
+  };
+
+  
+  const fetchDocxTemplateInfo = async () => {
+    try {
+      const token = localStorage.getItem('nsg_jwt_token');
+      const res = await fetch('/api/ceo-portal/payroll/template/docx/info', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists) {
+            setDocxMapping(data.mapping);
+            setHasMappedTemplate(true);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch DOCX template info", e);
     }
   };
 
@@ -147,6 +168,7 @@ export default function CeoPayroll() {
     else fetchHistory();
     fetchGlobalTemplate();
     fetchPdfTemplateInfo();
+    fetchDocxTemplateInfo();
   }, [activeTab, month, year]);
 
   const showNotification = (msg, type = 'success') => {
@@ -366,6 +388,7 @@ export default function CeoPayroll() {
     }
   };
 
+  
   const handleDocxTemplateUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -374,13 +397,15 @@ export default function CeoPayroll() {
         const token = localStorage.getItem('nsg_jwt_token');
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/ceo-portal/payroll/upload-docx-template', {
+        const res = await fetch('/api/ceo-portal/payroll/template/docx/upload', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData
         });
         if (res.ok) {
-          showNotification('Global DOCX Template Updated Successfully!', 'success');
+          const data = await res.json();
+          setDocxMapping(data.mapping);
+          showNotification('DOCX Template Uploaded Successfully!', 'success');
         } else {
           showNotification('Failed to upload DOCX template', 'error');
         }
@@ -392,6 +417,68 @@ export default function CeoPayroll() {
       }
     }
   };
+
+  const getDocxPreview = async () => {
+    if (!selectedUser) return;
+    
+    // Construct values dict for the preview
+    const values = {
+        employee_name: selectedUser.employee_name,
+        employee_id: selectedUser.employee_id,
+        department: selectedUser.department || '',
+        designation: selectedUser.role || '',
+        month: `${month}`,
+        month_year: `${month}/${year}`,
+        working_days: workedDays || 22,
+        paid_days: 22 - parseFloat(lopDays || 0),
+        basic: selectedUser.basic || 0,
+        hra: selectedUser.hra || 0,
+        allowances: selectedUser.allowances || 0,
+        bonus: selectedUser.bonus || 0,
+        gross: (selectedUser.basic || 0) + (selectedUser.hra || 0) + (selectedUser.allowances || 0) + (selectedUser.bonus || 0),
+        epf: selectedUser.epf || 0,
+        tds: selectedUser.tds || 0,
+        lop: selectedUser.lop || 0,
+        net: selectedUser.net || 0,
+        amount_words: numberToWords(selectedUser.net || 0),
+        bank: selectedUser.bank_name || '',
+        account_number: selectedUser.account_number || '',
+        ifsc: selectedUser.ifsc_code || '',
+        payment_mode: paymentMethod || ''
+    };
+
+    try {
+        const token = localStorage.getItem('nsg_jwt_token');
+        const res = await fetch('/api/ceo-portal/payroll/template/docx/preview', {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ values })
+        });
+        
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            setDocxPreviewUrl(url);
+        } else {
+            showNotification('Failed to generate preview', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+    }
+  };
+
+  // Debounced preview update when values change
+  useEffect(() => {
+     if (docxMapping && selectedUser && showModal) {
+         const timer = setTimeout(() => {
+             getDocxPreview();
+         }, 800);
+         return () => clearTimeout(timer);
+     }
+  }, [workedDays, lopDays, paymentMethod, selectedUser, showModal]);
 
   
   const handleSaveMapping = async () => {
@@ -734,6 +821,59 @@ export default function CeoPayroll() {
       };
       
       // If Custom PDF is mapped
+      
+      if (docxMapping) {
+          showNotification(`Generating DOCX Payslip for ${record.employee_name}...`, 'info');
+          const token = localStorage.getItem('nsg_jwt_token');
+          
+          const values = {
+            employee_name: record.employee_name,
+            employee_id: record.employee_id,
+            department: record.department || '',
+            designation: record.role || '',
+            month: `${month}`,
+            month_year: `${month}/${year}`,
+            working_days: workedDays || 22,
+            paid_days: 22 - parseFloat(lopDays || 0),
+            basic: record.basic || 0,
+            hra: record.hra || 0,
+            allowances: record.allowances || 0,
+            bonus: record.bonus || 0,
+            gross: (record.basic || 0) + (record.hra || 0) + (record.allowances || 0) + (record.bonus || 0),
+            epf: record.epf || 0,
+            tds: record.tds || 0,
+            lop: record.lop || 0,
+            net: record.net || 0,
+            amount_words: numberToWords(record.net || 0),
+            bank: record.bank_name || '',
+            account_number: record.account_number || '',
+            ifsc: record.ifsc_code || '',
+            payment_mode: paymentMethod || ''
+          };
+
+          const res = await fetch('/api/ceo-portal/payroll/template/docx/generate', {
+              method: 'POST',
+              headers: { 
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ values })
+          });
+          
+          if (!res.ok) throw new Error('Failed to generate DOCX');
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Payslip_${record.employee_name}_${month}_${year}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          showNotification(`Downloaded PDF for ${record.employee_name}`, 'success');
+          return;
+      }
+
       if (currentPdfFile && Object.keys(customFieldMappings).length > 0) {
           showNotification(`Generating custom mapped PDF for ${record.employee_name}...`, 'info');
           const token = localStorage.getItem('nsg_jwt_token');
@@ -1276,8 +1416,8 @@ export default function CeoPayroll() {
                 </div>
 
                 <div className="form-group" style={{ marginTop: '12px' }}>
-                  <label>Upload Custom Payslip Format (Any File)</label>
-                  <input type="file" onChange={(e) => handleTemplateUpload(e, false)} style={{ width: '100%', fontSize: '13px', marginBottom: hasCustomTemplate ? '8px' : '0' }} id="custom-template-upload" />
+                  <label>Upload Custom Payslip Format (.docx only)</label>
+                  <input type="file" accept=".docx" onChange={handleDocxTemplateUpload} style={{ width: '100%', fontSize: '13px' }} id="custom-template-upload" />
                   {hasCustomTemplate && (
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button 
@@ -1321,7 +1461,13 @@ export default function CeoPayroll() {
                      <Download size={16} /> {(currentPdfFile || hasMappedTemplate) ? 'Generate Mapped PDF' : 'Download PDF Preview'}
                    </button>
                 </div>
-                {hasCustomTemplate ? (
+                
+              {docxPreviewUrl ? (
+                <div style={{ width: '100%', height: '70vh', borderRadius: '8px', overflow: 'hidden' }}>
+                    <iframe src={`${docxPreviewUrl}#view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} title="Live Preview" />
+                </div>
+              ) : hasCustomTemplate ? (
+
                   <div
                     key={`custom-${templateKey}`}
                     ref={payslipContentRef}

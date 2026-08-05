@@ -21,3 +21,5 @@ PyMuPDF>=1.23.0
 
 docxtpl>=0.16.0
 cloudinary>=1.41.0
+docx2pdf>=0.1.8
+rapidfuzz>=3.5.0

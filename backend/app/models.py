@@ -938,3 +938,12 @@ class GlobalTemplate(Base):
     html_content = Column(Text, nullable=True)
     file_data = Column(LargeBinary, nullable=True)
     field_mappings = Column(JSON, nullable=True)
+
+class DocxTemplate(Base):
+    __tablename__ = 'docx_templates'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    file_data = Column(LargeBinary, nullable=False)
+    mapping_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

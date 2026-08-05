@@ -3672,3 +3672,97 @@ def sign_vault_doc(id: int, current_user: models.User = Depends(security.get_cur
     db.commit()
     return {"status": "success"}
 
+# --- DOCX Template Engine Endpoints ---
+
+@router.post("/payroll/template/docx/upload")
+def upload_docx_template(file: UploadFile = File(...), current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+    
+    # Read the file
+    content = file.file.read()
+    
+    # Save to a temporary file for docx parsing
+    temp_path = f"temp_{uuid.uuid4().hex}.docx"
+    with open(temp_path, "wb") as f:
+        f.write(content)
+        
+    try:
+        from app.docx_engine import extract_docx_fields
+        mapping = extract_docx_fields(temp_path)
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise HTTPException(status_code=400, detail=f"Failed to parse DOCX: {e}")
+        
+    # Check if a template already exists, update or create
+    template = db.query(models.DocxTemplate).first()
+    if not template:
+        template = models.DocxTemplate(name=file.filename, file_data=content, mapping_json=mapping)
+        db.add(template)
+    else:
+        template.name = file.filename
+        template.file_data = content
+        template.mapping_json = mapping
+        
+    db.commit()
+    db.refresh(template)
+    
+    if os.path.exists(temp_path):
+        os.remove(temp_path)
+        
+    return {"status": "success", "mapping": mapping}
+
+
+@router.get("/payroll/template/docx/info")
+def get_docx_template_info(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    template = db.query(models.DocxTemplate).first()
+    if template:
+        return {"exists": True, "mapping": template.mapping_json, "name": template.name}
+    return {"exists": False}
+
+
+from pydantic import BaseModel
+class DocxPreviewRequest(BaseModel):
+    values: dict
+
+@router.post("/payroll/template/docx/preview")
+def preview_docx_template(req: DocxPreviewRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    verify_ceo_role(current_user)
+    
+    template = db.query(models.DocxTemplate).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+        
+    # Save original to disk
+    import uuid
+    uid = uuid.uuid4().hex
+    temp_in = f"temp_in_{uid}.docx"
+    temp_out = f"temp_out_{uid}.docx"
+    pdf_out = f"temp_out_{uid}.pdf"
+    
+    with open(temp_in, "wb") as f:
+        f.write(template.file_data)
+        
+    try:
+        from app.docx_engine import fill_docx_template
+        fill_docx_template(temp_in, template.mapping_json, req.values, temp_out)
+        
+        # Convert to PDF
+        from docx2pdf import convert
+        convert(temp_out, pdf_out)
+        
+        from fastapi.responses import FileResponse
+        return FileResponse(pdf_out, media_type="application/pdf", filename="preview.pdf", background=None)
+        
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Failed to generate preview")
+    finally:
+        # Note: In a real app we'd clean up these files via background tasks
+        # But we can't delete them before returning FileResponse easily without a background task
+        pass
+
+@router.post("/payroll/template/docx/generate")
+def generate_docx_payslip(req: DocxPreviewRequest, current_user: models.User = Depends(security.get_current_user), db: Session = Depends(database.get_db)):
+    # Very similar to preview, but maybe marks the payslip as paid in DB
+    return preview_docx_template(req, current_user, db)
