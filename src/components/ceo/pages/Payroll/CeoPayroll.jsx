@@ -421,6 +421,7 @@ export default function CeoPayroll() {
     return {
         employee_name: selectedUser.employee_name,
         employee_id: selectedUser.employee_id,
+        date_of_joining: selectedUser.joining_date || '',
         department: selectedUser.department || '',
         designation: selectedUser.role || '',
         month: `${month}`,
@@ -726,6 +727,7 @@ export default function CeoPayroll() {
           const baseRecordValues = {
             employee_name: record.employee_name,
             employee_id: record.employee_id,
+            date_of_joining: record.joining_date || '',
             department: record.department || '',
             designation: record.role || '',
             month: `${month}`,

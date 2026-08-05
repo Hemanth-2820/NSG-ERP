@@ -9,6 +9,7 @@ KNOWN_LABELS = {
     "Designation": "designation",
     "Month": "month",
     "Month & Year": "month_year",
+    "Date of Joining": "date_of_joining",
     "Working Days": "working_days",
     "Paid Days": "paid_days",
     "Basic": "basic",
@@ -38,7 +39,8 @@ def extract_docx_fields(file_path):
     Returns a mapping JSON of where the editable values belong.
     """
     doc = Document(file_path)
-    mapping = {}
+    from collections import defaultdict
+    mapping = defaultdict(list)
     
     label_keys = list(KNOWN_LABELS.keys())
     
@@ -58,13 +60,14 @@ def extract_docx_fields(file_path):
                     
                     # Assume the value is in the next column if available
                     if col_idx + 1 < len(row.cells):
-                        mapping[field_id] = {
+                        mapping[field_id].append({
                             "type": "table_cell",
                             "table": table_idx,
                             "row": row_idx,
-                            "column": col_idx + 1
-                        }
-
+                            "column": col_idx + 1,
+                            "label_found": text
+                        })
+    
     # Check paragraphs
     for p_idx, paragraph in enumerate(doc.paragraphs):
         text = normalize_text(paragraph.text)
@@ -81,13 +84,13 @@ def extract_docx_fields(file_path):
             # Since paragraph contains label + value, we want to replace the value part.
             # We store the run that represents the blank line or the value.
             # Simplified approach: We store paragraph index. We will append to it or replace runs.
-            mapping[field_id] = {
+            mapping[field_id].append({
                 "type": "paragraph",
                 "paragraph": p_idx,
                 "label_found": matched_label
-            }
+            })
 
-    return mapping
+    return dict(mapping)
 
 
 def fill_docx_template(template_path, mapping_json, values_dict, output_path):
@@ -102,51 +105,55 @@ def fill_docx_template(template_path, mapping_json, values_dict, output_path):
             
         value = str(values_dict[field_id])
         
-        if location["type"] == "table_cell":
-            table_idx = location["table"]
-            row_idx = location["row"]
-            col_idx = location["column"]
-            
-            try:
-                cell = doc.tables[table_idx].rows[row_idx].cells[col_idx]
-                # Preserve formatting by replacing text in the first run and clearing the rest
-                if cell.paragraphs:
-                    para = cell.paragraphs[0]
-                    if para.runs:
-                        para.runs[0].text = value
-                        for r in para.runs[1:]:
-                            r.text = ""
+        # Support both old mapping format (dict) and new format (list of dicts)
+        locations = location if isinstance(location, list) else [location]
+        
+        for loc in locations:
+            if loc["type"] == "table_cell":
+                table_idx = loc["table"]
+                row_idx = loc["row"]
+                col_idx = loc["column"]
+                
+                try:
+                    cell = doc.tables[table_idx].rows[row_idx].cells[col_idx]
+                    # Preserve formatting by replacing text in the first run and clearing the rest
+                    if cell.paragraphs:
+                        para = cell.paragraphs[0]
+                        if para.runs:
+                            para.runs[0].text = value
+                            for r in para.runs[1:]:
+                                r.text = ""
+                        else:
+                            para.add_run(value)
+                except Exception as e:
+                    print(f"Error filling table cell for {field_id}: {e}")
+                    
+            elif loc["type"] == "paragraph":
+                p_idx = loc["paragraph"]
+                try:
+                    para = doc.paragraphs[p_idx]
+                    label_text = loc.get("label_found", "")
+                    
+                    # If paragraph text is "Employee Name : _______"
+                    # We replace everything after the label with the value
+                    # This is a bit tricky to preserve formatting, so we'll just reconstruct the text
+                    # or clear runs and add one.
+                    original_text = para.text
+                    if ":" in original_text:
+                        prefix = original_text.split(":")[0] + ": "
                     else:
-                        para.add_run(value)
-            except Exception as e:
-                print(f"Error filling table cell for {field_id}: {e}")
-                
-        elif location["type"] == "paragraph":
-            p_idx = location["paragraph"]
-            try:
-                para = doc.paragraphs[p_idx]
-                label_text = location.get("label_found", "")
-                
-                # If paragraph text is "Employee Name : _______"
-                # We replace everything after the label with the value
-                # This is a bit tricky to preserve formatting, so we'll just reconstruct the text
-                # or clear runs and add one.
-                original_text = para.text
-                if ":" in original_text:
-                    prefix = original_text.split(":")[0] + ": "
-                else:
-                    prefix = label_text + " "
-                
-                # Keep first run's style
-                style = para.runs[0].style if para.runs else None
-                for r in para.runs:
-                    r.text = ""
+                        prefix = label_text + " "
                     
-                run = para.add_run(prefix + value)
-                if style:
-                    run.style = style
-                    
-            except Exception as e:
-                print(f"Error filling paragraph for {field_id}: {e}")
+                    # Keep first run's style
+                    style = para.runs[0].style if para.runs else None
+                    for r in para.runs:
+                        r.text = ""
+                        
+                    run = para.add_run(prefix + value)
+                    if style:
+                        run.style = style
+                        
+                except Exception as e:
+                    print(f"Error filling paragraph for {field_id}: {e}")
 
     doc.save(output_path)
