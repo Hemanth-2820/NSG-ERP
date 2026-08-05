@@ -3747,9 +3747,24 @@ def preview_docx_template(req: DocxPreviewRequest, current_user: models.User = D
         from app.docx_engine import fill_docx_template
         fill_docx_template(temp_in, template.mapping_json, req.values, temp_out)
         
-        # Convert to PDF
-        from docx2pdf import convert
-        convert(temp_out, pdf_out)
+        # Convert to PDF using LibreOffice
+        import subprocess
+        try:
+            subprocess.run(
+                ["libreoffice", "--headless", "--convert-to", "pdf", temp_out, "--outdir", "."],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+        except Exception as libre_err:
+            print("LibreOffice conversion error:", libre_err)
+            # fallback to soffice if libreoffice is not found
+            subprocess.run(
+                ["soffice", "--headless", "--convert-to", "pdf", temp_out, "--outdir", "."],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
         
         from fastapi.responses import FileResponse
         return FileResponse(pdf_out, media_type="application/pdf", filename="preview.pdf", background=None)
