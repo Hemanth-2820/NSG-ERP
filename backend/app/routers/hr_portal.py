@@ -4090,26 +4090,48 @@ async def batch_edit_pdf_text(
                     for r in match_rects[1:]:
                         u_rect = u_rect | fitz.Rect(r)
                         
-                    # Add redaction without a fill color, so it deletes text but doesn't draw an opaque white box that hides borders
-                    page.add_redact_annot(u_rect)
-                    redactions_added = True
+                    # Precision diffing to preserve layout
+                    orig_lines = [l.strip() for l in search_text.split('\n')]
+                    new_lines = [l.strip() for l in replace_text.split('\n')]
                     
-                    
-                    # Estimate font size (typically 0.7 - 0.75 of bounding box height for standard fonts)
-                    # We use max 14 and min 8 to prevent massive or tiny fonts.
-                    line_height = match_rects[0].y1 - match_rects[0].y0
-                    calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
-                    
-                    # Create a text rect that fits the width, and is at least as tall as the original text block
-                    # Give it plenty of height so PyMuPDF doesn't silently abort inserting the text if it wraps
-                    bottom_y = max(u_rect.y1 + 100, u_rect.y0 + (calculated_fontsize * 10))
-                    text_rect = fitz.Rect(u_rect.x0, u_rect.y0, max(u_rect.x1, page.rect.x1 - 40), bottom_y)
-                    
-                    insertions.append({
-                        "rect": text_rect,
-                        "text": replace_text,
-                        "fontsize": calculated_fontsize
-                    })
+                    if len(orig_lines) == len(new_lines) and len(orig_lines) > 1:
+                        # Line-by-line precise replacement
+                        for old_l, new_l in zip(orig_lines, new_lines):
+                            if old_l != new_l and old_l:
+                                # Find instances of old_l that are INSIDE u_rect
+                                sub_instances = page.search_for(old_l)
+                                for sub_inst in sub_instances:
+                                    if u_rect.intersects(sub_inst):
+                                        page.add_redact_annot(sub_inst)
+                                        redactions_added = True
+                                        
+                                        line_height = sub_inst.y1 - sub_inst.y0
+                                        calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
+                                        
+                                        # Box only needs to be slightly taller, but extends right to fit longer numbers
+                                        text_rect = fitz.Rect(sub_inst.x0, sub_inst.y0, max(sub_inst.x1 + 100, page.rect.x1 - 40), sub_inst.y1 + 20)
+                                        
+                                        insertions.append({
+                                            "rect": text_rect,
+                                            "text": new_l,
+                                            "fontsize": calculated_fontsize
+                                        })
+                    else:
+                        # Fallback to massive block replacement if number of lines changed
+                        page.add_redact_annot(u_rect)
+                        redactions_added = True
+                        
+                        line_height = match_rects[0].y1 - match_rects[0].y0
+                        calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
+                        
+                        bottom_y = max(u_rect.y1 + 100, u_rect.y0 + (calculated_fontsize * 10))
+                        text_rect = fitz.Rect(u_rect.x0, u_rect.y0, max(u_rect.x1, page.rect.x1 - 40), bottom_y)
+                        
+                        insertions.append({
+                            "rect": text_rect,
+                            "text": replace_text,
+                            "fontsize": calculated_fontsize
+                        })
                     
             if redactions_added:
                 try:
