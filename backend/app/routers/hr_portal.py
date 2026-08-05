@@ -4120,20 +4120,48 @@ async def batch_edit_pdf_text(
                             sub_instances = page.search_for(search_phrase)
                             
                         for sub_inst in sub_instances:
-                            if u_rect.intersects(sub_inst):
-                                page.add_redact_annot(sub_inst)
+                            # Quick pre-filter
+                            if not u_rect.intersects(sub_inst):
+                                continue
+                                
+                        # Filter to only those in u_rect
+                        valid_subs = [r for r in sub_instances if u_rect.intersects(r)]
+                        if not valid_subs:
+                            continue
+                            
+                        # Group multi-line rects belonging to the SAME match
+                        valid_subs.sort(key=lambda r: (r.y0, r.x0))
+                        matches = []
+                        current = [valid_subs[0]]
+                        for inst in valid_subs[1:]:
+                            # It's the same match ONLY if it wraps to the NEXT line (vertically below, small gap)
+                            # If it's on the same line horizontally, it's a DIFFERENT match!
+                            is_next_line = (inst.y0 > current[-1].y0 + 5) and (inst.y0 - current[-1].y1 < 25)
+                            if is_next_line:
+                                current.append(inst)
+                            else:
+                                matches.append(current)
+                                current = [inst]
+                        matches.append(current)
+                        
+                        for match_group in matches:
+                            # Redact all rects in this specific match
+                            for r in match_group:
+                                page.add_redact_annot(r)
                                 redactions_added = True
                                 
-                                if new_phrase:
-                                    line_height = sub_inst.y1 - sub_inst.y0
-                                    calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
-                                    # Extend width to accommodate longer numbers/words
-                                    text_rect = fitz.Rect(sub_inst.x0, sub_inst.y0, page.rect.x1 - 40, sub_inst.y1 + 10)
-                                    insertions.append({
-                                        "rect": text_rect,
-                                        "text": new_phrase,
-                                        "fontsize": calculated_fontsize
-                                    })
+                            if new_phrase:
+                                first_rect = match_group[0]
+                                line_height = first_rect.y1 - first_rect.y0
+                                calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
+                                
+                                # Insert new text EXACTLY ONCE for this match, at the top-left of the first line!
+                                text_rect = fitz.Rect(first_rect.x0, first_rect.y0, page.rect.x1 - 40, first_rect.y1 + max(20, len(match_group)*15))
+                                insertions.append({
+                                    "rect": text_rect,
+                                    "text": new_phrase,
+                                    "fontsize": calculated_fontsize
+                                })
                                     
                     elif tag == 'insert':
                         # Insertions without deletion are extremely tricky because we don't know the exact x,y coordinates
