@@ -759,8 +759,15 @@ export default function CeoPayroll() {
         const token = localStorage.getItem('nsg_jwt_token');
         const payload = {
             ...record,
+            ...manualOverrides,
             month: month,
-            year: year
+            year: year,
+            worked_days: workedDays,
+            arrear_days: arrearDays,
+            lop_days: lopDays,
+            payment_method: paymentMethod,
+            transaction_ref: transactionRef,
+            payment_date: paymentDate
         };
         const res = await fetch('/api/ceo-portal/payroll/generate-mapped-pdf', {
             method: 'POST',
@@ -1301,10 +1308,10 @@ export default function CeoPayroll() {
                      <FileText size={16} /> Download DOCX Format
                    </button>
                    <button 
-                     onClick={downloadPreview}
+                     onClick={(currentPdfFile || hasMappedTemplate) ? () => downloadPDF(selectedUser) : downloadPreview}
                      style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                    >
-                     <Download size={16} /> Download PDF Preview
+                     <Download size={16} /> {(currentPdfFile || hasMappedTemplate) ? 'Generate Mapped PDF' : 'Download PDF Preview'}
                    </button>
                 </div>
                 {hasCustomTemplate ? (

@@ -2029,10 +2029,23 @@ def generate_mapped_pdf(
     m_name = month_names[m_idx] if 0 <= m_idx < 12 else ""
     month_year = f"{m_name} {data.get('year', '')}"
     
+    paid_days = 0.0
+    try:
+        paid_days = float(data.get("worked_days", 0)) - float(data.get("lop_days", 0))
+    except:
+        pass
+
+    emp_id_str = data.get("emp_id_str", "")
+    if not emp_id_str:
+        emp_id_str = str(data.get("employee_id", ""))
+
     values = {
         "employee_name": str(data.get("employee_name", "")),
-        "employee_id": str(data.get("employee_id", "")),
+        "employee_id": emp_id_str,
         "designation": str(data.get("designation", "")),
+        "department": str(data.get("department", "")),
+        "date_of_joining": str(data.get("date_of_joining", "") or data.get("doj", "")),
+        "paid_days": fmt(paid_days),
         "month_year": month_year,
         "basic": fmt(data.get("basic")),
         "hra": fmt(data.get("hra")),
