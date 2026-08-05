@@ -4099,9 +4099,10 @@ async def batch_edit_pdf_text(
                     line_height = match_rects[0].y1 - match_rects[0].y0
                     calculated_fontsize = max(8.0, min(line_height * 0.75, 12.0))
                     
-                    # Create a text rect that fits the width, but doesn't stretch down the entire page.
-                    # We allow height for 5 lines of text just in case (calculated_fontsize * 6)
-                    text_rect = fitz.Rect(u_rect.x0, u_rect.y0, max(u_rect.x1, page.rect.x1 - 40), u_rect.y0 + (calculated_fontsize * 6))
+                    # Create a text rect that fits the width, and is at least as tall as the original text block
+                    # plus a little extra padding, so large blocks (like tables) don't get truncated and disappear!
+                    bottom_y = max(u_rect.y1 + (calculated_fontsize * 2), u_rect.y0 + (calculated_fontsize * 6))
+                    text_rect = fitz.Rect(u_rect.x0, u_rect.y0, max(u_rect.x1, page.rect.x1 - 40), bottom_y)
                     
                     insertions.append({
                         "rect": text_rect,
