@@ -128,24 +128,19 @@ def fill_docx_template(template_path, mapping_json, values_dict, output_path):
                     para = doc.paragraphs[p_idx]
                     label_text = loc.get("label_found", "")
                     
-                    # If paragraph text is "Employee Name : _______"
-                    # We replace everything after the label with the value
-                    # This is a bit tricky to preserve formatting, so we'll just reconstruct the text
-                    # or clear runs and add one.
                     original_text = para.text
-                    if ":" in original_text:
-                        prefix = original_text.split(":")[0] + ": "
-                    else:
-                        prefix = label_text + " "
+                    import re
+                    # Match the label, optional spaces, optional colon/hyphen, optional spaces, and ANY number of underscores or dots
+                    pattern = re.compile(re.escape(label_text) + r'\s*[:\-]?\s*[_\.]*', re.IGNORECASE)
                     
-                    # Keep first run's style
-                    style = para.runs[0].style if para.runs else None
-                    for r in para.runs:
-                        r.text = ""
-                        
-                    run = para.add_run(prefix + value)
-                    if style:
-                        run.style = style
+                    new_text = pattern.sub(label_text + ": " + value, original_text, count=1)
+                    
+                    if new_text != original_text:
+                        # Keep first run's style to re-apply to the new single run if possible
+                        style = para.runs[0].style if para.runs else None
+                        para.text = new_text
+                        if style and para.runs:
+                            para.runs[0].style = style
                         
                 except Exception as e:
                     print(f"Error filling paragraph for {field_id}: {e}")
